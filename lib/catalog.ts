@@ -1,5 +1,9 @@
 // lib/catalog.ts
-// Temporary hardcoded list; replace with Option A when ready.
+// TODO: Replace this temporary hardcoded VALID_IDS with a real import from your products list.
+// Example (when ready):
+// import { PRODUCTS } from '@/data/products';
+// export const VALID_IDS = PRODUCTS.map(p => p.slug?.toLowerCase()).filter(Boolean);
+
 
 export const VALID_IDS = [
     'baileigh-rdb-250',
