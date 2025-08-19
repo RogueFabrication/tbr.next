@@ -1,0 +1,62 @@
+{
+  "01-home": [
+    "01-home_empty-table@2x.png",
+    "01-home-price-breakdown-expanded.png",
+    "01-home_filterbar_type@2x.png",
+    "01-home_filterbar_default@2x.png",
+    "01-home_desktop-full@2x.png",
+    "01-home_mobile-full@2x.png",
+    "01-home_tablet-full@2x.png"
+  ],
+  "02-guide": [
+    "01-guide_finder_result@2x.png",
+    "01-guide_finder_lvl4@2x.png",
+    "01-guide_finder_lvl3@2x.png",
+    "01-guide_finder_lvl3_dropdown@2x.png",
+    "01-guide_finder_lvl2@2x.png",
+    "01-guide_finder_whole@2x.png",
+    "01-guide_finder_dropdown1@2x.png",
+    "02-guide_desktop-full@2x.png.png"
+  ],
+  "03-review": [
+    "03-review_mobile-full@2x.png",
+    "03-review_desktop-full@2x.png"
+  ],
+  "04-admin": [
+    "04-admin-email-config-desktop.png",
+    "04-admin-banner-desktop.png",
+    "04-admin-images-desktop.png",
+    "04-admin-notes-desktop.png",
+    "04-admin-pricing-desktop.png",
+    "04-admin-content-desktop.png",
+    "04-admin-categories-desktop.png",
+    "04-admin-products-desktop.png",
+    "04-admin-diagnostic-report-desktop.png",
+    "04-admin-diagnostic-performance-desktop.png",
+    "04-admin-diagnostic-routing-desktop.png",
+    "04-admin-diagnostic-auth-desktop.png",
+    "04-admin-diagnostic-port-desktop.png",
+    "04-admin-diagnostic-overview-desktop.png",
+    "04-admin-login-screen-desktop.png"
+  ],
+  "05-debug": [
+    "05-debug-desktop-full.png"
+  ],
+  "06-mandrel": [
+    "06-mandrel-desktop.png"
+  ],
+  "07-roll": [
+    "07-roll-desktop.png"
+  ],
+  "08-ram": [
+    "08-ram-desktop.png"
+  ],
+  "09-compare": [
+    "09-compare-options-applied-desktop.png",
+    "09-compare-desktop-full.png"
+  ],
+  "10-scoring": [
+    "10-scoring-desktop-full.png"
+  ]
+}
+
