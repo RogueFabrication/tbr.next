@@ -6,4 +6,5 @@ import { SmartTubeBenderFinder } from '../../components/guide/SmartTubeBenderFin
 /** GuidePage – renders the route-specific tile grid (with filters) */
 export default function GuidePage() {
   return <SmartTubeBenderFinder />;
+  return <h1 className="text-2xl font-semibold">Buyer’s Guide (stub)</h1>;
 }
