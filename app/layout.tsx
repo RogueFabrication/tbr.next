@@ -1,7 +1,16 @@
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+// app/layout.tsx
+import "./globals.css";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, fontFamily: "system-ui, sans-serif" }}>{children}</body>
+      <body className="min-h-screen bg-white text-gray-900 antialiased">
+        {children}
+      </body>
     </html>
   );
 }
