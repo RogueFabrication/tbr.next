@@ -1,23 +1,15 @@
 // app/compare/page.tsx
-import React, { Suspense } from 'react';
-import { CompareTable } from '../../components/compare/CompareTable';
-import { LoadingSkeleton } from '../../components/comparison/LoadingSkeleton';
-import CompareQueryHydrator from '../../components/compare/CompareQueryHydrator';
+import { BENDERS } from "../../data/benders";
+import CompareClient from "../../components/compare/CompareClient";
 
-export const metadata = {
-  title: 'Compare Tube Benders – Side-by-Side Analysis',
-};
+export const metadata = { title: "Compare | TubeBenderReviews" };
 
-
+/** Compare page backed by the shared dataset with client-side filtering. */
 export default function ComparePage() {
   return (
-    <>
-      {/* Sync ?ids= from the URL into the compare store/localStorage */}
-      <CompareQueryHydrator />
-      return <h1 className="text-2xl font-semibold">Compare (stub)</h1>;
-      <Suspense fallback={<LoadingSkeleton />}>
-        <CompareTable />
-      </Suspense>
-    </>
+    <div>
+      <h1 className="mb-4 text-3xl font-bold">Compare</h1>
+      <CompareClient rows={BENDERS} />
+    </div>
   );
 }

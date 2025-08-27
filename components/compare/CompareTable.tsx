@@ -1,143 +1,93 @@
-'use client';
+"use client";
+import { useMemo, useState } from "react";
+import type { Bender } from "../../data/benders";
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { ScoreBadge } from '../comparison/ScoreBadge';
-import { toArray } from '../../lib/toArray';
+type SortKey = "brand" | "model" | "capacity" | "price" | "score";
+type SortDir = "asc" | "desc";
 
-interface Product {
-  id: string;
-  brand: string;
-  model: string;
-  maxCapacity: string;
-  clrRange: string;
-  dieCost: string;
-  cycleTime: string;
-  weight: string;
-  price: string;
-  mandrel: string;
-  totalScore: number;
-  description: string;
-}
+/**
+ * Sortable comparison table for benders.
+ * - No external deps; purely client-side.
+ * - Click a header to sort; click again to toggle direction.
+ */
+export default function CompareTable({ rows }: { rows: Bender[] }) {
+  const [sortKey, setSortKey] = useState<SortKey>("score");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-export function CompareTable() {
-  const searchParams = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  function baseCompare(aVal: unknown, bVal: unknown): number {
+    if (aVal == null && bVal == null) return 0;
+    if (aVal == null) return -1;
+    if (bVal == null) return 1;
+    if (typeof aVal === "number" && typeof bVal === "number") return aVal - bVal;
+    return String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: "base" });
+  }
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const sorted = useMemo(() => {
+    const copy = [...rows];
+    copy.sort((a, b) => {
+      const av = (a as any)[sortKey];
+      const bv = (b as any)[sortKey];
+      const cmp = baseCompare(av, bv);
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return copy;
+  }, [rows, sortKey, sortDir]);
 
-  const fetchProducts = async () => {
-    try {
-      const response = await fetch('/api/tube-benders');
-      if (response.ok) {
-        const data = await response.json();
-        const products = toArray<Product>(data);
-        setProducts(products);
-      }
-    } catch {
-      // Handle error
-    } finally {
-      setLoading(false);
+  function onSort(k: SortKey) {
+    if (k === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(k);
+      setSortDir("asc");
     }
+  }
+
+  const HeadCell = ({ k, children }: { k: SortKey; children: React.ReactNode }) => {
+    const active = sortKey === k;
+    return (
+      <th className="px-4 py-3">
+        <button
+          type="button"
+          onClick={() => onSort(k)}
+          className="flex items-center gap-1 font-medium hover:underline"
+          aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+          title={active ? `Sorted ${sortDir}. Click to toggle` : "Click to sort ascending"}
+        >
+          <span>{children}</span>
+          <span className="inline-block tabular-nums text-xs text-gray-500">
+            {active ? (sortDir === "asc" ? "▲" : "▼") : ""}
+          </span>
+        </button>
+      </th>
+    );
   };
 
-  const compareParam = searchParams.get('compare');
-  const selectedProductIds = compareParam ? compareParam.split(',') : [];
-  const list = Array.isArray(products) ? products : [];
-  const selectedProducts = list.filter(p => selectedProductIds.includes(p.id));
-
-  if (loading) {
-    return <div className="text-center py-8">Loading products...</div>;
-  }
-
-  if (selectedProducts.length === 0) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No Products Selected</h3>
-        <p className="text-gray-600">Select products from the filters above to compare them side-by-side.</p>
-      </div>
-    );
-  }
-
-  const comparisonFields = [
-    { key: 'brand', label: 'Brand' },
-    { key: 'model', label: 'Model' },
-    { key: 'maxCapacity', label: 'Max Capacity' },
-    { key: 'clrRange', label: 'CLR Range' },
-    { key: 'dieCost', label: 'Die Cost' },
-    { key: 'cycleTime', label: 'Cycle Time' },
-    { key: 'weight', label: 'Weight' },
-    { key: 'price', label: 'Price' },
-    { key: 'mandrel', label: 'Mandrel' },
-    { key: 'totalScore', label: 'Total Score' },
-  ];
-
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Specification
-              </th>
-              {selectedProducts.map((product) => (
-                <th key={product.id} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {product.brand} {product.model}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {comparisonFields.map((field) => (
-              <tr key={field.key} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {field.label}
-                </td>
-                {selectedProducts.map((product) => (
-                  <td key={`${product.id}-${field.key}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {field.key === 'totalScore' ? (
-                      <ScoreBadge score={product[field.key as keyof Product] as number} />
-                    ) : (
-                      product[field.key as keyof Product]
-                    )}
-                  </td>
-                ))}
+    <div className="overflow-hidden rounded-xl border">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-gray-50 dark:bg-gray-900/40">
+          <tr>
+            <HeadCell k="brand">Brand</HeadCell>
+            <HeadCell k="model">Model</HeadCell>
+            <HeadCell k="capacity">Capacity</HeadCell>
+            <HeadCell k="price">Price</HeadCell>
+            <HeadCell k="score">Score</HeadCell>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((r) => {
+            const price = typeof r.price === "number" ? `$${r.price.toLocaleString()}` : "—";
+            return (
+              <tr key={r.brand + r.model} className="border-t">
+                <td className="px-4 py-3">{r.brand}</td>
+                <td className="px-4 py-3">{r.model}</td>
+                <td className="px-4 py-3">{r.capacity}</td>
+                <td className="px-4 py-3">{price}</td>
+                <td className="px-4 py-3">{r.score ?? "—"}</td>
               </tr>
-            ))}
-            <tr>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                Description
-              </td>
-              {selectedProducts.map((product) => (
-                <td key={`${product.id}-description`} className="px-6 py-4 text-sm text-gray-900">
-                  <p className="line-clamp-3">{product.description}</p>
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-        <div className="flex justify-between items-center">
-          <div className="text-sm text-gray-600">
-            Comparing {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''}
-          </div>
-          <div className="flex space-x-3">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-              View Detailed Reviews
-            </button>
-            <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium">
-              Export Comparison
-            </button>
-          </div>
-        </div>
-      </div>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
