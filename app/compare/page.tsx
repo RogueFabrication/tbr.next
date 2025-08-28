@@ -1,71 +1,58 @@
-// app/compare/page.tsx
-import { BENDERS, toSlug } from "../../data/benders";
+// Server component: prefilters rows based on query params, then renders the client wrapper.
+// Supports:
+//   ?ids=3,1                     -> match by numeric id(s)
+//   ?m=roguefab-m625,brand-a-ab200  (alias: ?models=...) -> match by slugs
+//   no params                    -> show all rows (current behavior)
+//
+// No dependency changes. UI unchanged.
+
 import CompareClient from "../../components/compare/CompareClient";
+import { BENDERS, toSlug } from "../../data/benders";
+import type { Bender } from "../../data/benders";
 
-export const metadata = { title: "Compare | TubeBenderReviews" };
-
-type SP = Record<string, string | string[] | undefined>;
-
-/** Collect raw selection tokens from search params (strings only). */
-function collectTokens(sp: SP): string[] {
-  const raw: string[] = [];
-  const push = (v: string | string[] | undefined) => {
-    if (!v) return;
-    if (Array.isArray(v)) raw.push(...v);
-    else raw.push(v);
-  };
-  // Slug-based params
-  push(sp.m);         // /compare?m=roguefab-m625&m=brand-b-bx150
-  push(sp.models);    // /compare?models=roguefab-m625,brand-a-ab200
-  push(sp.model);     // accept a single 'model' if emitted elsewhere
-  // Numeric-based params (what the guide currently emits)
-  push(sp.ids);       // /compare?ids=3,1  (either 1-based or 0-based)
-
-  return raw
-    .flatMap((s) => s.split(","))
-    .map((s) => s.trim().toLowerCase())
+/** Split a Next.js search param into a normalized list. Accepts comma-delimited values. */
+function paramToList(v?: string | string[]): string[] {
+  if (!v) return [];
+  const arr = Array.isArray(v) ? v : [v];
+  return arr
+    .flatMap((s) => String(s).split(","))
+    .map((s) => s.trim())
     .filter(Boolean);
 }
 
-/** Convert tokens into slugs by:
- *  - If token is a number: map to current BENDERS by index (supports 1-based and 0-based)
- *  - Else: treat the token as a slug already
- */
-function tokensToSlugs(tokens: string[]): Set<string> {
-  const out = new Set<string>();
-  for (const t of tokens) {
-    // numeric?
-    const n = Number(t);
-    if (Number.isFinite(n) && t !== "") {
-      // Try 1-based first (ID=1 -> index 0)
-      const idx1 = n - 1;
-      if (idx1 >= 0 && idx1 < BENDERS.length) {
-        out.add(toSlug(BENDERS[idx1]));
-        continue;
-      }
-      // Fallback: 0-based (ID=0 -> index 0)
-      const idx0 = n;
-      if (idx0 >= 0 && idx0 < BENDERS.length) {
-        out.add(toSlug(BENDERS[idx0]));
-        continue;
-      }
-    }
-    // assume slug
-    out.add(t);
+/** Prefilter rows based on ids or model slugs. */
+function prefilter(all: Bender[], searchParams?: Record<string, string | string[] | undefined>): Bender[] {
+  if (!searchParams) return all;
+
+  const ids = paramToList(searchParams.ids as any);
+  const models = paramToList((searchParams.m ?? searchParams.models) as any);
+
+  if (ids.length > 0) {
+    const wanted = new Set(ids.map(String));
+    return all.filter((r) => wanted.has(String((r as any).id)));
   }
-  return out;
+
+  if (models.length > 0) {
+    const wanted = new Set(models.map((s) => s.toLowerCase()));
+    return all.filter((r) => wanted.has(toSlug(r)));
+  }
+
+  return all;
 }
 
-/** Compare page backed by the shared dataset with optional selection from the URL. */
-export default function ComparePage({ searchParams }: { searchParams: SP }) {
-  const raw = collectTokens(searchParams);
-  const selectedSlugs = tokensToSlugs(raw);
-  const rows = selectedSlugs.size ? BENDERS.filter((b) => selectedSlugs.has(toSlug(b))) : BENDERS;
+export default function ComparePage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
+  const all = BENDERS as Bender[];
+  const rows = prefilter(all, searchParams);
 
   return (
-    <div>
-      <h1 className="mb-4 text-3xl font-bold">Compare</h1>
+    <>
+      <h1 className="text-3xl font-bold mb-4">Compare</h1>
+      {/* Render exactly one client wrapper to avoid duplicate Filter blocks */}
       <CompareClient rows={rows} />
-    </div>
+    </>
   );
 }
