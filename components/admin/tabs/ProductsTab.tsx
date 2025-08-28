@@ -1,25 +1,27 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { z } from 'zod';
+// NOTE: Removed zod import — this module's schema stub was unused and caused
+// CI to fail on Vercel where 'zod' is not installed. If/when we add runtime
+// validation, reintroduce this and add 'zod' to package.json dependencies.
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const ProductSchema = z.object({
-  id: z.string(),
-  brand: z.string().min(1, 'Brand is required'),
-  model: z.string().min(1, 'Model is required'),
-  maxCapacity: z.string().min(1, 'Max capacity is required'),
-  clrRange: z.string().min(1, 'CLR range is required'),
-  dieCost: z.string().min(1, 'Die cost is required'),
-  cycleTime: z.string().min(1, 'Cycle time is required'),
-  weight: z.string().min(1, 'Weight is required'),
-  price: z.string().min(1, 'Price is required'),
-  mandrel: z.enum(['Available', 'Standard', 'No']),
-  totalScore: z.number().min(0).max(10),
-  description: z.string().optional()
-});
+// NOTE: Previous `ProductSchema` (zod) stub was unused. Removing it keeps types
+// lean and unblocks CI without changing runtime behavior.
 
-type Product = z.infer<typeof ProductSchema>;
+type Product = {
+  id: string;
+  brand: string;
+  model: string;
+  maxCapacity: string;
+  clrRange: string;
+  dieCost: string;
+  cycleTime: string;
+  weight: string;
+  price: string;
+  mandrel: 'Available' | 'Standard' | 'No';
+  totalScore: number;
+  description?: string;
+};
 
 interface EditableFieldProps {
   value: string | number;
