@@ -23,30 +23,48 @@ type Product = {
   description?: string;
 };
 
+// === EditableField (safe, optional onSave) ===
 interface EditableFieldProps {
-  value: string | number;
-  onSave: (value: string | number) => void;
+  value?: string | number | null;            // allow undefined/null
+  onSave?: (value: string | number) => void; // optional => read-only mode
   type?: 'text' | 'number';
   options?: string[];
 }
 
 function EditableField({ value, onSave, type = 'text', options }: EditableFieldProps) {
+  // Normalize to a safe display string
+  const initial = value == null ? '' : String(value);
+
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value.toString());
+  const [editValue, setEditValue] = useState<string>(initial);
+
+  // Keep local state in sync if the parent value changes
+  useEffect(() => {
+    setEditValue(initial);
+  }, [initial]);
 
   const handleSave = () => {
-    const finalValue = type === 'number' ? parseFloat(editValue) : editValue;
-    onSave(finalValue);
+    let finalValue: string | number = editValue;
+
+    if (type === 'number') {
+      const n = Number(editValue);
+      finalValue = Number.isFinite(n) ? n : editValue; // keep string if NaN
+    }
+
+    onSave?.(finalValue); // optional invocation
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setEditValue(value.toString());
+    setEditValue(initial);
     setIsEditing(false);
   };
 
-  if (isEditing) {
-    if (options) {
+  // If no onSave provided, render read-only (no edit affordance)
+  const interactive = Boolean(onSave);
+
+  if (isEditing && interactive) {
+    if (options && options.length) {
       return (
         <select
           value={editValue}
@@ -56,10 +74,8 @@ function EditableField({ value, onSave, type = 'text', options }: EditableFieldP
           className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
           autoFocus
         >
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
+          {options.map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
           ))}
         </select>
       );
@@ -83,13 +99,19 @@ function EditableField({ value, onSave, type = 'text', options }: EditableFieldP
 
   return (
     <div
-      onClick={() => setIsEditing(true)}
-      className="px-2 py-1 hover:bg-gray-100 rounded cursor-pointer text-sm"
+      onClick={interactive ? () => setIsEditing(true) : undefined}
+      className={
+        "px-2 py-1 rounded text-sm " +
+        (interactive ? "hover:bg-gray-100 cursor-pointer" : "text-gray-700")
+      }
+      title={interactive ? "Click to edit" : undefined}
+      aria-disabled={!interactive}
     >
-      {value}
+      {initial === '' ? <span className="text-gray-400">—</span> : initial}
     </div>
   );
 }
+// === /EditableField ===
 
 export function ProductsTab() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -173,12 +195,12 @@ export function ProductsTab() {
                 key={String(product?.id ?? "")}
                 className="hover:bg-gray-50"
               >
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                    <EditableField
-                      value={product?.name != null ? String(product.name) : ""}
-                      /* ...other props... */
-                    />
-                  </td>
+                                                   <td className="px-6 py-4 whitespace-nowrap">
+                   <EditableField
+                     value={product?.brand}
+                     onSave={(value) => updateProduct(product.id, 'brand', value as string)}
+                   />
+                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
                     value={product.model}
@@ -228,11 +250,13 @@ export function ProductsTab() {
                     options={['Available', 'Standard', 'No']}
                   />
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <EditableField
-                    value={product?.price != null ? String(product.price) : ""}
-                  />
-                </td>
+                                 <td className="px-6 py-4 whitespace-nowrap text-right">
+                   <EditableField
+                     value={product?.totalScore}
+                     type="number"
+                     // no onSave => read-only
+                   />
+                 </td>
               </tr>
             )
           )}
