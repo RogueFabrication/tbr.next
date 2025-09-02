@@ -1,122 +1,27 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// NOTE: Removed zod import — this module's schema stub was unused and caused
-// CI to fail on Vercel where 'zod' is not installed. If/when we add runtime
-// validation, reintroduce this and add 'zod' to package.json dependencies.
-
-// NOTE: Previous `ProductSchema` (zod) stub was unused. Removing it keeps types
-// lean and unblocks CI without changing runtime behavior.
+// This tab is tolerant of minimal data: it will render rows when only { id } exists
+// and progressively show more fields as they become available/edited.
 
 type Product = {
   id: string;
-  brand: string;
-  model: string;
-  maxCapacity: string;
-  clrRange: string;
-  dieCost: string;
-  cycleTime: string;
-  weight: string;
-  price: string;
-  mandrel: 'Available' | 'Standard' | 'No';
-  totalScore: number;
-  description?: string;
+  brand?: string;
+  model?: string;
+  maxCapacity?: string;
+  clrRange?: string;
+  dieCost?: string;
+  cycleTime?: string;
+  weight?: string;
+  price?: string;
+  mandrel?: string;
+  totalScore?: string;
 };
 
-// === EditableField (safe, optional onSave) ===
-interface EditableFieldProps {
-  value?: string | number | null;            // allow undefined/null
-  onSave?: (value: string | number) => void; // optional => read-only mode
-  type?: 'text' | 'number';
-  options?: string[];
-}
-
-function EditableField({ value, onSave, type = 'text', options }: EditableFieldProps) {
-  // Normalize to a safe display string
-  const initial = value == null ? '' : String(value);
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState<string>(initial);
-
-  // Keep local state in sync if the parent value changes
-  useEffect(() => {
-    setEditValue(initial);
-  }, [initial]);
-
-  const handleSave = () => {
-    let finalValue: string | number = editValue;
-
-    if (type === 'number') {
-      const n = Number(editValue);
-      finalValue = Number.isFinite(n) ? n : editValue; // keep string if NaN
-    }
-
-    onSave?.(finalValue); // optional invocation
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setEditValue(initial);
-    setIsEditing(false);
-  };
-
-  // If no onSave provided, render read-only (no edit affordance)
-  const interactive = Boolean(onSave);
-
-  if (isEditing && interactive) {
-    if (options && options.length) {
-      return (
-        <select
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onBlur={handleSave}
-          onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-          autoFocus
-        >
-          {options.map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
-          ))}
-        </select>
-      );
-    }
-
-    return (
-      <input
-        type={type}
-        value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
-        onBlur={handleSave}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') handleSave();
-          if (e.key === 'Escape') handleCancel();
-        }}
-        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-        autoFocus
-      />
-    );
-  }
-
-  return (
-    <div
-      onClick={interactive ? () => setIsEditing(true) : undefined}
-      className={
-        "px-2 py-1 rounded text-sm " +
-        (interactive ? "hover:bg-gray-100 cursor-pointer" : "text-gray-700")
-      }
-      title={interactive ? "Click to edit" : undefined}
-      aria-disabled={!interactive}
-    >
-      {initial === '' ? <span className="text-gray-400">—</span> : initial}
-    </div>
-  );
-}
-// === /EditableField ===
-
-export function ProductsTab() {
+export default function ProductsTab() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -124,10 +29,23 @@ export function ProductsTab() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/tube-benders');
+      // Use the admin overlay endpoint so edits are reflected immediately.
+      // The [id] GET returns all rows; any id value works, we use 0.
+      const response = await fetch('/api/admin/products/0');
       if (response.ok) {
-        const data = await response.json();
-        setProducts(Array.isArray(data) ? data : data ? Object.values(data) : []);
+        const json = await response.json();
+        const rows = Array.isArray(json?.data) ? json.data
+          : Array.isArray(json) ? json
+          : Array.isArray(json?.rows) ? json.rows
+          : [];
+        // Normalize rows so the grid always has an id and object shape
+        const normalized = rows.map((r: any) => {
+          if (r == null) return null;
+          if (typeof r === 'string' || typeof r === 'number') return { id: String(r) };
+          const id = r.id ?? r.slug ?? r.key ?? String(r?.name ?? '');
+          return id ? { id: String(id), ...r } : r;
+        }).filter(Boolean);
+        setProducts(normalized as Product[]);
       } else {
         setError('Failed to fetch products');
       }
@@ -138,23 +56,24 @@ export function ProductsTab() {
     }
   };
 
-  const updateProduct = async (id: string, field: keyof Product, value: string | number) => {
+  const updateProduct = async (id: string, field: keyof Product, value: string) => {
     try {
       const response = await fetch(`/api/admin/products/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ [field]: value }),
       });
 
       if (response.ok) {
-        setProducts(prev => prev.map(p => 
-          p.id === id ? { ...p, [field]: value } : p
-        ));
+        // Refresh the products list to show the updated data
+        fetchProducts();
       } else {
-        setError('Failed to update product');
+        console.error('Failed to update product');
       }
-    } catch {
-      setError('Failed to update product');
+    } catch (error) {
+      console.error('Error updating product:', error);
     }
   };
 
@@ -163,7 +82,7 @@ export function ProductsTab() {
   }
 
   if (error) {
-    return <div className="text-red-600 text-center py-8">{error}</div>;
+    return <div className="text-center py-8 text-red-600">Error: {error}</div>;
   }
 
   return (
@@ -177,6 +96,7 @@ export function ProductsTab() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Capacity</th>
@@ -186,7 +106,7 @@ export function ProductsTab() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mandrel</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Score</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -195,74 +115,139 @@ export function ProductsTab() {
                 key={String(product?.id ?? "")}
                 className="hover:bg-gray-50"
               >
-                                                   <td className="px-6 py-4 whitespace-nowrap">
-                   <EditableField
-                     value={product?.brand}
-                     onSave={(value) => updateProduct(product.id, 'brand', value as string)}
-                   />
-                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-600">
+                  {String(product?.id ?? '')}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
-                    value={product.model}
+                    value={product?.brand ?? ''}
+                    onSave={(value) => updateProduct(product.id, 'brand', value as string)}
+                  />
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <EditableField
+                    value={product?.model ?? ''}
                     onSave={(value) => updateProduct(product.id, 'model', value as string)}
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
-                    value={product.maxCapacity}
+                    value={product?.maxCapacity ?? ''}
                     onSave={(value) => updateProduct(product.id, 'maxCapacity', value as string)}
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
-                    value={product.clrRange}
+                    value={product?.clrRange ?? ''}
                     onSave={(value) => updateProduct(product.id, 'clrRange', value as string)}
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
-                    value={product.dieCost}
+                    value={product?.dieCost ?? ''}
                     onSave={(value) => updateProduct(product.id, 'dieCost', value as string)}
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
-                    value={product.cycleTime}
+                    value={product?.cycleTime ?? ''}
                     onSave={(value) => updateProduct(product.id, 'cycleTime', value as string)}
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
-                    value={product.weight}
+                    value={product?.weight ?? ''}
                     onSave={(value) => updateProduct(product.id, 'weight', value as string)}
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
-                    value={product.price}
+                    value={product?.price ?? ''}
                     onSave={(value) => updateProduct(product.id, 'price', value as string)}
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
-                    value={product.mandrel}
+                    value={product?.mandrel ?? ''}
                     onSave={(value) => updateProduct(product.id, 'mandrel', value as string)}
                     options={['Available', 'Standard', 'No']}
                   />
                 </td>
-                                 <td className="px-6 py-4 whitespace-nowrap text-right">
-                   <EditableField
-                     value={product?.totalScore}
-                     type="number"
-                     // no onSave => read-only
-                   />
-                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <EditableField
+                    value={product?.totalScore != null ? String(product.totalScore) : ""}
+                    onSave={(value) => updateProduct(product.id, 'totalScore', value as string)}
+                  />
+                </td>
               </tr>
-            )
-          )}
+            ))}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// EditableField component for inline editing
+function EditableField({ 
+  value, 
+  onSave, 
+  options 
+}: { 
+  value: string; 
+  onSave: (value: string) => void; 
+  options?: string[]; 
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+
+  const handleSave = () => {
+    onSave(editValue);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditValue(value);
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    if (options) {
+      return (
+        <select
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+          autoFocus
+          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+        >
+          {options.map(option => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      );
+    }
+
+    return (
+      <input
+        type="text"
+        value={editValue}
+        onChange={(e) => setEditValue(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+        autoFocus
+        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+      />
+    );
+  }
+
+  return (
+    <div
+      onClick={() => setIsEditing(true)}
+      className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded text-sm"
+    >
+      {value || '-'}
     </div>
   );
 }

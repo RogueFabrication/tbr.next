@@ -1,6 +1,6 @@
 'use client';
 
-import { ProductsTab } from '../../../components/admin/tabs/ProductsTab';
+import ProductsTab from '../../../components/admin/tabs/ProductsTab';
 
 export default function AdminClient() {
   return (
