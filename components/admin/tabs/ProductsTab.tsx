@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// This tab is tolerant of minimal data: it will render rows when only { id } exists
-// and progressively show more fields as they become available/edited.
+// Admin grid reads from /api/admin/products; writes hit /api/admin/products/[id]
 
 type Product = {
   id: string;
@@ -29,26 +28,25 @@ export default function ProductsTab() {
 
   const fetchProducts = async () => {
     try {
-      // Use the admin overlay endpoint so edits are reflected immediately.
-      // The [id] GET returns all rows; any id value works, we use 0.
-      const response = await fetch('/api/admin/products/0');
-      if (response.ok) {
-        const json = await response.json();
-        const rows = Array.isArray(json?.data) ? json.data
-          : Array.isArray(json) ? json
-          : Array.isArray(json?.rows) ? json.rows
-          : [];
-        // Normalize rows so the grid always has an id and object shape
-        const normalized = rows.map((r: any) => {
-          if (r == null) return null;
-          if (typeof r === 'string' || typeof r === 'number') return { id: String(r) };
-          const id = r.id ?? r.slug ?? r.key ?? String(r?.name ?? '');
-          return id ? { id: String(id), ...r } : r;
-        }).filter(Boolean);
-        setProducts(normalized as Product[]);
-      } else {
+      const res = await fetch('/api/admin/products', { cache: 'no-store' });
+      if (!res.ok) {
         setError('Failed to fetch products');
+        return;
       }
+      const json: any = await res.json();
+      // Accept either { ok, data } or a raw array (defensive)
+      let rows: any[] = [];
+      if (Array.isArray(json)) {
+        rows = json;
+      } else if (Array.isArray(json?.data)) {
+        rows = json.data;
+      } else if (json?.ok && Array.isArray(json?.data)) {
+        rows = json.data;
+      } else {
+        rows = [];
+      }
+      setProducts(rows as Product[]);
+      setError('');
     } catch {
       setError('Failed to fetch products');
     } finally {

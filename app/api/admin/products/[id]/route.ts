@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { update, getAll } from "../../../../../lib/adminStore";
+import { update } from "../../../../../lib/adminStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,8 +22,8 @@ function forbid() {
 }
 
 export async function GET() {
-  const data = getAll();
-  return NextResponse.json({ ok: true, data });
+  // This endpoint is for individual product updates, not listing
+  return NextResponse.json({ ok: false, error: "Use /api/admin/products for listing" }, { status: 404 });
 }
 
 export async function PATCH(
@@ -45,17 +45,10 @@ export async function PATCH(
   try {
     const body = (await req.json()) as Record<string, unknown>;
     const patch = { ...body, id } as Record<string, unknown>;
-    const numericId = Number(id);
-    if (!Number.isFinite(numericId)) {
-      return NextResponse.json(
-        { ok: false, error: "Invalid id: must be a number" },
-        { status: 400 }
-      );
-    }
-    const res = update(numericId, patch);
-    return NextResponse.json({ ok: true, updated: 1, id, overlay: res });
+    const res = update(id, patch);
+    return NextResponse.json({ ok: true, id, overlay: res });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Invalid JSON payload";
+    const msg = e instanceof Error ? e.message : "Invalid payload";
     return NextResponse.json({ ok: false, error: msg }, { status: 400 });
   }
 }
