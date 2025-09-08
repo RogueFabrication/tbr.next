@@ -1,5 +1,16 @@
 import "./globals.css";
 import Nav from "../components/Nav";
+import type { Metadata } from "next";
+import { getSiteUrl } from "../lib/site";
+
+// Single source of truth for page metadata (no static `metadata` export).
+export const generateMetadata = async (): Promise<Metadata> => {
+  const origin = getSiteUrl();
+  return {
+    title: "TBR",
+    metadataBase: new URL(origin),
+  };
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
