@@ -1,220 +1,122 @@
+// NOTE:
+// Do NOT add `"use server"` here. This file is a regular Server Component.
+// We intentionally export objects (e.g., metadata) and async functions here.
+
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
-type Row = Record<string, unknown> | string;
+type PageProps = { params: { slug: string } };
 
-/** Try to coerce any module export into an array of rows.
- *  - Arrays are returned as-is
- *  - Plain object maps become Object.values, injecting the map key as id/slug if missing
- *  - Functions (no-arg) that return an array/object are invoked
- */
-function rowsFromModule(mod: any): any[] | null {
-  if (!mod) return null;
-
-  const candidates = [
-    mod,
-    mod.default,
-    mod.rows,
-    mod.list,
-    mod.items,
-    mod.BENDERS,
-    mod.benders,
-  ];
-
-  const coerce = (val: any): any[] | null => {
-    if (!val) return null;
-    // If it's already an array, done.
-    if (Array.isArray(val)) return val as any[];
-
-    // If it's a function (no-arg getter), try calling it.
-    if (typeof val === "function") {
-      try {
-        const out = val();
-        if (Array.isArray(out)) return out as any[];
-        if (out && typeof out === "object") return injectKeysToValues(out);
-        return null;
-      } catch {
-        return null;
-      }
-    }
-
-    // If it's a plain object map, take values and inject keys when missing.
-    if (val && typeof val === "object") {
-      return injectKeysToValues(val);
-    }
-    return null;
-  };
-
-  for (const c of candidates) {
-    const arr = coerce(c);
-    if (arr) return arr;
-  }
-  return null;
-}
-
-/** Convert a record map to an array; carry the key as id/slug if not present. */
-function injectKeysToValues(map: Record<string, any>): any[] {
-  return Object.entries(map).map(([key, v]) => {
-    if (v && typeof v === "object") {
-      const haveId = v.id != null || v.slug != null || v.key != null;
-      return haveId ? v : { ...v, id: key, slug: key };
-    }
-    // If the value is primitive, wrap it
-    return { id: key, slug: String(v ?? key) };
-  });
-}
-
-/** Try both sources; return first usable array. */
-async function loadAll(): Promise<Row[]> {
-  const sources = ["../../../lib/catalog", "../../../lib/tube-benders"];
-  for (const spec of sources) {
-    try {
-      const mod = await import(spec);
-      const rows = rowsFromModule(mod);
-      if (rows) return rows as Row[];
-    } catch {
-      // ignore and try next
-    }
-  }
-  // Final fallback: ask our own API for the list of slugs and turn them into objects.
+/** Robust "is this slug known?" check using local helpers first, then API. */
+async function isKnownSlug(slug: string): Promise<boolean> {
+  // 1) lib/catalog — prefer direct validator if available
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/api/tube-benders`, {
-      // Ensure this runs at request time on the server
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const json = await res.json().catch(() => null);
-      const data = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
-      // Turn ["slug", ...] into [{ id, slug }]
-      return data.map((s: any) =>
-        typeof s === "string" ? ({ id: s, slug: s } as Row) : (s as Row)
+    const cat = await import("../../../lib/catalog");
+    if (typeof (cat as any).isValidId === "function") {
+      if ((cat as any).isValidId(slug)) return true;
+    }
+    // Some repos expose VALID_IDS as a Set<string>
+    if ((cat as any).VALID_IDS && typeof (cat as any).VALID_IDS.has === "function") {
+      if ((cat as any).VALID_IDS.has(slug)) return true;
+    }
+    // Or an array of objects/strings
+    const anyList =
+      (cat as any).default ??
+      (cat as any).CATALOG ??
+      (cat as any).catalog ??
+      (cat as any).rows ??
+      (cat as any).list;
+    if (Array.isArray(anyList)) {
+      const has = anyList.some((r: any) =>
+        typeof r === "string" ? r === slug : r?.id === slug || r?.slug === slug
       );
+      if (has) return true;
     }
   } catch {}
-  return [] as Row[];
+
+  // 2) lib/tube-benders — many codebases expose a getter
+  try {
+    const tb = await import("../../../lib/tube-benders");
+    if (typeof (tb as any).getTubeBenders === "function") {
+      const rows = await (tb as any).getTubeBenders();
+      if (Array.isArray(rows) && rows.length) {
+        const has = rows.some((r: any) => r?.id === slug || r?.slug === slug || r?.key === slug);
+        if (has) return true;
+      }
+    }
+    // Or static arrays under common names
+    const anyList =
+      (tb as any).default ??
+      (tb as any).BENDERS ??
+      (tb as any).benders ??
+      (tb as any).TUBE_BENDERS ??
+      (tb as any).list;
+    if (Array.isArray(anyList)) {
+      const has = anyList.some((r: any) =>
+        typeof r === "string" ? r === slug : r?.id === slug || r?.slug === slug || r?.key === slug
+      );
+      if (has) return true;
+    }
+  } catch {}
+
+  // 3) API fallback — use absolute URL so server-side fetch works
+  try {
+    const base =
+      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const res = await fetch(`${base}/api/tube-benders`, { cache: "no-store" });
+    if (res.ok) {
+      const j = await res.json().catch(() => null);
+      const raw =
+        (Array.isArray(j) && j) ||
+        (Array.isArray(j?.data) && j.data) ||
+        (Array.isArray(j?.rows) && j.rows) ||
+        [];
+      if (Array.isArray(raw)) {
+        const has = raw.some((r: any) =>
+          typeof r === "string" ? r === slug : r?.id === slug || r?.slug === slug || r?.key === slug
+        );
+        if (has) return true;
+      }
+    }
+  } catch {}
+
+  return false;
 }
 
-/** Turn a string row into an object with id+slug for uniform handling. */
-function normalizeRow(r: Row): Record<string, unknown> {
-  if (typeof r === "string") return { id: r, slug: r };
-  return r as Record<string, unknown>;
+/** Optional: help Next prebuild known slugs when possible. */
+export async function generateStaticParams() {
+  // Keep this conservative; we can enhance later.
+  return [];
 }
 
-/** Pull a best-effort "slug-ish" identifier from a row. */
-function pickIdish(row: Record<string, unknown>): string | null {
-  const v =
-    (row.slug as any) ??
-    (row.id as any) ??
-    (row.key as any) ??
-    (row.name as any) ??
-    null;
-  if (v == null) return null;
-  return String(v).trim().toLowerCase();
+function slugToTitle(slug: string) {
+  return slug
+    .replace(/-/g, " ")
+    .replace(/\b[a-z]/g, (m) => m.toUpperCase());
 }
 
-/** Normalize for matching (lowercase & collapse spaces/underscores). */
-function normSlug(s: string): string {
-  return s
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/_/g, "-");
-}
-
-export default async function Page({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  const asked = normSlug(params.slug);
-  const raw = await loadAll();
-  const rows = raw.map(normalizeRow);
-
-  const match = rows.find((r) => {
-    const base = pickIdish(r);
-    return base ? normSlug(base) === asked : false;
-  });
-
-  if (!match) {
-    // Short server-side crumb for diagnosis (shows up in server logs)
-    console.log("[reviews/slug] miss", {
-      asked,
-      sampleIds: rows
-        .slice(0, 8)
-        .map((r) => pickIdish(r))
-        .filter(Boolean),
-      length: rows.length,
-    });
+export default async function Page({ params }: PageProps) {
+  const slug = params.slug;
+  const known = await isKnownSlug(slug);
+  if (!known) {
     return notFound();
   }
 
-  const title =
-    (match as any)?.title ??
-    (match as any)?.name ??
-    (match as any)?.brand ??
-    (match as any)?.id ??
-    params.slug;
-
-  // Pull common spec-ish fields if they exist; render only non-empty ones.
-  const m = match as Record<string, any>;
-  const specs: Array<[string, any]> = [
-    ["Brand", m.brand],
-    ["Model", m.model],
-    ["Max Capacity", m.maxCapacity ?? m.capacity ?? m.max_cap],
-    ["CLR Range", m.clrRange ?? m.clr ?? m.clr_range],
-    ["Die Cost", m.dieCost],
-    ["Cycle Time", m.cycleTime ?? m.cycletime],
-    ["Weight", m.weight],
-    ["Price", m.price],
-    ["Mandrel", m.mandrel],
-    ["Total Score", m.totalScore ?? m.score ?? m.total_score],
-  ].filter(([, v]) => v !== undefined && v !== null && String(v).trim() !== "");
-
+  // Render a minimal review shell (keeps us deploy-safe); you can hydrate this later.
   return (
-    <div className="mx-auto max-w-5xl p-6 space-y-6">
-      {/* Breadcrumb / nav helpers */}
-      <div className="text-sm">
-        <a href="/" className="text-blue-600 hover:underline">Home</a>
-        <span className="mx-2 text-gray-400">/</span>
-        <a href="/compare" className="text-blue-600 hover:underline">Compare</a>
-        <span className="mx-2 text-gray-400">/</span>
-        <span className="text-gray-500">Review</span>
-      </div>
-
-      {/* Title */}
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold leading-tight">{String(title)}</h1>
-        <p className="text-sm text-gray-500">
-          Slug: <code className="px-1 py-0.5 rounded bg-gray-100">{params.slug}</code>
-        </p>
-      </header>
-
-      {/* Key Specs */}
-      <section className="rounded-lg border border-gray-200 bg-white">
-        <div className="border-b border-gray-200 px-4 py-3">
-          <h2 className="text-sm font-medium text-gray-700">Key Specifications</h2>
-        </div>
-        {specs.length === 0 ? (
-          <div className="px-4 py-6 text-sm text-gray-500">
-            No structured specs available for this model yet.
-          </div>
-        ) : (
-          <dl className="grid grid-cols-1 gap-x-8 gap-y-3 px-4 py-5 sm:grid-cols-2">
-            {specs.map(([label, value]) => (
-              <div key={label} className="flex items-baseline justify-between gap-4">
-                <dt className="text-sm text-gray-500">{label}</dt>
-                <dd className="text-sm font-medium text-gray-900 text-right">
-                  {String(value)}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        )}
-      </section>
-
-      {/* Placeholder for future content (pros/cons, images, scoring breakdown, etc.) */}
-      <div className="text-xs text-gray-400">
-        (Detailed review content coming next.)
-      </div>
+    <div className="mx-auto max-w-3xl p-6 space-y-2">
+      <h1 className="text-2xl font-semibold">{slugToTitle(slug)}</h1>
+      <p className="text-sm text-muted-foreground">
+        Slug: <code className="px-1 rounded bg-muted">{slug}</code>
+      </p>
+      <p className="text-sm">
+        Looking for details?{" "}
+        <Link className="underline" href="/compare">
+          Compare models
+        </Link>
+        .
+      </p>
     </div>
   );
 }
