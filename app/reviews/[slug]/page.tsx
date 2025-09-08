@@ -4,6 +4,7 @@
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { absoluteUrl } from "../../../lib/site";
 
 type PageProps = { params: { slug: string } };
 
@@ -61,10 +62,7 @@ async function isKnownSlug(slug: string): Promise<boolean> {
 
   // 3) API fallback — use absolute URL so server-side fetch works
   try {
-    const base =
-      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    const res = await fetch(`${base}/api/tube-benders`, { cache: "no-store" });
+    const res = await fetch(absoluteUrl("/api/tube-benders"), { cache: "no-store" });
     if (res.ok) {
       const j = await res.json().catch(() => null);
       const raw =
