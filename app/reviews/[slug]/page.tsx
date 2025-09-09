@@ -5,6 +5,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { absoluteUrl } from "../../../lib/site";
+import { getStaticReviewParams, getKnownReviewSlugs } from "../../../lib/reviews";
 
 type PageProps = { params: { slug: string } };
 
@@ -82,10 +83,12 @@ async function isKnownSlug(slug: string): Promise<boolean> {
   return false;
 }
 
-/** Optional: help Next prebuild known slugs when possible. */
-export async function generateStaticParams() {
-  // Keep this conservative; we can enhance later.
-  return [];
+/**
+ * Pre-render the known review slugs for faster loads & SEO.
+ * (If nothing is discovered, Next will fall back to on-demand rendering.)
+ */
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
+  return getStaticReviewParams();
 }
 
 function slugToTitle(slug: string) {
@@ -96,8 +99,9 @@ function slugToTitle(slug: string) {
 
 export default async function Page({ params }: PageProps) {
   const slug = params.slug;
-  const known = await isKnownSlug(slug);
-  if (!known) {
+
+  // hard 404 early if slug is truly unknown
+  if (!(await isKnownSlug(slug))) {
     return notFound();
   }
 
