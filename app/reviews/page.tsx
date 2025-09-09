@@ -1,135 +1,169 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 
-/**
- * If set to "1", we skip hitting /api/tube-benders and use the local fallback instead.
- * Helpful for testing the fallback path without killing the dev server.
- */
-const forceFallback = process.env.TBR_FORCE_REVIEWS_FALLBACK === "1";
+export const dynamic = "force-dynamic";
+// data-marker: reviews-tiles-v1
+// NOTE: No client components, no next/image needed to stay Vercel-safe.
 
-type Row = {
-  id?: string;
-  slug?: string;
-  brand?: string;
-  model?: string;
-  name?: string;
-};
-
-/** Build an absolute origin for server-side fetches (works in dev and Vercel). */
-function resolveOrigin(): string {
-  const h = headers();
-  const xfProto = h.get("x-forwarded-proto");
-  const xfHost = h.get("x-forwarded-host");
-  const host = h.get("host");
-  const proto = xfProto ?? (host?.startsWith("localhost") ? "http" : "https");
-  const authority = xfHost ?? host ?? "localhost:3000";
-  return `${proto}://${authority}`;
-}
-
-function rowsFromAny(input: unknown): Row[] | null {
-  if (Array.isArray(input)) return input as Row[];
-  if (input && typeof input === "object") {
-    for (const v of Object.values(input as Record<string, unknown>)) {
-      if (Array.isArray(v)) return v as Row[];
-    }
-  }
-  return null;
-}
-
-function slugOf(r: Row): string {
-  return (r.slug ?? r.id ?? "").toString();
-}
+type Row = { id?: string; slug?: string; brand?: string; model?: string; name?: string };
 
 function titleOf(r: Row): string {
-  const friendly = r.name;
-  if (friendly) return friendly;
-  const parts = [r.brand, r.model].filter(Boolean).join(" ");
-  return parts || slugOf(r);
+  const friendly = (r.name ?? "").toString().trim();
+  const combo = [r.brand, r.model].filter(Boolean).join(" ").trim();
+  const id = (r.slug || r.id || "").toString();
+  return friendly || combo || id;
 }
 
-async function tryApi(): Promise<{ rows: Row[]; source: string } | null> {
-  const origin = resolveOrigin();
+/** Normalize unknown shapes into { id, slug, brand, model, name }. */
+function coerceRow(x: any): Row | null {
+  if (!x) return null;
+  if (typeof x === "string") return { id: x, slug: x };
+  const id = x.id ?? x.slug ?? x.key ?? null;
+  const brand = x.brand ?? x.make ?? x.manufacturer ?? undefined;
+  const model = x.model ?? x.series ?? undefined;
+  const name = x.name ?? x.title ?? (brand && model ? `${brand} ${model}` : undefined);
+  if (!id) return null;
+  return { id: String(id), slug: String(id), brand, model, name };
+}
+
+/** Try an API request to /api/tube-benders and normalize whatever shape it returns. */
+async function tryApi(): Promise<Row[]> {
   try {
-    const res = await fetch(`${origin}/api/tube-benders`, { next: { revalidate: 60 } });
-    if (!res.ok) return null;
-    const data = await res.json().catch(() => null);
-    const rows = rowsFromAny(data);
-    if (rows && rows.length > 0) {
-      return { rows, source: "api" };
-    }
-    return null;
+    const res = await fetch("/api/tube-benders", { cache: "no-store" });
+    if (!res.ok) return [];
+    const j = await res.json().catch(() => null) as any;
+    const raw: any[] =
+      (Array.isArray(j) && j) ||
+      (Array.isArray(j?.data) && j.data) ||
+      (Array.isArray(j?.rows) && j.rows) ||
+      [];
+    return raw.map(coerceRow).filter(Boolean) as Row[];
   } catch {
-    return null;
+    return [];
   }
 }
 
-async function tryFallback(): Promise<{ rows: Row[]; source: string } | null> {
-  // Try a couple of local data modules without assuming exact export shape
-  const specs = ["../../lib/catalog", "../../lib/tube-benders", "../../lib/tube_benders"];
-  for (const spec of specs) {
-    try {
-      const mod: any = await import(spec);
-      const rows = rowsFromAny(mod?.default ?? mod);
-      if (rows && rows.length > 0) return { rows, source: `fallback:${spec}` };
-    } catch {
-      // keep trying
+/** Try importing lib/catalog in whatever shape it exists, then normalize. */
+async function tryCatalog(): Promise<Row[]> {
+  try {
+    const mod = await import("../../lib/catalog");
+    const maybeList: any =
+      (mod as any).default ??
+      (mod as any).CATALOG ??
+      (mod as any).catalog ??
+      (mod as any).rows ??
+      (mod as any).list ??
+      null;
+    const list: any[] = Array.isArray(maybeList) ? maybeList : [];
+    return list.map(coerceRow).filter(Boolean) as Row[];
+  } catch {
+    return [];
+  }
+}
+
+/** Try importing lib/tube-benders in whatever shape it exists, then normalize. */
+async function tryTubeBenders(): Promise<Row[]> {
+  try {
+    const tb = await import("../../lib/tube-benders");
+    if (typeof (tb as any).getTubeBenders === "function") {
+      const rows = await (tb as any).getTubeBenders();
+      if (Array.isArray(rows) && rows.length) {
+        return rows.map(coerceRow).filter(Boolean) as Row[];
+      }
     }
+    const anyList: any =
+      (tb as any).default ??
+      (tb as any).BENDERS ??
+      (tb as any).benders ??
+      (tb as any).TUBE_BENDERS ??
+      (tb as any).list ??
+      null;
+    const list: any[] = Array.isArray(anyList) ? anyList : [];
+    return list.map(coerceRow).filter(Boolean) as Row[];
+  } catch {
+    return [];
   }
-  return null;
 }
 
-/**
- * Resolve rows, preferring API unless forced to fallback via env.
- */
-async function loadRows(): Promise<{ rows: Row[]; source: string }> {
-  if (forceFallback) return (await tryFallback()) ?? { rows: [], source: "empty(fallback-forced)" };
-  const viaApi = await tryApi();
-  if (viaApi) return viaApi;
-  const viaFallback = await tryFallback();
-  if (viaFallback) return viaFallback;
-  return { rows: [], source: "empty" };
+/** Final fallback: known-good IDs so UI renders while wiring data sources. */
+const FALLBACK_IDS = [
+  "baileigh-rdb-250",
+  "jd2-model-32",
+  "pro-tools-105hd",
+  "roguefab-m600-series",
+];
+
+async function loadRows(): Promise<Row[]> {
+  // 1) API first
+  const a = await tryApi();
+  if (a.length) return a;
+  // 2) catalog module
+  const b = await tryCatalog();
+  if (b.length) return b;
+  // 3) tube-benders module
+  const c = await tryTubeBenders();
+  if (c.length) return c;
+  // 4) last resort: hardcoded list to confirm UI works
+  return FALLBACK_IDS.map((id) => ({ id, slug: id }));
 }
 
-/** Server component: lists reviewable models and links to their review pages. */
-export default async function Page() {
-  const { rows, source } = await loadRows();
-  const isDev = process.env.NODE_ENV !== "production";
-  const forced = forceFallback;
+export default async function ReviewsIndex() {
+  const rows = await loadRows();
+  // Normalize, unique by id/slug, and create items for tiles.
+  const seen = new Set<string>();
+  const items = rows
+    .map((r) => {
+      const id = (r.slug || r.id || "").toString();
+      return id ? { id, title: titleOf(r) } : null;
+    })
+    .filter(Boolean)
+    .filter((it) => {
+      const key = (it as { id: string }).id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }) as Array<{ id: string; title: string }>;
 
   return (
-    <main className="mx-auto max-w-4xl p-6 space-y-6">
+    <div className="mx-auto max-w-3xl p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Reviews</h1>
-        <p className="text-sm text-gray-500">Pick a model to view its review page.</p>
-        {isDev && (
-          <p className="mt-1 text-xs text-gray-400">
-            source: <code>{source}</code> (count: {rows.length}, forceFallback: {String(forced)})
-          </p>
-        )}
+        <p className="text-sm text-muted-foreground">
+          Pick a model to view its review page.
+        </p>
       </div>
 
-      {rows.length === 0 ? (
-        <div className="rounded-md border border-dashed p-6 text-sm text-gray-600">
-          No reviewable models yet.
+      {items.length === 0 ? (
+        <div className="text-sm text-muted-foreground" data-testid="reviews-tiles-v1-empty">
+          No reviewable models yet (tiles).
         </div>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {rows
-            .map((r) => ({ slug: slugOf(r), title: titleOf(r) }))
-            .filter((x) => x.slug)
-            .map(({ slug, title }) => (
-              <li key={slug}>
-                <Link
-                  href={`/reviews/${encodeURIComponent(slug)}`}
-                  className="block rounded-md border p-4 hover:bg-gray-50"
-                >
-                  <div className="font-medium">{title}</div>
-                  <div className="text-xs text-gray-500">/{slug}</div>
-                </Link>
-              </li>
-            ))}
-        </ul>
+        <div
+          className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+          data-testid="reviews-tiles-v1"
+        >
+          {items.map((it) => (
+            <Link
+              key={it.id}
+              href={`/reviews/${encodeURIComponent(it.id)}`}
+              className="block rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow"
+              aria-label={`Open review for ${it.title}`}
+            >
+              <div className="p-4 flex flex-col gap-3">
+                <div className="h-28 w-full rounded-xl bg-gray-100 flex items-center justify-center">
+                  <span className="text-sm text-gray-500">Review</span>
+                </div>
+                <div className="space-y-1">
+                  <h2 className="text-base font-semibold text-gray-900 line-clamp-2">{it.title}</h2>
+                  <p className="text-xs text-muted-foreground break-words">{it.id}</p>
+                </div>
+                <span className="mt-1 inline-flex items-center text-xs font-medium text-blue-700">
+                  View review →
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
       )}
-    </main>
+    </div>
   );
 }
