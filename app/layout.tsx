@@ -1,15 +1,16 @@
 import "./globals.css";
 import Nav from "../components/Nav";
 import type { Metadata } from "next";
-import { getSiteUrl } from "../lib/site";
 
-// Single source of truth for page metadata (no static `metadata` export).
-export const generateMetadata = async (): Promise<Metadata> => {
-  const origin = getSiteUrl();
-  return {
-    title: "TBR",
-    metadataBase: new URL(origin),
-  };
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+  "https://www.tubebenderreviews.com";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  title: { default: "TubeBenderReviews", template: "%s | TBR" },
+  description:
+    "Expert reviews and transparent scoring to help you choose the perfect tube bender.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

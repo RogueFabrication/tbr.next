@@ -1,172 +1,101 @@
-import { notFound } from "next/navigation";
+import React from "react";
 import Link from "next/link";
-import type { Metadata } from "next";
+import { allTubeBenders } from "../../../lib/catalog";
 
-export const metadata: Metadata = { title: "Review | TBR" };
-
-type PageProps = { params: { slug: string } };
-
-type Row = {
-  id?: string;
+type Product = {
+  id: string;
   slug?: string;
-  key?: string;
+  name?: string;
   brand?: string;
   model?: string;
-  name?: string;
-  title?: string;
+  [k: string]: unknown;
 };
 
-function normalizeTitle(r: Row, slug: string) {
-  const t =
-    r?.title ??
-    r?.name ??
-    [r?.brand, r?.model].filter(Boolean).join(" ").trim();
-  return t && t.length > 0 ? t : slug;
+/** Local slugify helper. */
+function slugOf(input: string): string {
+  const s = String(input ?? "");
+  const decomp = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+  return decomp.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
 }
 
-async function getKnownReviewSlugs(): Promise<string[]> {
-  // catalog
-  try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    const cat = await import("../../../lib/catalog");
-    const anyList =
-      (cat as any).VALID_IDS ||
-      (cat as any).default ||
-      (cat as any).catalog ||
-      (cat as any).rows ||
-      (cat as any).list;
-    if (anyList) {
-      if (anyList instanceof Set) return Array.from(anyList);
-      if (Array.isArray(anyList)) {
-        return anyList
-          .map((r: any) => (typeof r === "string" ? r : r?.id || r?.slug || r?.key))
-          .filter(Boolean);
-      }
+/** Find product by id/slug/name/brand+model. */
+function findProduct(slugParam: string): Product | undefined {
+  const norm = slugOf(slugParam);
+  for (const p of allTubeBenders) {
+    if (p.id === slugParam || p.slug === slugParam || slugOf(p.id) === norm || slugOf(p.slug || "") === norm) {
+      return p;
     }
-  } catch {}
-  // tube-benders
-  try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    const tb = await import("../../../lib/tube-benders");
-    if (typeof (tb as any).getTubeBenders === "function") {
-      const rows = await (tb as any).getTubeBenders();
-      if (Array.isArray(rows))
-        return rows.map((r: any) => r?.id || r?.slug || r?.key).filter(Boolean);
-    }
-    const anyList =
-      (tb as any).default ||
-      (tb as any).BENDERS ||
-      (tb as any).benders ||
-      (tb as any).TUBE_BENDERS ||
-      (tb as any).list;
-    if (Array.isArray(anyList))
-      return anyList.map((r: any) => r?.id || r?.slug || r?.key).filter(Boolean);
-  } catch {}
-  // API
-  try {
-    const url = await import("../../../lib/url").catch(() => null as any);
-    const origin =
-      (url && typeof (url as any).absoluteUrl === "function" && (url as any).absoluteUrl("/").replace(/\/$/, "")) ||
-      "http://localhost:3000";
-    const res = await fetch(`${origin}/api/tube-benders`, { cache: "no-store" });
-    if (res.ok) {
-      const j = await res.json().catch(() => null);
-      const raw =
-        (Array.isArray(j) && j) ||
-        (Array.isArray(j?.data) && j.data) ||
-        (Array.isArray(j?.rows) && j.rows) ||
-        [];
-      return raw.map((r: any) => (typeof r === "string" ? r : r?.id || r?.slug || r?.key)).filter(Boolean);
-    }
-  } catch {}
-  return [];
+    const name = p.name || [p.brand, p.model].filter(Boolean).join(" ");
+    if (name && slugOf(name) === norm) return p;
+  }
+  return undefined;
 }
 
-export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
-  return (await getKnownReviewSlugs()).map((s) => ({ slug: s }));
-}
+const SAFE_SPEC_FIELDS = [
+  "brand",
+  "model",
+  "type",
+  "country",
+  "madeIn",
+  "capacity",
+  "max_od",
+  "maxWall",
+  "weight",
+  "dimensions",
+  "warranty",
+  "price",
+] as const;
 
-export default async function Page({ params }: PageProps) {
-  const slug = params.slug;
-  const row = await (async () => {
-    // catalog
-    try {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      const cat = await import("../../../lib/catalog");
-      const anyList =
-        (cat as any).default ||
-        (cat as any).catalog ||
-        (cat as any).rows ||
-        (cat as any).list ||
-        null;
-      if (Array.isArray(anyList)) {
-        const found = anyList.find((r: any) => r?.id === slug || r?.slug === slug || r?.key === slug);
-        if (found) return found as Row;
-      }
-    } catch {}
-    // tube-benders
-    try {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      const tb = await import("../../../lib/tube-benders");
-      if (typeof (tb as any).getTubeBenders === "function") {
-        const rows = await (tb as any).getTubeBenders();
-        if (Array.isArray(rows)) {
-          const found = rows.find((r: any) => r?.id === slug || r?.slug === slug || r?.key === slug);
-          if (found) return found as Row;
-        }
-      }
-      const anyList =
-        (tb as any).default ||
-        (tb as any).BENDERS ||
-        (tb as any).benders ||
-        (tb as any).TUBE_BENDERS ||
-        (tb as any).list;
-      if (Array.isArray(anyList)) {
-        const found = anyList.find((r: any) => r?.id === slug || r?.slug === slug || r?.key === slug);
-        if (found) return found as Row;
-      }
-    } catch {}
-    // API
-    try {
-      const url = await import("../../../lib/url").catch(() => null as any);
-      const origin =
-        (url && typeof (url as any).absoluteUrl === "function" && (url as any).absoluteUrl("/").replace(/\/$/, "")) ||
-        "http://localhost:3000";
-      const res = await fetch(`${origin}/api/tube-benders`, { cache: "no-store" });
-      if (res.ok) {
-        const j = await res.json().catch(() => null);
-        const raw =
-          (Array.isArray(j) && j) ||
-          (Array.isArray(j?.data) && j.data) ||
-          (Array.isArray(j?.rows) && j.rows) ||
-          [];
-        const found = raw.find((r: any) => r?.id === slug || r?.slug === slug || r?.key === slug);
-        if (found) return found as Row;
-      }
-    } catch {}
-    return null;
-  })();
-  if (!row) return notFound();
-  const title = normalizeTitle(row, slug);
+type PageProps = {
+  params: { slug: string };
+};
+
+export default function ReviewPage({ params }: PageProps) {
+  const product = findProduct(params.slug);
+  if (!product) {
+    return (
+      <main className="container mx-auto px-4 py-6">
+        <h1 className="text-2xl font-semibold mb-2">Not found</h1>
+        <p className="text-sm text-muted-foreground">
+          We couldn't find that review.{" "}
+          <Link className="underline" href="/reviews">Back to reviews</Link>
+        </p>
+      </main>
+    );
+  }
+  const title = product.name || [product.brand, product.model].filter(Boolean).join(" ") || product.id;
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10">
-      <h1 className="text-2xl font-semibold">{title}</h1>
-      <p className="text-xs text-muted-foreground">
-        Slug: <code>{slug}</code>
+    <main className="container mx-auto px-4 py-6">
+      <h1 className="text-2xl font-semibold mb-2">{title}</h1>
+      <p className="text-sm text-muted-foreground mb-6">
+        This is a minimal review shell. We'll expand this soon.
       </p>
-      <div className="mt-6 space-y-2">
-        <p className="text-sm text-muted-foreground">
-          Full specs, charts, and scoring are coming soon for this model.
-        </p>
-        <Link href="/compare" className="text-sm text-blue-600 hover:underline">
-          Looking for details? Compare models →
+      {/* Safe "Specs" block: only show present, primitive fields from SAFE_SPEC_FIELDS */}
+      <section className="mb-6">
+        <h2 className="text-lg font-medium mb-2">Specs</h2>
+        <ul className="list-disc pl-5 text-sm">
+          {SAFE_SPEC_FIELDS.map((k) => {
+            const v = product[k as keyof typeof product];
+            const isPrimitive =
+              typeof v === "string" || typeof v === "number" || typeof v === "boolean";
+            if (v == null || !isPrimitive) return null;
+            return (
+              <li key={k}>
+                <span className="font-medium">{k}:</span> {String(v)}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+      <div>
+        <Link
+          className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:shadow"
+          href={`/compare?ids=${encodeURIComponent(product.id)}`}
+        >
+          Compare models
         </Link>
       </div>
-    </div>
+    </main>
   );
 }

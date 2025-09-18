@@ -1,62 +1,92 @@
-// Server component: prefilter dataset from query, then render client table
-import CompareClient from "../../components/compare/CompareClient";
-import { BENDERS, toSlug } from "../../data/benders";
-import type { Bender } from "../../data/benders";
+import React from "react";
+import Link from "next/link";
+import { allTubeBenders } from "../../lib/catalog";
 
-/** Parse a comma-separated list from a query value. */
-function splitCSV(v?: string | string[]): string[] {
-  if (!v) return [];
-  const s = Array.isArray(v) ? v.join(",") : v;
-  return s
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
+type Product = {
+  id: string;
+  slug?: string;
+  name?: string;
+  brand?: string;
+  model?: string;
+};
+
+/** Lightweight slugify (no deps). */
+function slugOf(input: string): string {
+  const s = String(input ?? "");
+  const decomp = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+  return decomp.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
 }
 
-/** Build filtered rows by ids and/or slugs. Falls back to all rows. */
-function filterRows(params?: Record<string, string | string[] | undefined>): Bender[] {
-  const p = params ?? {};
-  const idTokens = splitCSV(p["ids"]);
-  const slugTokens = splitCSV(p["m"] ?? p["models"]).map((s) => s.toLowerCase());
+/** Normalize a free-form token (id/slug/brand+model/name) to slug. */
+const normalizeToken = (t: string) => slugOf(t.trim());
 
-  // Accept ids passed as numbers (dataset ids), strings (dataset ids stored as strings),
-  // and 1-based row positions (e.g., ids=3,1 means show 3rd and 1st entries).
-  const idNumSet = new Set<number>(
-    idTokens
-      .map((t) => Number(t))
-      .filter((n) => Number.isInteger(n))
-  );
-  const idStrSet = new Set<string>(idTokens);
-
-  const slugSet = new Set<string>(slugTokens);
-
-  // If no filters provided, return all
-  const hasFilter = idNumSet.size > 0 || idStrSet.size > 0 || slugSet.size > 0;
-  if (!hasFilter) return BENDERS;
-
-  return BENDERS.filter((b, i) => {
-    const slugMatch = slugSet.has(toSlug(b));
-    // dataset id can be number or string; also accept 1-based row index
-    const idx1 = i + 1;
-    const idMatch =
-      idNumSet.has(Number((b as any).id)) ||
-      idStrSet.has(String((b as any).id)) ||
-      idNumSet.has(idx1) ||
-      idStrSet.has(String(idx1));
-    return slugMatch || idMatch;
-  });
+/** Parse `ids` robustly: supports `%2C`, `;`, `|`, spaces, or an array param. */
+function parseIds(ids: string | string[] | undefined): string[] {
+  let input = Array.isArray(ids) ? ids.join(",") : (ids ?? "");
+  try { input = decodeURIComponent(input); } catch {}
+  input = input.replace(/%2C/gi, ",").replace(/[|;]+/g, ",");
+  return input.split(",").map(s => s.trim()).filter(Boolean);
 }
 
-export default function ComparePage({
-  searchParams,
-}: {
-  searchParams?: Record<string, string | string[] | undefined>;
-}) {
-  const rows = filterRows(searchParams);
+function titleOf(p: Product): string {
+  return (p.name && p.name.trim()) || [p.brand, p.model].filter(Boolean).join(" ").trim() || p.id;
+}
+
+function buildLookup(products: Product[]): Map<string, Product> {
+  const map = new Map<string, Product>();
+  for (const p of products) {
+    const cands = new Set<string>();
+    if (p.id) cands.add(p.id);
+    if (p.slug) cands.add(p.slug);
+    if (p.name) cands.add(p.name);
+    const bm = [p.brand, p.model].filter(Boolean).join(" ");
+    if (bm) cands.add(bm);
+    for (const c of Array.from(cands)) map.set(slugOf(c), p);
+  }
+  return map;
+}
+
+function dedupePreserveOrder(items: Product[]): Product[] {
+  const seen = new Set<string>();
+  const out: Product[] = [];
+  for (const p of items) {
+    const key = p.id || p.slug;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(p);
+  }
+  return out;
+}
+
+type ComparePageProps = { searchParams?: { ids?: string | string[] } };
+export default function ComparePage({ searchParams }: ComparePageProps) {
+  const tokens = parseIds(searchParams?.ids);
+  const lookup = buildLookup(allTubeBenders as Product[]);
+  const normalized = tokens.map(normalizeToken);
+  const matched = normalized.map((t) => lookup.get(t)).filter(Boolean) as Product[];
+  const rows = dedupePreserveOrder(matched);
+
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10">
-      <h1 className="text-3xl font-bold mb-6">Compare</h1>
-      <CompareClient rows={rows} />
-    </div>
+    <main className="container mx-auto px-4 py-6">
+      <h1 className="text-2xl font-semibold mb-4">Compare</h1>
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No matches.</p>
+      ) : (
+        <div className="text-sm mb-4">
+          {/* Minimal, non-invasive rendering so matches are visible */}
+          <ul className="list-disc pl-5">
+            {rows.map((p) => (
+              <li key={p.id}>
+                <span className="font-medium">{titleOf(p)}</span>
+                <span className="text-muted-foreground"> — {p.id}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="mt-4 text-sm text-muted-foreground">
+        <Link className="underline" href="/reviews">Browse reviews</Link>
+      </div>
+    </main>
   );
 }
