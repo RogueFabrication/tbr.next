@@ -55,3 +55,9 @@ export const allTubeBenders: Product[] = [
     model: "RDB-250",
   },
 ];
+
+/**
+ * Canonical IDs list for lightweight imports (e.g., landing page).
+ * Kept in sync with `allTubeBenders`.
+ */
+export const VALID_IDS: string[] = allTubeBenders.map((p) => p.id);
