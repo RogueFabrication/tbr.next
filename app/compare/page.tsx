@@ -31,6 +31,15 @@ function parseIds(ids: string | string[] | undefined): string[] {
 /** True if token is an integer (e.g., "2"). */
 const isIntToken = (t: string) => /^[0-9]+$/.test(t);
 
+/** Decide if numeric tokens should be treated as 1-based or 0-based (request-wide). */
+function chooseIndexScheme(tokens: string[], listLen: number): "one" | "zero" {
+  const ints = tokens.filter(isIntToken);
+  if (ints.length === 0) return "zero";
+  const allOneRange = ints.every(t => { const n = parseInt(t, 10); return n >= 1 && n <= listLen; });
+  const hasZero = ints.some(t => t === "0");
+  return (allOneRange && !hasZero) ? "one" : "zero";
+}
+
 function titleOf(p: Product): string {
   return (p.name && p.name.trim()) || [p.brand, p.model].filter(Boolean).join(" ").trim() || p.id;
 }
@@ -66,22 +75,17 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
   const tokens = parseIds(searchParams?.ids);
   const lookup = buildLookup(allTubeBenders as Product[]);
   const normalized = tokens.map(normalizeToken);
-  // Resolve tokens:
-  // 1) Try direct key/slug/name/brand+model via lookup.
-  // 2) If token looks like an integer, try both 0-based and 1-based indexes into the canonical list.
+  // Resolve tokens with a single index scheme to avoid doubling (bug: 2 tokens → 3+ rows).
+  const list = allTubeBenders as Product[];
+  const scheme = chooseIndexScheme(normalized, list.length);
   const matched = normalized.flatMap((t) => {
     const byKey = lookup.get(t);
     if (byKey) return [byKey];
-    if (isIntToken(t)) {
-      const n = parseInt(t, 10);
-      const out: Product[] = [];
-      const byZero = (allTubeBenders as Product[])[n];
-      const byOne  = (allTubeBenders as Product[])[n - 1];
-      if (byZero) out.push(byZero);
-      if (byOne) out.push(byOne);
-      return out;
-    }
-    return [];
+    if (!isIntToken(t)) return [];
+    const n = parseInt(t, 10);
+    const idx = scheme === "one" ? (n - 1) : n;
+    const p = (idx >= 0 && idx < list.length) ? list[idx] : undefined;
+    return p ? [p] : [];
   }) as Product[];
   const rows = dedupePreserveOrder(matched);
 
