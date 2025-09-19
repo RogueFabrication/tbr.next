@@ -28,6 +28,9 @@ function parseIds(ids: string | string[] | undefined): string[] {
   return input.split(",").map(s => s.trim()).filter(Boolean);
 }
 
+/** True if token is an integer (e.g., "2"). */
+const isIntToken = (t: string) => /^[0-9]+$/.test(t);
+
 function titleOf(p: Product): string {
   return (p.name && p.name.trim()) || [p.brand, p.model].filter(Boolean).join(" ").trim() || p.id;
 }
@@ -63,7 +66,23 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
   const tokens = parseIds(searchParams?.ids);
   const lookup = buildLookup(allTubeBenders as Product[]);
   const normalized = tokens.map(normalizeToken);
-  const matched = normalized.map((t) => lookup.get(t)).filter(Boolean) as Product[];
+  // Resolve tokens:
+  // 1) Try direct key/slug/name/brand+model via lookup.
+  // 2) If token looks like an integer, try both 0-based and 1-based indexes into the canonical list.
+  const matched = normalized.flatMap((t) => {
+    const byKey = lookup.get(t);
+    if (byKey) return [byKey];
+    if (isIntToken(t)) {
+      const n = parseInt(t, 10);
+      const out: Product[] = [];
+      const byZero = (allTubeBenders as Product[])[n];
+      const byOne  = (allTubeBenders as Product[])[n - 1];
+      if (byZero) out.push(byZero);
+      if (byOne) out.push(byOne);
+      return out;
+    }
+    return [];
+  }) as Product[];
   const rows = dedupePreserveOrder(matched);
 
   return (
