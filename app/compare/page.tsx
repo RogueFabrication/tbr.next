@@ -95,16 +95,27 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">No matches.</p>
       ) : (
-        <div className="text-sm mb-4">
-          {/* Minimal, non-invasive rendering so matches are visible */}
-          <ul className="list-disc pl-5">
-            {rows.map((p) => (
-              <li key={p.id}>
-                <span className="font-medium">{titleOf(p)}</span>
-                <span className="text-muted-foreground"> — {p.id}</span>
-              </li>
-            ))}
-          </ul>
+        <div className="mb-4 overflow-x-auto">
+          <table className="min-w-[640px] w-full text-sm border">
+            <thead>
+              <tr className="bg-muted/30">
+                <th className="text-left p-2 border-b">Name</th>
+                <th className="text-left p-2 border-b">Brand</th>
+                <th className="text-left p-2 border-b">Model</th>
+                <th className="text-left p-2 border-b">ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((p) => (
+                <tr key={p.id} className="odd:bg-background even:bg-muted/10">
+                  <td className="p-2 border-b font-medium">{titleOf(p)}</td>
+                  <td className="p-2 border-b">{p.brand ?? ""}</td>
+                  <td className="p-2 border-b">{p.model ?? ""}</td>
+                  <td className="p-2 border-b text-xs text-muted-foreground">{p.id}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
       <div className="mt-4 text-sm text-muted-foreground">

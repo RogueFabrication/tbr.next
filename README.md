@@ -34,3 +34,50 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+
+
+How to control the banner via ENV
+Local (PowerShell)
+
+Show banner for this run only
+
+$env:NEXT_PUBLIC_SHOW_TEMP_BANNER="1"; npm run dev
+
+
+Hide banner for this run
+
+$env:NEXT_PUBLIC_SHOW_TEMP_BANNER="0"; npm run dev
+
+
+Remove the var from the current shell (optional cleanup)
+
+Remove-Item Env:NEXT_PUBLIC_SHOW_TEMP_BANNER -ErrorAction SilentlyContinue
+
+
+Make it persistent across terminal sessions (requires new terminal)
+
+# Turn ON persistently
+setx NEXT_PUBLIC_SHOW_TEMP_BANNER "1"
+# Turn OFF persistently
+setx NEXT_PUBLIC_SHOW_TEMP_BANNER "0"
+
+
+Note: setx doesn’t affect the current shell; open a new terminal or restart the dev server.
+
+Vercel (Preview/Production)
+
+Project → Settings → Environment Variables
+
+Add:
+
+Name: NEXT_PUBLIC_SHOW_TEMP_BANNER
+
+Value: 1 (show) or 0 (hide)
+
+Environment: check Preview and/or Production
+
+Save, then trigger a redeploy (push a commit or click Redeploy on the latest deployment).
+
+That’s it. If you want, I can also drop a short note into your repo’s README with these exact steps next time.
