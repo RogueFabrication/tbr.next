@@ -1,7 +1,8 @@
 import React from "react";
 import Link from "next/link";
 import { allTubeBenders } from "../../lib/catalog";
-import { slugOf, parseIds, isIntToken, chooseIndexScheme, titleOf } from "../../lib/ids";
+import { redirect } from "next/navigation";
+import { slugOf, parseIds, isIntToken, chooseIndexScheme, titleOf, slugForProduct } from "../../lib/ids";
 // NOTE: Small, safe change: accept numeric tokens from Buyer's Guide (?ids=2,1)
 
 type Product = {
@@ -60,6 +61,25 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
   }) as Product[];
   const rows = dedupePreserveOrder(matched);
 
+  // --- Canonicalize URL (strict) ---------------------------------------------
+  // Redirect if:
+  //  - any numeric tokens were used, OR
+  //  - raw tokens != resolved canonical IDs (length or order or value differ)
+  if (rows.length > 0) {
+    const canonicalIds = rows.map((p) => p.id);
+    const hadNumeric = tokens.some(isIntToken);
+    const needsRedirect =
+      hadNumeric ||
+      tokens.length !== canonicalIds.length ||
+      tokens.some((t, i) => t !== canonicalIds[i]);
+    if (needsRedirect) {
+      const qp = new URLSearchParams();
+      qp.set("ids", canonicalIds.join(","));
+      redirect(`/compare?${qp.toString()}`);
+    }
+  }
+  // ---------------------------------------------------------------------------
+
   return (
     <main className="container mx-auto px-4 py-6">
       <h1 className="text-2xl font-semibold mb-4">Compare</h1>
@@ -79,7 +99,11 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
             <tbody>
               {rows.map((p) => (
                 <tr key={p.id} className="odd:bg-background even:bg-muted/10">
-                  <td className="p-2 border-b font-medium">{titleOf(p)}</td>
+                  <td className="p-2 border-b font-medium">
+                    <Link href={`/reviews/${slugForProduct(p)}`} className="underline hover:no-underline">
+                      {titleOf(p)}
+                    </Link>
+                  </td>
                   <td className="p-2 border-b">{p.brand ?? ""}</td>
                   <td className="p-2 border-b">{p.model ?? ""}</td>
                   <td className="p-2 border-b text-xs text-muted-foreground">{p.id}</td>
@@ -87,6 +111,10 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
               ))}
             </tbody>
           </table>
+          {/* Shareable canonical link (no client JS needed) */}
+          <p className="mt-2 text-xs text-muted-foreground">
+            Share: <code className="px-1 py-0.5 rounded border">/compare?ids={rows.map((p) => p.id).join(",")}</code>
+          </p>
         </div>
       )}
       <div className="mt-4 text-sm text-muted-foreground">

@@ -42,3 +42,11 @@ export function titleOf(p: { id: string; name?: string; brand?: string; model?: 
     || [p.brand, p.model].filter(Boolean).join(" ").trim()
     || p.id;
 }
+
+/** Compute a review slug for a product (prefer explicit slug, else from id/title). */
+export function slugForProduct(p: { id: string; slug?: string; name?: string; brand?: string; model?: string }): string {
+  if (p.slug && p.slug.length) return p.slug;
+  // Fall back to id or derived title to ensure a stable slug
+  const basis = p.id || titleOf(p);
+  return slugOf(basis);
+}
