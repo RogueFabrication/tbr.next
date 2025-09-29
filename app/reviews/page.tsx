@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { allTubeBenders } from "../../lib/catalog";
+import { titleOf, slugForProduct } from "../../lib/ids";
 
 type Product = {
   id: string;
@@ -10,19 +11,11 @@ type Product = {
   model?: string;
 };
 
-/** Local slugify to compute slugs if missing. */
-function slugOf(input: string): string {
-  const s = String(input ?? "");
-  const decomp = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
-  return decomp.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
-}
+/** Derive slug and title via shared helpers. */
+const slugFor = (p: Product) => slugForProduct(p as any);
 
-const titleOf = (p: Product) =>
-  (p.name && p.name.trim()) ||
-  [p.brand, p.model].filter(Boolean).join(" ").trim() ||
-  p.id;
-
-const slugFor = (p: Product) => (p.slug && p.slug.length ? p.slug : slugOf(p.id || titleOf(p)));
+/** Friendly title from shared helper. */
+const displayTitle = (p: Product) => titleOf(p as any);
 
 export default function ReviewsIndexPage() {
   return (
@@ -30,7 +23,7 @@ export default function ReviewsIndexPage() {
       <h1 className="text-2xl font-semibold mb-4">Reviews</h1>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {allTubeBenders.map((p) => {
-          const title = titleOf(p);
+          const title = displayTitle(p);
           const slug = slugFor(p);
           return (
             <Link

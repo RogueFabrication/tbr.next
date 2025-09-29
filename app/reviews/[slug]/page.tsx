@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { allTubeBenders } from "../../../lib/catalog";
+import { slugOf, titleOf, slugForProduct } from "../../../lib/ids";
 
 type Product = {
   id: string;
@@ -8,50 +9,62 @@ type Product = {
   name?: string;
   brand?: string;
   model?: string;
-  [k: string]: unknown;
+  // Safe optional fields that may exist in the catalog:
+  type?: string;
+  country?: string;
+  madeIn?: string;
+  capacity?: string | number;
+  max_od?: string | number;
+  maxWall?: string | number;
+  weight?: string | number;
+  dimensions?: string;
+  warranty?: string;
+  price?: string | number;
 };
 
-/** Local slugify helper. */
-function slugOf(input: string): string {
-  const s = String(input ?? "");
-  const decomp = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
-  return decomp.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
-}
-
-/** Find product by id/slug/name/brand+model. */
-function findProduct(slugParam: string): Product | undefined {
-  const norm = slugOf(slugParam);
-  for (const p of allTubeBenders) {
-    if (p.id === slugParam || p.slug === slugParam || slugOf(p.id) === norm || slugOf(p.slug || "") === norm) {
-      return p;
-    }
-    const name = p.name || [p.brand, p.model].filter(Boolean).join(" ");
-    if (name && slugOf(name) === norm) return p;
+/** Build a lookup by multiple keys (id, slug, name, brand+model). */
+function buildLookup(products: Product[]): Map<string, Product> {
+  const map = new Map<string, Product>();
+  for (const p of products) {
+    const candidates = new Set<string>();
+    if (p.id) candidates.add(p.id);
+    if (p.slug) candidates.add(p.slug);
+    if (p.name) candidates.add(p.name);
+    const bm = [p.brand, p.model].filter(Boolean).join(" ");
+    if (bm) candidates.add(bm);
+    for (const c of candidates) map.set(slugOf(c), p);
   }
-  return undefined;
+  return map;
 }
 
-const SAFE_SPEC_FIELDS = [
-  "brand",
-  "model",
-  "type",
-  "country",
-  "madeIn",
-  "capacity",
-  "max_od",
-  "maxWall",
-  "weight",
-  "dimensions",
-  "warranty",
-  "price",
-] as const;
+const SAFE_FIELDS: Array<keyof Product> = [
+  "brand","model","type","country","madeIn","capacity","max_od","maxWall","weight","dimensions","warranty","price",
+];
 
-type PageProps = {
-  params: { slug: string };
-};
+/** Human label for a spec key. */
+function labelFor(k: keyof Product): string {
+  const map: Record<string,string> = {
+    brand: "Brand",
+    model: "Model",
+    type: "Type",
+    country: "Country",
+    madeIn: "Made In",
+    capacity: "Capacity",
+    max_od: "Max OD",
+    maxWall: "Max Wall",
+    weight: "Weight",
+    dimensions: "Dimensions",
+    warranty: "Warranty",
+    price: "Price",
+  };
+  return map[k] ?? String(k);
+}
 
+type PageProps = { params: { slug: string } };
 export default function ReviewPage({ params }: PageProps) {
-  const product = findProduct(params.slug);
+  const lookup = buildLookup(allTubeBenders as Product[]);
+  const product = lookup.get(slugOf(params.slug));
+
   if (!product) {
     return (
       <main className="container mx-auto px-4 py-6">
@@ -63,38 +76,48 @@ export default function ReviewPage({ params }: PageProps) {
       </main>
     );
   }
-  const title = product.name || [product.brand, product.model].filter(Boolean).join(" ") || product.id;
+
+  const title = titleOf(product);
+  const compareHref = `/compare?ids=${encodeURIComponent(product.id)}`;
+  const specs = SAFE_FIELDS
+    .map((k) => [k, product[k]] as const)
+    .filter(([, v]) => v !== undefined && v !== null && String(v).trim().length > 0);
 
   return (
     <main className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl font-semibold mb-2">{title}</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        This is a minimal review shell. We'll expand this soon.
-      </p>
-      {/* Safe "Specs" block: only show present, primitive fields from SAFE_SPEC_FIELDS */}
-      <section className="mb-6">
-        <h2 className="text-lg font-medium mb-2">Specs</h2>
-        <ul className="list-disc pl-5 text-sm">
-          {SAFE_SPEC_FIELDS.map((k) => {
-            const v = product[k as keyof typeof product];
-            const isPrimitive =
-              typeof v === "string" || typeof v === "number" || typeof v === "boolean";
-            if (v == null || !isPrimitive) return null;
-            return (
-              <li key={k}>
-                <span className="font-medium">{k}:</span> {String(v)}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-      <div>
-        <Link
-          className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:shadow"
-          href={`/compare?ids=${encodeURIComponent(product.id)}`}
-        >
-          Compare models
-        </Link>
+      <h1 className="text-2xl font-semibold mb-3">{title}</h1>
+      {/* Minimal scaffold content retained */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <section className="md:col-span-2">
+          <p className="text-sm text-muted-foreground">
+            Review content is coming soon. In the meantime, basic specs are listed on the right.
+          </p>
+        </section>
+        <aside className="md:col-span-1">
+          <div className="rounded-lg border p-4">
+            <h2 className="text-base font-medium mb-2">Specs (preview)</h2>
+            {specs.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No specs available yet.</p>
+            ) : (
+              <dl className="text-sm">
+                {specs.map(([k, v]) => (
+                  <div key={String(k)} className="flex justify-between gap-3 py-1 border-b last:border-b-0">
+                    <dt className="text-muted-foreground">{labelFor(k)}</dt>
+                    <dd className="font-medium">{String(v)}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            <div className="mt-3">
+              <Link href={compareHref} className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:shadow">
+                Compare models
+              </Link>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <div className="mt-6 text-sm text-muted-foreground">
+        <Link className="underline" href="/reviews">Back to all reviews</Link>
       </div>
     </main>
   );

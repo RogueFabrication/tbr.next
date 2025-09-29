@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { allTubeBenders } from "../../lib/catalog";
+import ShareLink from "../../components/ShareLink";
 import { redirect } from "next/navigation";
 import { slugOf, parseIds, isIntToken, chooseIndexScheme, titleOf, slugForProduct } from "../../lib/ids";
 // NOTE: Small, safe change: accept numeric tokens from Buyer's Guide (?ids=2,1)
@@ -111,11 +112,10 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
               ))}
             </tbody>
           </table>
-          {/* Shareable canonical link (no client JS needed) */}
-          <p className="mt-2 text-xs text-muted-foreground">
-            Share: <code className="px-1 py-0.5 rounded border">/compare?ids={rows.map((p) => p.id).join(",")}</code>
-          </p>
         </div>
+      )}
+      {rows.length > 0 && (
+        <ShareLink relativeHref={`/compare?ids=${rows.map((p) => p.id).join(",")}`} />
       )}
       <div className="mt-4 text-sm text-muted-foreground">
         <Link className="underline" href="/reviews">Browse reviews</Link>
