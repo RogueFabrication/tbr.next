@@ -3,26 +3,31 @@ import React from "react";
 import Link from "next/link";
 import { SmartTubeBenderFinder } from "../../components/guide/SmartTubeBenderFinder";
 import { readIds } from "../../lib/compare";
+import { allTubeBenders } from "../../lib/catalog";
+import { slugOf } from "../../lib/ids";
 
-/** Lightweight slugify (no deps). */
-function slugOf(input: string): string {
-  const s = String(input ?? "");
-  const decomp = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
-  return decomp
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-{2,}/g, "-");
-}
+type Product = { id: string; brand?: string; model?: string; name?: string };
 
-/** Map mock numeric IDs to canonical product IDs. */
-function mapToCanonicalId(mockId: string): string {
-  const mapping: Record<string, string> = {
-    "1": "baileigh-rdb-250",
-    "2": "jd2-model-32", 
-    "3": "pro-tools-105hd",
-  };
-  return mapping[mockId] || mockId;
+/** Convert selection tokens (likely numeric indices) to canonical product IDs safely. */
+function selectionToCanonicalIds(selection: Array<string | number>, list: Product[]): string[] {
+  const ids: string[] = [];
+  for (const t of selection ?? []) {
+    // allow both numbers and numeric strings
+    const n = typeof t === "number" ? t : /^[0-9]+$/.test(String(t)) ? parseInt(String(t), 10) : NaN;
+    if (!Number.isNaN(n) && n >= 0 && n < list.length) {
+      ids.push(list[n].id);
+      continue;
+    }
+    // if not a clean index, accept known IDs or slugs directly
+    const s = String(t).trim();
+    if (s && list.some(p => p.id === s || p.id === slugOf(s))) {
+      // normalize to id if slug matches
+      const p = list.find(p => p.id === s || p.id === slugOf(s))!;
+      ids.push(p.id);
+    }
+  }
+  // de-dupe, preserve order
+  return Array.from(new Set(ids));
 }
 
 /** GuidePage – renders the route-specific tile grid (with filters) */
@@ -42,9 +47,10 @@ export default function GuidePage() {
   }, []);
 
   // Convert selected IDs to canonical IDs for compare URL
-  const canonicalIds = selectedIds.map(mapToCanonicalId).filter(Boolean);
+  const products = allTubeBenders as Product[];
+  const canonicalIds = selectionToCanonicalIds(selectedIds, products);
   const compareHref = canonicalIds.length > 0 
-    ? `/compare?ids=${encodeURIComponent(canonicalIds.join(","))}` 
+    ? `/compare?ids=${canonicalIds.join(",")}` 
     : "/compare";
 
   return (

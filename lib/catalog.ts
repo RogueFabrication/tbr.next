@@ -11,6 +11,10 @@ export type Product = {
   name?: string;
   brand?: string;
   model?: string;
+  /** Public image path under /public (e.g., /images/products/<id>.jpg). */
+  image?: string;
+  /** Short bullets for the review page and tiles. */
+  highlights?: string[];
   // Safe optional fields that may be shown on the review page:
   type?: string;
   country?: string;
@@ -32,6 +36,8 @@ export const allTubeBenders: Product[] = [
     name: "RogueFab M600 Series",
     brand: "RogueFab",
     model: "M600",
+    image: "/images/products/roguefab-m600-series.jpg",
+    highlights: ["Value leader", "Fast die change", "Large die library"],
   },
   {
     id: "jd2-model-32",
@@ -39,6 +45,8 @@ export const allTubeBenders: Product[] = [
     name: "JD Squared Model 32",
     brand: "JD Squared",
     model: "Model 32",
+    image: "/images/products/jd2-model-32.jpg",
+    highlights: ["Shop staple", "Robust frame", "Manual/Hydraulic options"],
   },
   {
     id: "pro-tools-105hd",
@@ -46,6 +54,8 @@ export const allTubeBenders: Product[] = [
     name: "Pro-Tools 105HD",
     brand: "Pro-Tools",
     model: "105HD",
+    image: "/images/products/pro-tools-105hd.jpg",
+    highlights: ["Heavy duty", "Simple setup", "Aftermarket support"],
   },
   {
     id: "baileigh-rdb-250",
@@ -53,6 +63,8 @@ export const allTubeBenders: Product[] = [
     name: "Baileigh RDB-250",
     brand: "Baileigh",
     model: "RDB-250",
+    image: "/images/products/baileigh-rdb-250.jpg",
+    highlights: ["Programmable", "Powered rotation", "Pro-tier"],
   },
 ];
 

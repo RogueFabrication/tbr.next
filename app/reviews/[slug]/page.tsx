@@ -3,12 +3,15 @@ import Link from "next/link";
 import { allTubeBenders } from "../../../lib/catalog";
 import { slugOf, titleOf, slugForProduct } from "../../../lib/ids";
 
+const fallbackImg = "/images/products/placeholder.png";
 type Product = {
   id: string;
   slug?: string;
   name?: string;
   brand?: string;
   model?: string;
+  image?: string;
+  highlights?: string[];
   // Safe optional fields that may exist in the catalog:
   type?: string;
   country?: string;
@@ -79,6 +82,8 @@ export default function ReviewPage({ params }: PageProps) {
 
   const title = titleOf(product);
   const compareHref = `/compare?ids=${encodeURIComponent(product.id)}`;
+  const img = product.image || fallbackImg;
+  const highlights = Array.isArray(product.highlights) ? product.highlights : [];
   const specs = SAFE_FIELDS
     .map((k) => [k, product[k]] as const)
     .filter(([, v]) => v !== undefined && v !== null && String(v).trim().length > 0);
@@ -86,7 +91,16 @@ export default function ReviewPage({ params }: PageProps) {
   return (
     <main className="container mx-auto px-4 py-6">
       <h1 className="text-2xl font-semibold mb-3">{title}</h1>
-      {/* Minimal scaffold content retained */}
+      {/* Hero image + highlights */}
+      <div className="rounded-lg overflow-hidden border mb-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={img} alt={title} className="w-full h-64 object-cover" />
+      </div>
+      {highlights.length > 0 && (
+        <ul className="mb-6 list-disc pl-5 text-sm">
+          {highlights.map((h) => <li key={h}>{h}</li>)}
+        </ul>
+      )}
       <div className="grid gap-6 md:grid-cols-3">
         <section className="md:col-span-2">
           <p className="text-sm text-muted-foreground">

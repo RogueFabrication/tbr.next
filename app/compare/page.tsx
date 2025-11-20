@@ -3,8 +3,8 @@ import Link from "next/link";
 import { allTubeBenders } from "../../lib/catalog";
 import ShareLink from "../../components/ShareLink";
 import { redirect } from "next/navigation";
-import { slugOf, parseIds, isIntToken, chooseIndexScheme, titleOf, slugForProduct } from "../../lib/ids";
-// NOTE: Small, safe change: accept numeric tokens from Buyer's Guide (?ids=2,1)
+import { slugOf, parseIds, titleOf, slugForProduct } from "../../lib/ids";
+// NOTE: Only accepts canonical product identifiers (id/slug/name/brand+model)
 
 type Product = {
   id: string;
@@ -14,19 +14,18 @@ type Product = {
   model?: string;
 };
 
-/** Normalize a free-form token (id/slug/brand+model/name) to slug. */
-const normalizeToken = (t: string) => slugOf(t.trim());
 
 function buildLookup(products: Product[]): Map<string, Product> {
   const map = new Map<string, Product>();
   for (const p of products) {
-    const cands = new Set<string>();
-    if (p.id) cands.add(p.id);
-    if (p.slug) cands.add(p.slug);
-    if (p.name) cands.add(p.name);
+    const keys = new Set<string>();
+    // Always index by ID as well (normalized for safety)
+    if (p.id) keys.add(p.id);
+    if (p.slug) keys.add(p.slug);
+    if (p.name) keys.add(p.name);
     const bm = [p.brand, p.model].filter(Boolean).join(" ");
-    if (bm) cands.add(bm);
-    for (const c of Array.from(cands)) map.set(slugOf(c), p);
+    if (bm) keys.add(bm);
+    for (const c of Array.from(keys)) map.set(slugOf(c), p);
   }
   return map;
 }
@@ -45,32 +44,26 @@ function dedupePreserveOrder(items: Product[]): Product[] {
 
 type ComparePageProps = { searchParams?: { ids?: string | string[] } };
 export default function ComparePage({ searchParams }: ComparePageProps) {
-  const tokens = parseIds(searchParams?.ids);
-  const lookup = buildLookup(allTubeBenders as Product[]);
-  const normalized = tokens.map(normalizeToken);
-  // Resolve tokens with a single index scheme to avoid doubling (bug: 2 tokens → 3+ rows).
-  const list = allTubeBenders as Product[];
-  const scheme = chooseIndexScheme(normalized, list.length);
-  const matched = normalized.flatMap((t) => {
-    const byKey = lookup.get(t);
-    if (byKey) return [byKey];
-    if (!isIntToken(t)) return [];
-    const n = parseInt(t, 10);
-    const idx = scheme === "one" ? (n - 1) : n;
-    const p = (idx >= 0 && idx < list.length) ? list[idx] : undefined;
-    return p ? [p] : [];
-  }) as Product[];
+  const products = allTubeBenders as Product[];
+  const tokens = parseIds(searchParams?.ids);          // raw query tokens
+  const byId = new Map(products.map((p) => [p.id, p])); // fast direct ID match
+  const lookup = buildLookup(products);                 // slug/name/brand+model
+
+  // Resolve by trying raw ID first, then normalized key
+  const matched = tokens.map((raw) => {
+    const direct = byId.get(raw);
+    if (direct) return direct;
+    const key = slugOf(raw.trim());
+    return lookup.get(key);
+  }).filter(Boolean) as Product[];
+
   const rows = dedupePreserveOrder(matched);
 
   // --- Canonicalize URL (strict) ---------------------------------------------
-  // Redirect if:
-  //  - any numeric tokens were used, OR
-  //  - raw tokens != resolved canonical IDs (length or order or value differ)
+  // Redirect if raw tokens != resolved canonical IDs (length/order/value differ).
   if (rows.length > 0) {
     const canonicalIds = rows.map((p) => p.id);
-    const hadNumeric = tokens.some(isIntToken);
     const needsRedirect =
-      hadNumeric ||
       tokens.length !== canonicalIds.length ||
       tokens.some((t, i) => t !== canonicalIds[i]);
     if (needsRedirect) {

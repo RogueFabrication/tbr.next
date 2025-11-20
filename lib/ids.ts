@@ -18,23 +18,6 @@ export function parseIds(ids: string | string[] | undefined): string[] {
   return input.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-/** True if token is a non-negative integer (e.g., "2"). */
-export function isIntToken(t: string): boolean {
-  return /^[0-9]+$/.test(t);
-}
-
-/**
- * Decide if numeric tokens should be treated as 1-based or 0-based for a given request.
- * - If every int is in [1..listLen] and there is no "0", prefer 1-based.
- * - Otherwise, default to 0-based.
- */
-export function chooseIndexScheme(tokens: string[], listLen: number): "one" | "zero" {
-  const ints = tokens.filter(isIntToken);
-  if (ints.length === 0) return "zero";
-  const allOneRange = ints.every(t => { const n = parseInt(t, 10); return n >= 1 && n <= listLen; });
-  const hasZero = ints.some(t => t === "0");
-  return (allOneRange && !hasZero) ? "one" : "zero";
-}
 
 /** Derive a friendly display title from optional name/brand/model/id. */
 export function titleOf(p: { id: string; name?: string; brand?: string; model?: string }): string {
