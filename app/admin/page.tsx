@@ -19,7 +19,11 @@ export default function AdminPage() {
         </p>
         <ul className="list-disc pl-6 text-sm text-muted-foreground">
           <li>Writes are always blocked on Vercel (preview/prod).</li>
-          <li>Local edits update an in-memory overlay only (reset on restart).</li>
+          <li>
+            On local Node runtime, edits persist to a JSON overlay file under{" "}
+            <code className="px-1 rounded bg-muted">data/admin/products.overlay.json</code>.
+          </li>
+          <li>The overlay is merged with base product IDs from the public catalog.</li>
         </ul>
         {/* Debug hint (no secrets): shows what the server actually sees */}
         <pre className="text-xs text-muted-foreground">
