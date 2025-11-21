@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Settings } from "lucide-react";
 import ThemeToggle from "./ThemeToggle"; // your existing toggle
 
 const links = [
@@ -22,7 +23,15 @@ export default function Header() {
   dark:border-gray-800 dark:bg-gray-950/95 dark:supports-[backdrop-filter]:bg-gray-950/80
 ">
       <div className="mx-auto max-w-6xl w-full h-14 px-4 flex items-center justify-between">
-          <div className="font-semibold">TubeBenderReviews</div>
+          {/* Brand link */}
+          <Link
+            href="/"
+            className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 hover:opacity-90 transition"
+            aria-label="Return to homepage"
+          >
+            <Settings className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+            <span>Tube Bender Reviews</span>
+          </Link>
 
           <nav className="flex items-center gap-1">
             {links.map((l) => {
