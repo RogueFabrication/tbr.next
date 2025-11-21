@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { allTubeBenders } from "../../../lib/catalog";
+import { getAllTubeBendersWithOverlay } from "../../../lib/catalogOverlay";
 import { slugOf, titleOf, slugForProduct } from "../../../lib/ids";
 
 const fallbackImg = "/images/products/placeholder.png";
@@ -65,7 +65,8 @@ function labelFor(k: keyof Product): string {
 
 type PageProps = { params: { slug: string } };
 export default function ReviewPage({ params }: PageProps) {
-  const lookup = buildLookup(allTubeBenders as Product[]);
+  const all = getAllTubeBendersWithOverlay() as Product[];
+  const lookup = buildLookup(all);
   const product = lookup.get(slugOf(params.slug));
 
   if (!product) {

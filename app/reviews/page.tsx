@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { allTubeBenders } from "../../lib/catalog";
+import { getAllTubeBendersWithOverlay } from "../../lib/catalogOverlay";
 import { titleOf, slugForProduct } from "../../lib/ids";
 
 const fallbackImg = "/images/products/placeholder.png";
@@ -21,11 +21,13 @@ const slugFor = (p: Product) => slugForProduct(p as any);
 const displayTitle = (p: Product) => titleOf(p as any);
 
 export default function ReviewsIndexPage() {
+  const products = getAllTubeBendersWithOverlay() as Product[];
+
   return (
     <main className="container mx-auto px-4 py-6">
       <h1 className="text-2xl font-semibold mb-4">Reviews</h1>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {allTubeBenders.map((p) => {
+        {products.map((p) => {
           const title = displayTitle(p);
           const slug = slugFor(p);
           const img = p.image || fallbackImg;

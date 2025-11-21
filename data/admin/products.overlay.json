@@ -1,11 +1,13 @@
 {
   "pro-tools-105hd": {
-    "price": "987",
+    "price": "1003",
     "weight": ""
   },
   "jd2-model-32": {
-    "price": "987",
-    "weight": ""
+    "price": "1002",
+    "weight": "",
+    "brand": "ADMIN",
+    "model": "ADMIN"
   },
   "roguefab-m600-series": {
     "price": ""

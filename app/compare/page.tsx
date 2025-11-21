@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { allTubeBenders } from "../../lib/catalog";
+import { getAllTubeBendersWithOverlay } from "../../lib/catalogOverlay";
 import ShareLink from "../../components/ShareLink";
 import { redirect } from "next/navigation";
 import { slugOf, parseIds, titleOf, slugForProduct } from "../../lib/ids";
@@ -42,9 +42,10 @@ function dedupePreserveOrder(items: Product[]): Product[] {
   return out;
 }
 
+// Build a lookup map from the overlay-aware product list.
 type ComparePageProps = { searchParams?: { ids?: string | string[] } };
 export default function ComparePage({ searchParams }: ComparePageProps) {
-  const products = allTubeBenders as Product[];
+  const products = getAllTubeBendersWithOverlay() as Product[];
   const tokens = parseIds(searchParams?.ids);          // raw query tokens
   const byId = new Map(products.map((p) => [p.id, p])); // fast direct ID match
   const lookup = buildLookup(products);                 // slug/name/brand+model
