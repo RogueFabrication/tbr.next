@@ -12,32 +12,34 @@ export const metadata = {
 export default function Page() {
   const picks = Array.isArray(VALID_IDS) ? VALID_IDS.slice(0, 4) : [];
   return (
-    <main className="relative overflow-hidden">
-      {/* Hero Background */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: "url(/images/hero/hero-industrial.jpg)",
-        }}
-      />
+    <main className="bg-white">
+      {/* HERO BLOCK (image + overlay + content) */}
+      <section className="relative overflow-hidden">
+        {/* Hero Background */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url(/images/hero/hero-industrial.jpg)",
+          }}
+        />
 
-      {/* Dark overlay to keep text readable */}
-      <div className="absolute inset-0 bg-black/65" />
+        {/* Dark overlay to keep text readable */}
+        <div className="absolute inset-0 bg-black/65" />
 
-      {/* Foreground content */}
-      <div className="relative">
-        {/* Hero section */}
-        <section className="relative mx-auto max-w-6xl px-6 pt-16 pb-10 text-center text-white">
+        {/* Foreground content */}
+        <div className="relative">
+          {/* Hero section */}
+          <section className="relative mx-auto max-w-6xl px-6 pt-24 pb-20 text-center text-white min-h-[36rem] md:min-h-[42rem]">
           <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight">
             Find the Right Tube Bender in Minutes.
           </h1>
-          <p className="mt-4 text-sm sm:text-base text-white/80 max-w-2xl mx-auto">
+          <p className="mt-8 text-sm sm:text-base text-white/80 max-w-2xl mx-auto">
             Compare real-world capacity, die and tooling costs, footprint, and workflow speed across
             popular shop benders — all in one place.
           </p>
 
           {/* Proof tiles */}
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto text-left text-xs sm:text-sm">
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto text-left text-xs sm:text-sm">
             <div className="rounded-lg bg-black/55 border-2 border-white/40 px-4 py-3 shadow-md">
               <div className="font-semibold text-white">
                 11-Point Scoring Algorithm
@@ -64,8 +66,8 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Trust line (now above buttons) */}
-          <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-4 text-xs sm:text-sm text-white/80">
+            {/* Trust line (above buttons) */}
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 text-xs sm:text-sm text-white/80">
             <div className="inline-flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-orange-400" />
               <span>Expert Tested</span>
@@ -80,7 +82,7 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/compare"
               className="inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent transition-colors"
@@ -98,7 +100,7 @@ export default function Page() {
           </div>
 
           {/* Mobile attribution in-flow */}
-          <p className="mt-6 text-xs text-white/70 sm:hidden">
+          <p className="mt-10 text-xs text-white/70 sm:hidden">
             Built by Mechanical Engineer Joseph Gambino — data-driven, brand-agnostic comparisons.
           </p>
 
@@ -108,10 +110,12 @@ export default function Page() {
             <br />
             — data-driven, brand-agnostic comparisons.
           </div>
-        </section>
+          </section>
+        </div>
+      </section>
 
-        {/* Quick picks section */}
-        <section className="mx-auto max-w-6xl px-6 pb-12 mt-2">
+      {/* Quick Picks section, now clearly below hero on white */}
+      <section className="mx-auto max-w-6xl px-6 pb-12 mt-2">
           <div className="rounded-xl bg-white/95 backdrop-blur shadow-sm border border-black/5 px-5 py-4">
             <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
               <div>
@@ -149,8 +153,7 @@ export default function Page() {
               )}
             </div>
           </div>
-        </section>
-      </div>
+      </section>
     </main>
   );
 }
