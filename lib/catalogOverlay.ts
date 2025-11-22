@@ -16,10 +16,30 @@ export function getAllTubeBendersWithOverlay(): Product[] {
   // `mergeWithOverlay` is expected to be generic over rows that at least have
   // an `id` field, and will shallow-merge any overlay values by that id.
   //
-  // We cast the generic here to keep the public surface of this helper strongly
-  // typed as `Product[]`, while still allowing the overlay store to supply
-  // partial patches of those objects.
-  return mergeWithOverlay(allTubeBenders);
+  // After merging, we normalize a few fields so that overlay edits stay
+  // compatible with how the public UI expects to consume them.
+  const merged = mergeWithOverlay(allTubeBenders);
+
+  return merged.map((raw) => {
+    const b = { ...raw } as Product & { highlights?: unknown };
+
+    // Normalize highlights:
+    // - base catalog uses string[]
+    // - admin overlay currently writes a single comma-separated string
+    //   (e.g. "foo, bar, baz")
+    //
+    // If we see a string here, split it into a trimmed string[] so that
+    // Array.isArray checks in the public UI continue to work as designed.
+    if (typeof b.highlights === "string") {
+      const parts = (b.highlights as string)
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      b.highlights = parts as unknown as Product["highlights"];
+    }
+
+    return b as Product;
+  });
 }
 
 /**

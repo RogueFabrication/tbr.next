@@ -15,6 +15,17 @@ type Product = {
   price?: string;
   mandrel?: string;
   totalScore?: string;
+  // Newly added public-facing fields
+  type?: string;
+  country?: string;
+  madeIn?: string;
+  capacity?: string;
+  max_od?: string;
+  maxWall?: string;
+  dimensions?: string;
+  warranty?: string;
+  image?: string;
+  highlights?: string; // stored comma-separated for simple admin editing
 };
 
 export default function ProductsTab() {
@@ -105,6 +116,17 @@ export default function ProductsTab() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mandrel</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Score</th>
+              {/* New fields */}
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Made In</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max OD</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Wall</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dimensions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warranty</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Highlights</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -177,6 +199,84 @@ export default function ProductsTab() {
                     onSave={(value) => updateProduct(product.id, 'totalScore', value as string)}
                   />
                 </td>
+
+                {/* New field cells */}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <EditableField
+                    value={product?.type ?? ''}
+                    onSave={(val) => updateProduct(product.id, 'type', val as string)}
+                  />
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <EditableField
+                    value={product?.country ?? ''}
+                    onSave={(val) => updateProduct(product.id, 'country', val as string)}
+                  />
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <EditableField
+                    value={product?.madeIn ?? ''}
+                    onSave={(val) => updateProduct(product.id, 'madeIn', val as string)}
+                  />
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <EditableField
+                    value={product?.capacity ?? ''}
+                    onSave={(val) => updateProduct(product.id, 'capacity', val as string)}
+                  />
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <EditableField
+                    value={product?.max_od ?? ''}
+                    onSave={(val) => updateProduct(product.id, 'max_od', val as string)}
+                  />
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <EditableField
+                    value={product?.maxWall ?? ''}
+                    onSave={(val) => updateProduct(product.id, 'maxWall', val as string)}
+                  />
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <EditableField
+                    value={product?.dimensions ?? ''}
+                    onSave={(val) => updateProduct(product.id, 'dimensions', val as string)}
+                  />
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <EditableField
+                    value={product?.warranty ?? ''}
+                    onSave={(val) => updateProduct(product.id, 'warranty', val as string)}
+                  />
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <EditableField
+                    value={product?.image ?? ''}
+                    onSave={(val) => updateProduct(product.id, 'image', val as string)}
+                  />
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <EditableField
+                    value={
+                      product?.highlights
+                        ? Array.isArray(product.highlights)
+                          ? product.highlights.join(', ')
+                          : String(product.highlights)
+                        : ''
+                    }
+                    onSave={(val) => updateProduct(product.id, 'highlights', val as string)}
+                  />
+                </td>
+
               </tr>
             ))}
           </tbody>

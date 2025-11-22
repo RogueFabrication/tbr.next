@@ -16,6 +16,7 @@ type Product = {
   type?: string;
   country?: string;
   madeIn?: string;
+  maxCapacity?: string | number;
   capacity?: string | number;
   max_od?: string | number;
   maxWall?: string | number;
@@ -85,9 +86,28 @@ export default function ReviewPage({ params }: PageProps) {
   const compareHref = `/compare?ids=${encodeURIComponent(product.id)}`;
   const img = product.image || fallbackImg;
   const highlights = Array.isArray(product.highlights) ? product.highlights : [];
+
   const specs = SAFE_FIELDS
-    .map((k) => [k, product[k]] as const)
-    .filter(([, v]) => v !== undefined && v !== null && String(v).trim().length > 0);
+    .map((k) => {
+      let value = product[k];
+
+      // Special handling for Capacity:
+      // - If admin has provided a maxCapacity value via the overlay,
+      //   treat that as the authoritative "Capacity" shown in the specs
+      //   card (this mirrors how the admin grid is currently being used).
+      if (k === "capacity") {
+        const maxCap = product.maxCapacity;
+        if (maxCap !== undefined && maxCap !== null && String(maxCap).trim().length > 0) {
+          value = maxCap;
+        }
+      }
+
+      return [k, value] as const;
+    })
+    .filter(([, v]) => {
+      if (v === undefined || v === null) return false;
+      return String(v).trim().length > 0;
+    });
 
   return (
     <main className="container mx-auto px-4 py-6">
