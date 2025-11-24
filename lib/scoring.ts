@@ -154,6 +154,27 @@ export function getProductScore(
 
   const p: any = product;
 
+  // Parse bend angle from either number or string.
+  let bendAngle: number | undefined;
+  if (typeof p.bendAngle === "number") {
+    bendAngle = p.bendAngle;
+  } else if (typeof p.bendAngle === "string") {
+    const parsed = parseFloat(p.bendAngle.replace(/[^0-9.+-]/g, ""));
+    if (Number.isFinite(parsed)) {
+      bendAngle = parsed;
+    }
+  }
+
+  // Normalize s-bend capability from boolean or string admin input.
+  let sBendCapability: boolean | undefined;
+  if (typeof p.sBendCapability === "boolean") {
+    sBendCapability = p.sBendCapability;
+  } else if (typeof p.sBendCapability === "string") {
+    const v = p.sBendCapability.trim().toLowerCase();
+    if (v === "yes" || v === "true") sBendCapability = true;
+    if (v === "no" || v === "false") sBendCapability = false;
+  }
+
   // Build a best-effort scoring input from whatever fields we have.
   const scoringInput: ScoringInput = {
     id: p.id,
@@ -169,7 +190,7 @@ export function getProductScore(
     maxCapacity: p.maxCapacity ?? p.capacity,
     // Country of origin often appears as country/countryOfOrigin/madeIn.
     countryOfOrigin: p.countryOfOrigin ?? p.country ?? p.madeIn,
-    bendAngle: typeof p.bendAngle === "number" ? p.bendAngle : undefined,
+    bendAngle,
     // Wall thickness capability: prefer a dedicated field, then maxWall as a
     // best-effort proxy when that is how the catalog stores it.
     wallThicknessCapacity: p.wallThicknessCapacity ?? p.maxWall,
@@ -178,7 +199,7 @@ export function getProductScore(
     // Mandrel availability in the new admin grid is stored as "mandrel" with
     // values like "Available" / "Standard" / "No".
     mandrelBender: p.mandrelBender ?? p.mandrel,
-    sBendCapability: p.sBendCapability,
+    sBendCapability,
   };
 
   try {

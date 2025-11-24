@@ -18,7 +18,7 @@
   },
   "roguefab-m600-series": {
     "price": "999",
-    "maxCapacity": "3.00",
+    "maxCapacity": "1.25",
     "clrRange": "1.00-6.00",
     "totalScore": "88",
     "dieCost": "99",
@@ -32,7 +32,10 @@
     "max_od": "2.375",
     "maxWall": ".250",
     "warranty": "YES",
-    "highlights": "AWESOME TEST!"
+    "highlights": "AWESOME TEST!",
+    "brand": "",
+    "powerType": "electric",
+    "sBendCapability": ""
   },
   "baileigh-rdb-250": {
     "price": "",
