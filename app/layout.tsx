@@ -2,6 +2,7 @@ import "./globals.css";
 import Header from "../components/Header";
 import type { Metadata } from "next";
 import { ThemeProvider } from "../components/ThemeProvider";
+import Link from "next/link";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
@@ -39,6 +40,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="mx-auto max-w-6xl px-6 py-8">
             {children}
           </main>
+          <footer className="border-t border-muted bg-muted/40 mt-8">
+            <div className="container mx-auto px-4 py-3 text-xs text-muted-foreground flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                Disclosure: TubeBenderReviews is published by{" "}
+                <span className="font-medium">Joseph Gambino</span>, founder of Rogue Fabrication.
+              </p>
+              <p>
+                Learn more on the{" "}
+                <Link href="/about" className="underline">
+                  About &amp; Disclosures
+                </Link>{" "}
+                page.
+              </p>
+            </div>
+          </footer>
         </ThemeProvider>
       </body>
     </html>
