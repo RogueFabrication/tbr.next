@@ -20,7 +20,7 @@ export default function ScoringPage() {
         <div className="mx-auto max-w-6xl px-6 py-10">
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-gray-900">
             Tube Bender Scoring Methodology
-          </h1>
+            </h1>
           <p className="mt-3 max-w-3xl text-sm sm:text-base text-gray-600">
             Complete transparency in how we calculate objective scores for tube
             bender comparisons. All scoring is based on published specs,
@@ -44,27 +44,27 @@ export default function ScoringPage() {
             <div>
               <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
                 Total Points
-              </div>
+                  </div>
               <div className="mt-1 text-2xl font-semibold text-gray-900">
                 {TOTAL_POINTS}
-              </div>
+                  </div>
               <p className="mt-1 text-xs text-gray-500">
                 Each bender receives a score out of 100 points across 11
                 categories.
               </p>
-            </div>
+                  </div>
             <div>
               <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
                 Categories
-              </div>
+                  </div>
               <div className="mt-1 text-2xl font-semibold text-gray-900">
                 {SCORING_CATEGORIES.length}
-              </div>
+                  </div>
               <p className="mt-1 text-xs text-gray-500">
                 Covering value, capacity, manufacturing, upgrade path, and
                 advanced capability.
               </p>
-            </div>
+                </div>
             <div>
               <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
                 Scoring Types
@@ -95,9 +95,10 @@ export default function ScoringPage() {
               <article
                 key={cat.key}
                 className="rounded-xl border border-gray-200 bg-white px-5 py-5 shadow-sm"
+                id={cat.key === "valueForMoney" ? "value-for-money" : undefined}
               >
                 <header className="flex flex-col justify-between gap-2 sm:flex-row sm:items-baseline">
-                  <div>
+              <div>
                     <h3 className="text-sm font-semibold text-gray-900">
                       {cat.index}. {cat.name}{" "}
                       <span className="font-normal text-gray-500">
@@ -107,7 +108,7 @@ export default function ScoringPage() {
                     <p className="mt-1 text-xs text-gray-600">
                       {cat.tagline}
                     </p>
-                  </div>
+                </div>
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
                       Method:{" "}
@@ -122,8 +123,17 @@ export default function ScoringPage() {
                     <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
                       Max {cat.maxPoints} pts
                     </span>
-                  </div>
+              </div>
                 </header>
+
+                {cat.key === "valueForMoney" && (
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    For each machine we build a conservative minimum system price from the lowest documented cost of four components:{" "}
+                    <span className="font-medium">frame, dies, hydraulics, and stand/mount</span>. This minimum system total is what drives the
+                    Value for Money score – not a single sale price or marketing claim. When we cannot verify a component price, we either omit it
+                    (for hydraulics/stands that are truly optional) or assign a conservative baseline so that incomplete data never inflates a score.
+                  </p>
+                )}
 
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <div className="space-y-2 text-xs text-gray-600">
@@ -275,7 +285,7 @@ export default function ScoringPage() {
                         </p>
                       </>
                     )}
-                  </div>
+                </div>
                   <div className="space-y-2 text-xs text-gray-600">
                     <p className="font-medium text-gray-900">
                       Data sources & verification
@@ -288,8 +298,8 @@ export default function ScoringPage() {
                         When data is missing, conservative baseline scores are
                         applied.
                       </li>
-                    </ul>
-                  </div>
+                  </ul>
+                </div>
                 </div>
               </article>
             ))}
@@ -308,16 +318,16 @@ export default function ScoringPage() {
             baseline scores are applied to maintain fairness.
           </p>
           <div className="mt-4 grid gap-6 md:grid-cols-2 text-xs text-gray-600">
-            <div>
+              <div>
               <p className="font-medium text-gray-900 mb-1">Data sources</p>
               <ul className="space-y-1 list-disc pl-4">
                 <li>Manufacturer technical specs and capacity charts</li>
                 <li>Product manuals and official documentation</li>
                 <li>Company founding dates and history</li>
                 <li>Clarification from support and sales teams</li>
-              </ul>
-            </div>
-            <div>
+                </ul>
+              </div>
+              <div>
               <p className="font-medium text-gray-900 mb-1">
                 Scoring verification
               </p>
@@ -330,7 +340,7 @@ export default function ScoringPage() {
                   Individual product pages will eventually expose per-category
                   breakdowns so you can inspect each score.
                 </li>
-              </ul>
+                </ul>
             </div>
           </div>
         </section>

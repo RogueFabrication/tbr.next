@@ -16,7 +16,6 @@ type Product = {
   // Safe optional fields that may exist in the catalog:
   type?: string;
   country?: string;
-  madeIn?: string;
   maxCapacity?: string | number;
   capacity?: string | number;
   max_od?: string | number;
@@ -24,7 +23,17 @@ type Product = {
   weight?: string | number;
   dimensions?: string;
   warranty?: string;
+  // Legacy flat price (entry setup); we prefer component pricing for UI.
   price?: string | number;
+  // Pricing breakdown from admin overlay:
+  framePriceMin?: string | number;
+  framePriceMax?: string | number;
+  diePriceMin?: string | number;
+  diePriceMax?: string | number;
+  hydraulicPriceMin?: string | number;
+  hydraulicPriceMax?: string | number;
+  standPriceMin?: string | number;
+  standPriceMax?: string | number;
 };
 
 /** Build a lookup by multiple keys (id, slug, name, brand+model). */
@@ -42,9 +51,18 @@ function buildLookup(products: Product[]): Map<string, Product> {
   return map;
 }
 
-// We treat `country` as the canonical field and ignore legacy `madeIn` to avoid duplicate rows.
+// Expose core specs but omit raw "price" – pricing snapshot below shows min/max system totals.
 const SAFE_FIELDS: Array<keyof Product> = [
-  "brand","model","type","country","capacity","max_od","maxWall","weight","dimensions","warranty","price",
+  "brand",
+  "model",
+  "type",
+  "country",
+  "capacity",
+  "max_od",
+  "maxWall",
+  "weight",
+  "dimensions",
+  "warranty",
 ];
 
 /** Human label for a spec key. */
@@ -61,7 +79,6 @@ function labelFor(k: keyof Product): string {
     weight: "Weight",
     dimensions: "Dimensions",
     warranty: "Warranty",
-    price: "Price",
   };
   return map[k] ?? String(k);
 }
@@ -92,6 +109,46 @@ export default function ReviewPage({ params }: PageProps) {
   const img = product.image || fallbackImg;
   const { total: score, breakdown } = getProductScore(product as any);
   const highlights = Array.isArray(product.highlights) ? product.highlights : [];
+
+  // --- Pricing: compute min/max system totals from component fields ----------
+  const parseMoney = (raw: unknown): number | null => {
+    if (raw === null || raw === undefined || raw === "") return null;
+    if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
+    const parsed = parseFloat(String(raw).replace(/[^0-9.+-]/g, ""));
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const frameMin = parseMoney((product as any).framePriceMin);
+  const dieMin = parseMoney((product as any).diePriceMin);
+  const hydraulicMin = parseMoney((product as any).hydraulicPriceMin);
+  const standMin = parseMoney((product as any).standPriceMin);
+
+  const frameMax = parseMoney((product as any).framePriceMax);
+  const dieMax = parseMoney((product as any).diePriceMax);
+  const hydraulicMax = parseMoney((product as any).hydraulicPriceMax);
+  const standMax = parseMoney((product as any).standPriceMax);
+
+  const hasMinComponents =
+    frameMin !== null ||
+    dieMin !== null ||
+    hydraulicMin !== null ||
+    standMin !== null;
+  const hasMaxComponents =
+    frameMax !== null ||
+    dieMax !== null ||
+    hydraulicMax !== null ||
+    standMax !== null;
+
+  const minSystemTotal =
+    hasMinComponents
+      ? (frameMin ?? 0) + (dieMin ?? 0) + (hydraulicMin ?? 0) + (standMin ?? 0)
+      : parseMoney(product.price);
+
+  const maxSystemTotal =
+    hasMaxComponents
+      ? (frameMax ?? 0) + (dieMax ?? 0) + (hydraulicMax ?? 0) + (standMax ?? 0)
+      : null;
+  // ---------------------------------------------------------------------------
 
   const specs = SAFE_FIELDS
     .map((k) => {
@@ -131,16 +188,61 @@ export default function ReviewPage({ params }: PageProps) {
       <div className="grid gap-6 md:grid-cols-3">
         <section className="md:col-span-2">
           <p className="text-sm text-muted-foreground">
-            Review content is coming soon. In the meantime, basic specs are listed on the right.
+            Review content is coming soon. In the meantime, you can see how this bender scores and how its specs and pricing compare to other models.
           </p>
         </section>
         <aside className="md:col-span-1">
           <div className="rounded-lg border p-4">
-            <h2 className="text-base font-medium mb-1">Specs (preview)</h2>
+            <h2 className="text-base font-medium mb-2">Specs &amp; score (preview)</h2>
+
             {score !== null && (
-              <div className="mb-2 text-sm">
-                <span className="font-medium">Score:</span>{" "}
-                <span>{score} / {TOTAL_POINTS}</span>
+              <div className="mb-3 rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-semibold text-emerald-900">
+                    Overall score
+                  </span>
+                  <span className="font-semibold text-emerald-900">
+                    {score} / {TOTAL_POINTS}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {(minSystemTotal || maxSystemTotal) && (
+              <div className="mb-3 rounded-md border border-amber-100 bg-amber-50 px-3 py-2 text-xs">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-semibold text-amber-900">
+                    Pricing snapshot
+                  </span>
+                  <span className="text-right text-amber-900">
+                    {minSystemTotal && (
+                      <span className="block">
+                        Min system:{" "}
+                        <span className="font-semibold">
+                          ${minSystemTotal.toFixed(0)}
+                        </span>
+                      </span>
+                    )}
+                    {maxSystemTotal && (
+                      <span className="block">
+                        Max system:{" "}
+                        <span className="font-semibold">
+                          ${maxSystemTotal.toFixed(0)}
+                        </span>
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <p className="mt-1 text-[0.7rem] text-amber-900/80">
+                  Min system totals are built from the lowest documented prices for frame, dies, hydraulics, and stand/mount that we could verify.{" "}
+                  <Link
+                    href="/scoring#value-for-money"
+                    className="underline"
+                  >
+                    See how we calculate pricing for scoring
+                  </Link>
+                  .
+                </p>
               </div>
             )}
 
