@@ -17,10 +17,22 @@
     "totalScore": "81"
   },
   "roguefab-m600-series": {
-    "price": "",
+    "price": "999",
     "maxCapacity": "3.00",
     "clrRange": "1.00-6.00",
-    "totalScore": "88"
+    "totalScore": "88",
+    "dieCost": "99",
+    "cycleTime": "13",
+    "weight": "400",
+    "mandrel": "",
+    "type": "",
+    "country": "USA",
+    "madeIn": "USA",
+    "capacity": ".275",
+    "max_od": "2.375",
+    "maxWall": ".250",
+    "warranty": "YES",
+    "highlights": "AWESOME TEST!"
   },
   "baileigh-rdb-250": {
     "price": "",

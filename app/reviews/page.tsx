@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { getAllTubeBendersWithOverlay } from "../../lib/catalogOverlay";
 import { titleOf, slugForProduct } from "../../lib/ids";
+import { getProductScore, TOTAL_POINTS } from "../../lib/scoring";
 
 const fallbackImg = "/images/products/placeholder.png";
 type Product = {
@@ -31,6 +32,7 @@ export default function ReviewsIndexPage() {
           const title = displayTitle(p);
           const slug = slugFor(p);
           const img = p.image || fallbackImg;
+          const { total: score } = getProductScore(p as any);
           return (
             <Link
               key={p.id}
@@ -47,6 +49,14 @@ export default function ReviewsIndexPage() {
                 <div className="text-xs text-muted-foreground mt-1">
                   {[p.brand, p.model].filter(Boolean).join(" ")}
                 </div>
+                {score !== null && (
+                  <div className="mt-1 text-xs">
+                    <span className="font-medium">Score:</span>{" "}
+                    <span>
+                      {score} / {TOTAL_POINTS}
+                    </span>
+                  </div>
+                )}
                 {Array.isArray(p.highlights) && p.highlights.length > 0 && (
                   <ul className="mt-2 text-xs list-disc pl-4">
                     {p.highlights.slice(0,2).map((h) => <li key={h}>{h}</li>)}
