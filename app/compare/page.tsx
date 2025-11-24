@@ -43,27 +43,39 @@ function dedupePreserveOrder(items: Product[]): Product[] {
   return out;
 }
 
-// Build a lookup map from the overlay-aware product list.
 type ComparePageProps = { searchParams?: { ids?: string | string[] } };
 export default function ComparePage({ searchParams }: ComparePageProps) {
   const products = getAllTubeBendersWithOverlay() as Product[];
-  const tokens = parseIds(searchParams?.ids);          // raw query tokens
-  const byId = new Map(products.map((p) => [p.id, p])); // fast direct ID match
-  const lookup = buildLookup(products);                 // slug/name/brand+model
+  const tokens = parseIds(searchParams?.ids); // raw query tokens
 
-  // Resolve by trying raw ID first, then normalized key
-  const matched = tokens.map((raw) => {
-    const direct = byId.get(raw);
-    if (direct) return direct;
-    const key = slugOf(raw.trim());
-    return lookup.get(key);
-  }).filter(Boolean) as Product[];
+  let rows: Product[] = [];
 
-  const rows = dedupePreserveOrder(matched);
+  if (tokens.length === 0) {
+    // No explicit ids: default to showing all products (overlay-aware).
+    rows = products;
+  } else {
+    // Build a lookup map from the overlay-aware product list.
+    const byId = new Map(products.map((p) => [p.id, p])); // fast direct ID match
+    const lookup = buildLookup(products); // slug/name/brand+model
+
+    // Resolve by trying raw ID first, then normalized key
+    const matched = tokens
+      .map((raw) => {
+        const direct = byId.get(raw);
+        if (direct) return direct;
+        const key = slugOf(raw.trim());
+        return lookup.get(key);
+      })
+      .filter(Boolean) as Product[];
+
+    rows = dedupePreserveOrder(matched);
+  }
 
   // --- Canonicalize URL (strict) ---------------------------------------------
   // Redirect if raw tokens != resolved canonical IDs (length/order/value differ).
-  if (rows.length > 0) {
+  // Only do this when ids were actually supplied; /compare with no ids should
+  // just show the full table without redirect noise.
+  if (tokens.length > 0 && rows.length > 0) {
     const canonicalIds = rows.map((p) => p.id);
     const needsRedirect =
       tokens.length !== canonicalIds.length ||
