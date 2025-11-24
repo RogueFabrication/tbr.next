@@ -1,7 +1,8 @@
 import React from "react";
 import Link from "next/link";
-import { getAllTubeBendersWithOverlay } from "../../../lib/catalogOverlay";
+import { getAllTubeBendersWithOverlay, findTubeBenderWithOverlay } from "../../../lib/catalogOverlay";
 import { slugOf, titleOf, slugForProduct } from "../../../lib/ids";
+import { getProductScore, TOTAL_POINTS } from "../../../lib/scoring";
 
 const fallbackImg = "/images/products/placeholder.png";
 type Product = {
@@ -66,9 +67,12 @@ function labelFor(k: keyof Product): string {
 
 type PageProps = { params: { slug: string } };
 export default function ReviewPage({ params }: PageProps) {
+  // Read from the merged catalog so admin overlay edits are reflected.
   const all = getAllTubeBendersWithOverlay() as Product[];
   const lookup = buildLookup(all);
-  const product = lookup.get(slugOf(params.slug));
+  const product =
+    lookup.get(slugOf(params.slug)) ??
+    (findTubeBenderWithOverlay((b) => slugOf(b.id) === slugOf(params.slug) || slugOf(b.slug ?? "") === slugOf(params.slug)) as Product | undefined);
 
   if (!product) {
     return (
@@ -85,6 +89,7 @@ export default function ReviewPage({ params }: PageProps) {
   const title = titleOf(product);
   const compareHref = `/compare?ids=${encodeURIComponent(product.id)}`;
   const img = product.image || fallbackImg;
+  const { total: score } = getProductScore(product as any);
   const highlights = Array.isArray(product.highlights) ? product.highlights : [];
 
   const specs = SAFE_FIELDS
@@ -130,7 +135,13 @@ export default function ReviewPage({ params }: PageProps) {
         </section>
         <aside className="md:col-span-1">
           <div className="rounded-lg border p-4">
-            <h2 className="text-base font-medium mb-2">Specs (preview)</h2>
+            <h2 className="text-base font-medium mb-1">Specs (preview)</h2>
+            {score !== null && (
+              <div className="mb-2 text-sm">
+                <span className="font-medium">Score:</span>{" "}
+                <span>{score} / {TOTAL_POINTS}</span>
+              </div>
+            )}
             {specs.length === 0 ? (
               <p className="text-xs text-muted-foreground">No specs available yet.</p>
             ) : (

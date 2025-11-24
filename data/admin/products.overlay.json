@@ -3,7 +3,8 @@
     "price": "1003",
     "weight": "",
     "image": "",
-    "highlights": "foo, bar, baz"
+    "highlights": "foo, bar, baz #@",
+    "totalScore": "77"
   },
   "jd2-model-32": {
     "price": "1002",
@@ -12,14 +13,20 @@
     "model": "ADMIN",
     "maxCapacity": "2.01",
     "clrRange": "1.1-6.6",
-    "image": "qw"
+    "image": "qw",
+    "totalScore": "81"
   },
   "roguefab-m600-series": {
     "price": "",
     "maxCapacity": "3.00",
-    "clrRange": "1.00-6.00"
+    "clrRange": "1.00-6.00",
+    "totalScore": "99"
   },
   "baileigh-rdb-250": {
-    "price": ""
+    "price": "",
+    "totalScore": "65"
+  },
+  "baileigh-rdb-050": {
+    "totalScore": "64"
   }
 }

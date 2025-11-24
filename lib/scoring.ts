@@ -1,7 +1,5 @@
 /**
  * Simple, UI-focused description of the tube bender scoring system.
- * This is deliberately read-only for now – we are not yet computing
- * per-product scores inside this module.
  */
 
 export type ScoringMethod = "tier" | "scaled" | "binary" | "brand";
@@ -115,4 +113,56 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     tagline: "Binary scoring based on documented S-bend capability.",
   },
 ];
+
+/** Source of a product score for transparency. */
+export type ProductScoreSource = "manual" | "computed" | "none";
+
+export type ProductScore = {
+  /** 0–TOTAL_POINTS when known; null when no score is available. */
+  total: number | null;
+  /** Whether the score came from an admin override, future algorithm, or is missing. */
+  source: ProductScoreSource;
+};
+
+/**
+ * Lightweight per-product scoring helper.
+ *
+ * MVP behavior:
+ * - If the product has a `totalScore` value (typically from the admin overlay),
+ *   we treat that as the truth, clamp it into 0–TOTAL_POINTS, and return it.
+ * - If `totalScore` is missing or unparsable, we return { total: null, source: "none" }.
+ *
+ * This keeps public UI wiring simple today while leaving room for a future
+ * algorithmic scorer that can compute a derived score when no manual override
+ * is present.
+ */
+export function getProductScore(
+  product:
+    | {
+        id?: string | undefined;
+        totalScore?: unknown;
+      }
+    | null
+    | undefined,
+): ProductScore {
+  if (!product) {
+    return { total: null, source: "none" };
+  }
+
+  const raw = (product as any).totalScore ?? null;
+  if (raw === null || raw === undefined || raw === "") {
+    return { total: null, source: "none" };
+  }
+
+  const n =
+    typeof raw === "number"
+      ? raw
+      : parseFloat(String(raw).replace(/[^0-9.+-]/g, ""));
+  if (!Number.isFinite(n)) {
+    return { total: null, source: "none" };
+  }
+
+  const clamped = Math.max(0, Math.min(TOTAL_POINTS, Math.round(n)));
+  return { total: clamped, source: "manual" };
+}
 

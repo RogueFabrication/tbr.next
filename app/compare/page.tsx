@@ -4,6 +4,7 @@ import { getAllTubeBendersWithOverlay } from "../../lib/catalogOverlay";
 import ShareLink from "../../components/ShareLink";
 import { redirect } from "next/navigation";
 import { slugOf, parseIds, titleOf, slugForProduct } from "../../lib/ids";
+import { getProductScore, TOTAL_POINTS } from "../../lib/scoring";
 // NOTE: Only accepts canonical product identifiers (id/slug/name/brand+model)
 
 type Product = {
@@ -86,24 +87,31 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
             <thead>
               <tr className="bg-muted/30">
                 <th className="text-left p-2 border-b">Name</th>
+                <th className="text-left p-2 border-b">Score</th>
                 <th className="text-left p-2 border-b">Brand</th>
                 <th className="text-left p-2 border-b">Model</th>
                 <th className="text-left p-2 border-b">ID</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((p) => (
-                <tr key={p.id} className="odd:bg-background even:bg-muted/10">
-                  <td className="p-2 border-b font-medium">
-                    <Link href={`/reviews/${slugForProduct(p)}`} className="underline hover:no-underline">
-                      {titleOf(p)}
-                    </Link>
-                  </td>
-                  <td className="p-2 border-b">{p.brand ?? ""}</td>
-                  <td className="p-2 border-b">{p.model ?? ""}</td>
-                  <td className="p-2 border-b text-xs text-muted-foreground">{p.id}</td>
-                </tr>
-              ))}
+              {rows.map((p) => {
+                const { total: score } = getProductScore(p as any);
+                return (
+                  <tr key={p.id} className="odd:bg-background even:bg-muted/10">
+                    <td className="p-2 border-b font-medium">
+                      <Link href={`/reviews/${slugForProduct(p)}`} className="underline hover:no-underline">
+                        {titleOf(p)}
+                      </Link>
+                    </td>
+                    <td className="p-2 border-b">
+                      {score != null ? `${score} / ${TOTAL_POINTS}` : "—"}
+                    </td>
+                    <td className="p-2 border-b">{p.brand ?? ""}</td>
+                    <td className="p-2 border-b">{p.model ?? ""}</td>
+                    <td className="p-2 border-b text-xs text-muted-foreground">{p.id}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
