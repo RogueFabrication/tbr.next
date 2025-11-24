@@ -26,35 +26,37 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen bg-white text-gray-900 antialiased">
+      <body className="bg-white text-gray-900 antialiased">
         <ThemeProvider>
-          {showTempBanner && (
-            <div
-              role="alert"
-              className="w-full bg-red-600 text-white text-center text-sm sm:text-base font-semibold py-2 px-3"
-            >
-              TEMP DATA — COME BACK LATER. This site is in placeholder mode; specs/compare may be inaccurate.
-            </div>
-          )}
-          <Header />
-          <main className="mx-auto max-w-6xl px-6 py-8">
-            {children}
-          </main>
-          <footer className="border-t border-muted bg-muted/40 mt-8">
-            <div className="container mx-auto px-4 py-3 text-xs text-muted-foreground flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <p>
-                Disclosure: TubeBenderReviews is published by{" "}
-                <span className="font-medium">Joseph Gambino</span>, founder of Rogue Fabrication.
-              </p>
-              <p>
-                Learn more on the{" "}
-                <Link href="/about" className="underline">
-                  About &amp; Disclosures
-                </Link>{" "}
-                page.
-              </p>
-            </div>
-          </footer>
+          <div className="min-h-screen flex flex-col">
+            {showTempBanner && (
+              <div
+                role="alert"
+                className="w-full bg-red-600 text-white text-center text-sm sm:text-base font-semibold py-2 px-3"
+              >
+                TEMP DATA — COME BACK LATER. This site is in placeholder mode; specs/compare may be inaccurate.
+              </div>
+            )}
+            <Header />
+            <main className="mx-auto max-w-6xl px-6 py-8 flex-1 w-full">
+              {children}
+            </main>
+            <footer className="border-t border-muted bg-muted/40 mt-8">
+              <div className="container mx-auto px-4 py-3 text-xs text-muted-foreground flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <p>
+                  Disclosure: TubeBenderReviews is published by{" "}
+                  <span className="font-medium">Joseph Gambino</span>, founder of Rogue Fabrication.
+                </p>
+                <p>
+                  Learn more on the{" "}
+                  <Link href="/about" className="underline">
+                    About &amp; Disclosures
+                  </Link>{" "}
+                  page.
+                </p>
+              </div>
+            </footer>
+          </div>
         </ThemeProvider>
       </body>
     </html>

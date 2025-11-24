@@ -11,7 +11,6 @@ type Product = {
   price?: string;
   maxCapacity?: string;
   country?: string;
-  madeIn?: string;
   powerType?: string;
   bendAngle?: string | number;
   wallThicknessCapacity?: string;
@@ -112,104 +111,104 @@ export default function ProductsTab() {
       </div>
       
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200 relative">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 top-0 z-30 bg-gray-50">ID</th>
               {/* Scoring drivers first (after ID) */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">* Price</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">* Max Capacity</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">* Country / Made In</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">* Power Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">* Bend Angle (°)</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">* Wall Thickness</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">* Mandrel</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">* S-Bend Capable</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Price</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Max Capacity</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Country / Made In</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Power Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Bend Angle (°)</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Wall Thickness</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Mandrel</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* S-Bend Capable</th>
               {/* Non-scoring / display fields to the right */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CLR Range</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Die Cost</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cycle Time</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image Path</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Brand</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Model</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">CLR Range</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Die Cost</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Cycle Time</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Weight</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Image Path</th>
               {/* Additional display fields */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max OD</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Wall</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dimensions</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warranty</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Highlights</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Capacity</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Max OD</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Max Wall</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Dimensions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Warranty</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Highlights</th>
             </tr>
             <tr>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky left-0 top-12 bg-gray-50 z-30">
                 Stable internal ID. Do not change unless catalog data is updated to match.
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Entry / starter setup price (USD) used for Value for Money scoring.
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Largest round tube OD this machine can bend (inches).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
-                Primary manufacturing country (e.g. USA) used for USA Manufacturing score.
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
+                Primary manufacturing country (e.g. USA). Drives USA Manufacturing score.
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Manual / Hydraulic / Electric, etc. Affects Ease of Use &amp; Setup score.
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Maximum advertised single-pass bend angle in degrees.
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Max wall for 1.75&quot; DOM used for wall thickness scoring (inches).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Mandrel option: Available / Standard / No, used for Mandrel score.
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Yes/No: documented ability to create S-bends (affects S-Bend score).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Brand / manufacturer name (display only).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Model designation exactly as marketed (display only).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Approximate min–max CLR coverage, for future content / specs.
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Rough die price notes (not currently used in scoring).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Bend cycle speed notes (not currently used in scoring).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Approximate shipping/operating weight for the specs table.
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Relative path under <code className="font-mono">/images/products/</code>. If the file doesn&apos;t exist, the photo will break.
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Product type classification (display only).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Alternative capacity field (display only).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Maximum outer diameter spec (display only).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Maximum wall thickness spec (display only).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Physical dimensions for specs table (display only).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Warranty terms for specs table (display only).
               </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal">
+              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Comma-separated highlight bullets for review pages (display only).
               </th>
             </tr>
@@ -220,7 +219,7 @@ export default function ProductsTab() {
                 key={String(product?.id ?? "")}
                 className="hover:bg-gray-50"
               >
-                <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-600">
+                <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-600 sticky left-0 bg-white z-10">
                   {String(product?.id ?? '')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -237,9 +236,8 @@ export default function ProductsTab() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
-                    value={product?.country ?? product?.madeIn ?? ''}
+                    value={product?.country ?? ''}
                     onSave={(value) => {
-                      // Store as "country" in the overlay; scoring also falls back to madeIn if present.
                       updateProduct(product.id, 'country', value as string);
                     }}
                   />
@@ -248,6 +246,13 @@ export default function ProductsTab() {
                   <EditableField
                     value={product?.powerType ?? ''}
                     onSave={(value) => updateProduct(product.id, 'powerType', value as string)}
+                    options={[
+                      'Manual',
+                      'Hydraulic',
+                      'Manual + Hydraulic',
+                      'Electric / CNC',
+                      'Other',
+                    ]}
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -415,7 +420,7 @@ function EditableField({
           onBlur={handleSave}
           onKeyDown={(e) => e.key === 'Enter' && handleSave()}
           autoFocus
-          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+          className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
         >
           {options.map(option => (
             <option key={option} value={option}>{option}</option>
@@ -432,7 +437,7 @@ function EditableField({
         onBlur={handleSave}
         onKeyDown={(e) => e.key === 'Enter' && handleSave()}
         autoFocus
-        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+        className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
       />
     );
   }
@@ -440,7 +445,7 @@ function EditableField({
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded text-sm"
+      className="cursor-pointer hover:bg-gray-50 px-2 py-1 rounded text-sm text-gray-900"
     >
       {value || '-'}
     </div>

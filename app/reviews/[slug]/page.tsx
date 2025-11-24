@@ -42,8 +42,9 @@ function buildLookup(products: Product[]): Map<string, Product> {
   return map;
 }
 
+// We treat `country` as the canonical field and ignore legacy `madeIn` to avoid duplicate rows.
 const SAFE_FIELDS: Array<keyof Product> = [
-  "brand","model","type","country","madeIn","capacity","max_od","maxWall","weight","dimensions","warranty","price",
+  "brand","model","type","country","capacity","max_od","maxWall","weight","dimensions","warranty","price",
 ];
 
 /** Human label for a spec key. */
@@ -52,8 +53,8 @@ function labelFor(k: keyof Product): string {
     brand: "Brand",
     model: "Model",
     type: "Type",
-    country: "Country",
-    madeIn: "Made In",
+    // Explicitly disclosed as claimed by the manufacturer, not independently audited.
+    country: "Country of manufacture (claimed)",
     capacity: "Capacity",
     max_od: "Max OD",
     maxWall: "Max Wall",
