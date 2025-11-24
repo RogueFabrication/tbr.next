@@ -14,7 +14,6 @@ type Product = {
   weight?: string;
   price?: string;
   mandrel?: string;
-  totalScore?: string;
   // Newly added public-facing fields
   type?: string;
   country?: string;
@@ -115,7 +114,6 @@ export default function ProductsTab() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mandrel</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Score</th>
               {/* New fields */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
@@ -191,12 +189,6 @@ export default function ProductsTab() {
                     value={product?.mandrel ?? ''}
                     onSave={(value) => updateProduct(product.id, 'mandrel', value as string)}
                     options={['Available', 'Standard', 'No']}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <EditableField
-                    value={product?.totalScore != null ? String(product.totalScore) : ""}
-                    onSave={(value) => updateProduct(product.id, 'totalScore', value as string)}
                   />
                 </td>
 

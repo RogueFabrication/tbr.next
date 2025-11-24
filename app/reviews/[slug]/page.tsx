@@ -89,7 +89,7 @@ export default function ReviewPage({ params }: PageProps) {
   const title = titleOf(product);
   const compareHref = `/compare?ids=${encodeURIComponent(product.id)}`;
   const img = product.image || fallbackImg;
-  const { total: score } = getProductScore(product as any);
+  const { total: score, breakdown } = getProductScore(product as any);
   const highlights = Array.isArray(product.highlights) ? product.highlights : [];
 
   const specs = SAFE_FIELDS
@@ -142,6 +142,32 @@ export default function ReviewPage({ params }: PageProps) {
                 <span>{score} / {TOTAL_POINTS}</span>
               </div>
             )}
+
+            {Array.isArray(breakdown) && breakdown.length > 0 && (
+              <details className="mb-3 text-xs md:text-sm">
+                <summary className="cursor-pointer select-none font-medium">
+                  Score breakdown
+                </summary>
+                <div className="mt-2 space-y-1.5">
+                  {breakdown.map((item, idx) => (
+                    <div key={`${item.criteria}-${idx}`} className="border-b last:border-b-0 pb-1.5 last:pb-0">
+                      <div className="flex justify-between gap-2">
+                        <span className="font-medium">{item.criteria}</span>
+                        <span>
+                          {item.points} / {item.maxPoints}
+                        </span>
+                      </div>
+                      {item.reasoning && (
+                        <p className="text-[0.7rem] md:text-xs text-muted-foreground mt-0.5">
+                          {item.reasoning}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+
             {specs.length === 0 ? (
               <p className="text-xs text-muted-foreground">No specs available yet.</p>
             ) : (

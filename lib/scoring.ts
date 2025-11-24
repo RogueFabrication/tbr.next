@@ -134,19 +134,16 @@ export type ProductScore = {
 
 /**
  * Scoring behavior:
- * - If the product has a `totalScore` value (typically from the admin overlay),
- *   we treat that as the truth, clamp it into 0–TOTAL_POINTS, and return it
- *   with source: "manual".
- * - If `totalScore` is missing or unparsable, we fall back to the legacy
- *   algorithm in scoringEngine, adapted to whatever fields exist on the
- *   product, and return source: "computed" when we can derive a score.
- * - If we cannot compute anything sane, we return { total: null, source: "none" }.
+ * - We always attempt to compute a score + breakdown via the legacy scoring
+ *   engine, using a best-effort adapter from whatever catalog fields exist.
+ * - There are no manual overrides: the total score is always derived from the
+ *   algorithm. If we cannot compute anything sane, we return
+ *   { total: null, source: "none" }.
  */
 export function getProductScore(
   product:
     | {
         id?: string | undefined;
-        totalScore?: unknown;
       }
     | null
     | undefined,
@@ -155,33 +152,18 @@ export function getProductScore(
     return { total: null, source: "none" };
   }
 
-  // 1) Manual override from admin overlay (totalScore field)
-  const raw = (product as any).totalScore ?? null;
-  if (raw !== null && raw !== undefined && raw !== "") {
-    const n =
-      typeof raw === "number"
-        ? raw
-        : parseFloat(String(raw).replace(/[^0-9.+-]/g, ""));
-    if (Number.isFinite(n)) {
-      const clamped = Math.max(0, Math.min(TOTAL_POINTS, Math.round(n)));
-      return { total: clamped, source: "manual" };
-    }
-  }
-
-  // 2) Computed score via scoringEngine when no valid manual override exists.
   const p: any = product;
 
+  // Build a best-effort scoring input from whatever fields we have.
   const scoringInput: ScoringInput = {
     id: p.id,
     brand: p.brand,
     model: p.model,
-    // Prefer an explicit priceRange if present; otherwise fall back to a
-    // stringified price so the legacy price-bucket logic has *something*.
+    // Prefer an explicit priceRange; otherwise fall back to a stringified price
+    // so the legacy price-bucket logic has something to classify.
     priceRange:
       p.priceRange ??
       (p.price ? String(p.price) : undefined),
-    // Power type may be a dedicated field in some catalogs; otherwise we have
-    // to leave it blank and accept a slightly degraded "ease of use" score.
     powerType: p.powerType,
     // Capacity: prefer a dedicated maxCapacity field, then capacity.
     maxCapacity: p.maxCapacity ?? p.capacity,
@@ -190,13 +172,11 @@ export function getProductScore(
     bendAngle: typeof p.bendAngle === "number" ? p.bendAngle : undefined,
     // Wall thickness capability: prefer a dedicated field, then maxWall as a
     // best-effort proxy when that is how the catalog stores it.
-    wallThicknessCapacity:
-      p.wallThicknessCapacity ?? p.maxWall,
+    wallThicknessCapacity: p.wallThicknessCapacity ?? p.maxWall,
     features: Array.isArray(p.features) ? p.features : [],
     materials: Array.isArray(p.materials) ? p.materials : [],
     // Mandrel availability in the new admin grid is stored as "mandrel" with
-    // values like "Available" / "Standard" / "No". The legacy algorithm expects
-    // "Available" to award full points.
+    // values like "Available" / "Standard" / "No".
     mandrelBender: p.mandrelBender ?? p.mandrel,
     sBendCapability: p.sBendCapability,
   };
@@ -206,12 +186,12 @@ export function getProductScore(
     if (!Number.isFinite(scored.totalScore)) {
       return { total: null, source: "none" };
     }
-    const clamped = Math.max(
-      0,
-      Math.min(TOTAL_POINTS, Math.round(scored.totalScore)),
-    );
+
+    const clamp = (value: number): number =>
+      Math.max(0, Math.min(TOTAL_POINTS, Math.round(value)));
+
     return {
-      total: clamped,
+      total: clamp(scored.totalScore),
       source: "computed",
       breakdown: scored.scoreBreakdown,
     };
