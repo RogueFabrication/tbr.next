@@ -61,10 +61,24 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
     // Resolve by trying raw ID first, then normalized key
     const matched = tokens
       .map((raw) => {
-        const direct = byId.get(raw);
+        const trimmed = raw.trim();
+        // 1) Direct ID match (preferred)
+        const direct = byId.get(trimmed);
         if (direct) return direct;
-        const key = slugOf(raw.trim());
-        return lookup.get(key);
+
+        // 2) Slug/name/brand+model lookup
+        const key = slugOf(trimmed);
+        const fromLookup = lookup.get(key);
+        if (fromLookup) return fromLookup;
+
+        // 3) Backwards-compat: numeric tokens as 1-based indexes into the product list
+        //    e.g. ids=3,2,1 -> products[2], products[1], products[0]
+        const n = Number(trimmed);
+        if (Number.isInteger(n) && n > 0 && n <= products.length) {
+          return products[n - 1];
+        }
+
+        return undefined;
       })
       .filter(Boolean) as Product[];
 
