@@ -2,6 +2,10 @@
 import Link from "next/link";
 import { Tag, ShieldCheck, TrendingUp } from "lucide-react";
 import { VALID_IDS } from "../lib/catalog";
+import { getAllTubeBendersWithOverlay } from "../lib/catalogOverlay";
+import { getProductScore } from "../lib/scoring";
+import { titleOf, slugForProduct } from "../lib/ids";
+import LandingCompareSection, { type LandingCompareRow } from "../components/LandingCompareSection";
 
 export const metadata = {
   title: "TBR | TubeBenderReviews",
@@ -11,6 +15,68 @@ export const metadata = {
 
 export default function Page() {
   const picks = Array.isArray(VALID_IDS) ? VALID_IDS.slice(0, 4) : [];
+
+  // Prepare data for landing compare section
+  const products = getAllTubeBendersWithOverlay();
+  const parseMoney = (raw: unknown): number | null => {
+    if (raw === null || raw === undefined || raw === "") return null;
+    if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
+    const parsed = parseFloat(String(raw).replace(/[^0-9.+-]/g, ""));
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const compareRows: LandingCompareRow[] = products.map((p) => {
+    const { total: score } = getProductScore(p as any);
+
+    const frameMin = parseMoney((p as any).framePriceMin);
+    const dieMin = parseMoney((p as any).diePriceMin);
+    const hydraulicMin = parseMoney((p as any).hydraulicPriceMin);
+    const standMin = parseMoney((p as any).standPriceMin);
+
+    const frameMax = parseMoney((p as any).framePriceMax);
+    const dieMax = parseMoney((p as any).diePriceMax);
+    const hydraulicMax = parseMoney((p as any).hydraulicPriceMax);
+    const standMax = parseMoney((p as any).standPriceMax);
+
+    const hasMinComponents =
+      frameMin !== null ||
+      dieMin !== null ||
+      hydraulicMin !== null ||
+      standMin !== null;
+    const hasMaxComponents =
+      frameMax !== null ||
+      dieMax !== null ||
+      hydraulicMax !== null ||
+      standMax !== null;
+
+    const priceMin =
+      hasMinComponents
+        ? (frameMin ?? 0) + (dieMin ?? 0) + (hydraulicMin ?? 0) + (standMin ?? 0)
+        : parseMoney((p as any).price);
+
+    const priceMax =
+      hasMaxComponents
+        ? (frameMax ?? 0) + (dieMax ?? 0) + (hydraulicMax ?? 0) + (standMax ?? 0)
+        : null;
+
+    return {
+      id: p.id,
+      slug: slugForProduct(p),
+      name: titleOf(p),
+      brand: p.brand,
+      model: p.model,
+      score,
+      priceMin,
+      priceMax,
+      maxCapacity: p.maxCapacity ?? (p.max_od != null ? String(p.max_od) : null),
+      powerType: p.powerType ?? null,
+      country: (p as any).country ?? null,
+      mandrel: p.mandrel ?? null,
+      sBend: typeof (p as any).sBendCapability === "boolean" ? (p as any).sBendCapability : null,
+      image: (p as any).image ?? null,
+    };
+  });
+
   return (
     <main className="bg-white">
       {/* HERO BLOCK (image + overlay + content) */}
@@ -153,6 +219,11 @@ export default function Page() {
               )}
             </div>
           </div>
+      </section>
+
+      {/* Landing Compare Section */}
+      <section className="mx-auto max-w-6xl px-6 pb-12">
+        <LandingCompareSection rows={compareRows} />
       </section>
     </main>
   );

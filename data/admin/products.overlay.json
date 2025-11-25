@@ -4,7 +4,8 @@
     "weight": "",
     "image": "",
     "highlights": "foo, bar, baz #@",
-    "totalScore": "77"
+    "totalScore": "77",
+    "country": "USA"
   },
   "jd2-model-32": {
     "price": "1002",
@@ -14,7 +15,10 @@
     "maxCapacity": "2.01",
     "clrRange": "1.1-6.6",
     "image": "qw",
-    "totalScore": "81"
+    "totalScore": "81",
+    "country": "ASIA",
+    "powerType": "Electric / CNC",
+    "framePriceMin": ""
   },
   "roguefab-m600-series": {
     "price": "999",
@@ -35,7 +39,15 @@
     "highlights": "AWESOME TEST!",
     "brand": "",
     "powerType": "electric",
-    "sBendCapability": ""
+    "sBendCapability": "",
+    "framePriceMin": "779",
+    "framePriceMax": "1545",
+    "diePriceMin": "224",
+    "diePriceMax": "456",
+    "hydraulicPriceMin": "99",
+    "hydraulicPriceMax": "2488",
+    "standPriceMin": "0",
+    "standPriceMax": "1560"
   },
   "baileigh-rdb-250": {
     "price": "",

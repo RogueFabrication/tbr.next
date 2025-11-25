@@ -30,6 +30,15 @@ type Product = {
   warranty?: string;
   image?: string;
   highlights?: string; // stored comma-separated for simple admin editing
+  // Pricing breakdown fields (all optional; stored in overlay)
+  framePriceMin?: string;
+  framePriceMax?: string;
+  diePriceMin?: string;
+  diePriceMax?: string;
+  hydraulicPriceMin?: string;
+  hydraulicPriceMax?: string;
+  standPriceMin?: string;
+  standPriceMax?: string;
 };
 
 export default function ProductsTab() {
@@ -384,6 +393,168 @@ export default function ProductsTab() {
           </tbody>
         </table>
       </div>
+
+      {/* Pricing breakdown section (component-level min/max) */}
+      <section className="mt-10 border-t border-gray-200 pt-6">
+        <h3 className="text-base font-semibold text-gray-900">Pricing breakdown (min / max)</h3>
+        <p className="mt-1 text-xs text-gray-500 max-w-3xl">
+          These values are used for transparent pricing when we explain Value for Money scoring.
+          Enter conservative, documented prices only. System totals are calculated as the sum of all component min/max values.
+        </p>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          {(Array.isArray(products) ? products : (products as any)?.items ?? []).map((product: any) => {
+            const parse = (v: unknown): number =>
+              typeof v === 'number'
+                ? v
+                : parseFloat(String(v ?? '').replace(/[^0-9.+-]/g, '')) || 0;
+
+            const minTotal =
+              parse(product?.framePriceMin) +
+              parse(product?.diePriceMin) +
+              parse(product?.hydraulicPriceMin) +
+              parse(product?.standPriceMin);
+
+            const maxTotal =
+              parse(product?.framePriceMax) +
+              parse(product?.diePriceMax) +
+              parse(product?.hydraulicPriceMax) +
+              parse(product?.standPriceMax);
+
+            return (
+              <div
+                key={String(product?.id ?? '')}
+                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+              >
+                <div className="flex items-baseline justify-between gap-3 mb-2">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {String(product?.id ?? '')}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {product?.brand || product?.model
+                        ? [product?.brand, product?.model].filter(Boolean).join(' ')
+                        : 'Unnamed product'}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[0.65rem] uppercase tracking-wide text-gray-500">
+                      Min system total
+                    </div>
+                    <div className="text-sm font-semibold text-gray-900 mb-1">
+                      {minTotal > 0 ? `$${minTotal.toFixed(0)}` : '—'}
+                    </div>
+                    <div className="text-[0.65rem] uppercase tracking-wide text-gray-500">
+                      Max system total
+                    </div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {maxTotal > 0 ? `$${maxTotal.toFixed(0)}` : '—'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <div className="font-semibold text-gray-800 mb-1">Frame</div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Min</div>
+                        <EditableField
+                          value={product?.framePriceMin ?? ''}
+                          onSave={(value) =>
+                            updateProduct(product.id, 'framePriceMin', value as string)
+                          }
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Max</div>
+                        <EditableField
+                          value={product?.framePriceMax ?? ''}
+                          onSave={(value) =>
+                            updateProduct(product.id, 'framePriceMax', value as string)
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="font-semibold text-gray-800 mb-1">Dies</div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Min</div>
+                        <EditableField
+                          value={product?.diePriceMin ?? ''}
+                          onSave={(value) =>
+                            updateProduct(product.id, 'diePriceMin', value as string)
+                          }
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Max</div>
+                        <EditableField
+                          value={product?.diePriceMax ?? ''}
+                          onSave={(value) =>
+                            updateProduct(product.id, 'diePriceMax', value as string)
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="font-semibold text-gray-800 mb-1">Hydraulics</div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Min</div>
+                        <EditableField
+                          value={product?.hydraulicPriceMin ?? ''}
+                          onSave={(value) =>
+                            updateProduct(product.id, 'hydraulicPriceMin', value as string)
+                          }
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Max</div>
+                        <EditableField
+                          value={product?.hydraulicPriceMax ?? ''}
+                          onSave={(value) =>
+                            updateProduct(product.id, 'hydraulicPriceMax', value as string)
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="font-semibold text-gray-800 mb-1">Stand / Mount</div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Min</div>
+                        <EditableField
+                          value={product?.standPriceMin ?? ''}
+                          onSave={(value) =>
+                            updateProduct(product.id, 'standPriceMin', value as string)
+                          }
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Max</div>
+                        <EditableField
+                          value={product?.standPriceMax ?? ''}
+                          onSave={(value) =>
+                            updateProduct(product.id, 'standPriceMax', value as string)
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }
@@ -400,6 +571,13 @@ function EditableField({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
+
+  // Sync editValue when value prop changes (e.g., after save)
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(value);
+    }
+  }, [value, isEditing]);
 
   const handleSave = () => {
     onSave(editValue);
@@ -445,7 +623,15 @@ function EditableField({
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className="cursor-pointer hover:bg-gray-50 px-2 py-1 rounded text-sm text-gray-900"
+      onFocus={() => setIsEditing(true)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setIsEditing(true);
+        }
+      }}
+      tabIndex={0}
+      className="cursor-pointer hover:bg-gray-50 px-2 py-1 rounded text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
     >
       {value || '-'}
     </div>

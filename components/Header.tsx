@@ -10,7 +10,7 @@ const links = [
   { href: "/finder", label: "Finder" },
   { href: "/compare", label: "Compare" },
   { href: "/scoring", label: "Scoring" },
-  { href: "/admin", label: "Admin" },
+  { href: "/about", label: "About" },
 ];
 
 export default function Header() {
