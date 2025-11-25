@@ -59,20 +59,20 @@ function isSBendOn(flag?: boolean | null): boolean {
   return !!flag;
 }
 
-function ScoreCircle({ score }: { score: number | null }) {
+function ScoreCircle({ score, href }: { score: number | null; href: string }) {
   const clamped =
     score == null
       ? null
       : Math.max(0, Math.min(TOTAL_POINTS, Math.round(score)));
 
-  const radius = 18;
+  // Slightly larger circle than before
+  const radius = 20;
   const circumference = 2 * Math.PI * radius;
   const ratio = clamped == null ? 0 : clamped / TOTAL_POINTS;
   const dash = circumference * ratio;
 
-  // Marketing scale:
   // 0–59 = red, 60–79 = yellow, 80–100 = green
-  let color = "#9ca3af"; // gray as fallback
+  let color = "#9ca3af"; // neutral gray fallback
   if (clamped != null) {
     if (clamped >= 80) color = "#22c55e";        // green
     else if (clamped >= 60) color = "#f59e0b";   // yellow
@@ -81,19 +81,23 @@ function ScoreCircle({ score }: { score: number | null }) {
 
   return (
     <div className="flex flex-col items-center gap-1 text-center">
-      <div className="relative h-12 w-12">
-        <svg viewBox="0 0 48 48" className="h-12 w-12" aria-hidden="true">
+      <div className="relative h-14 w-14">
+        <svg
+          viewBox="0 0 52 52"
+          className="h-14 w-14"
+          aria-hidden="true"
+        >
           <circle
-            cx="24"
-            cy="24"
+            cx="26"
+            cy="26"
             r={radius}
-            stroke="#e5e7eb" // gray track
+            stroke="#e5e7eb" // track
             strokeWidth="4"
             fill="none"
           />
           <circle
-            cx="24"
-            cy="24"
+            cx="26"
+            cy="26"
             r={radius}
             stroke={color}
             strokeWidth="4"
@@ -103,6 +107,8 @@ function ScoreCircle({ score }: { score: number | null }) {
             strokeLinecap="round"
           />
         </svg>
+
+        {/* Centered score text */}
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center leading-tight">
           <span className="text-xs font-semibold" style={{ color }}>
             {clamped != null ? clamped : "—"}
@@ -110,9 +116,14 @@ function ScoreCircle({ score }: { score: number | null }) {
           <span className="text-[0.6rem] text-gray-500">/ {TOTAL_POINTS}</span>
         </div>
       </div>
-      <span className="text-[0.6rem] uppercase tracking-wide text-gray-500">
-        Rating
-      </span>
+
+      {/* Link to review page with score flag for future auto-expand */}
+      <Link
+        href={href}
+        className="text-[0.7rem] font-medium text-blue-600 underline hover:text-blue-700"
+      >
+        Pt. details
+      </Link>
     </div>
   );
 }
@@ -327,7 +338,10 @@ export default function LandingCompareSection({ rows }: Props) {
                     </div>
                   </td>
                   <td className="px-3 py-3 align-middle">
-                    <ScoreCircle score={row.score} />
+                    <ScoreCircle
+                      score={row.score}
+                      href={`/reviews/${row.slug}?score=details`}
+                    />
                   </td>
                   <td className="px-3 py-3 align-middle text-sm text-gray-800">
                     {formatPriceRange(row.priceMin, row.priceMax)}
