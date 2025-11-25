@@ -13,6 +13,22 @@ type Product = {
   name?: string;
   brand?: string;
   model?: string;
+  // Core specs / scoring-related fields
+  price?: string | number;
+  maxCapacity?: string;
+  max_od?: string | number;
+  powerType?: string;
+  mandrel?: string;
+  sBendCapability?: string | boolean;
+  // Pricing breakdown fields (overlay-driven)
+  framePriceMin?: string | number;
+  framePriceMax?: string | number;
+  diePriceMin?: string | number;
+  diePriceMax?: string | number;
+  hydraulicPriceMin?: string | number;
+  hydraulicPriceMax?: string | number;
+  standPriceMin?: string | number;
+  standPriceMax?: string | number;
 };
 
 
@@ -114,27 +130,104 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
               <tr className="bg-muted/30">
                 <th className="text-left p-2 border-b">Name</th>
                 <th className="text-left p-2 border-b">Score</th>
-                <th className="text-left p-2 border-b">Brand</th>
-                <th className="text-left p-2 border-b">Model</th>
-                <th className="text-left p-2 border-b">ID</th>
+                <th className="text-left p-2 border-b">Price range (min–max)</th>
+                <th className="text-left p-2 border-b">Power</th>
+                <th className="text-left p-2 border-b">Max diameter</th>
+                <th className="text-left p-2 border-b">Mandrel</th>
+                <th className="text-left p-2 border-b">S-bend</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((p) => {
                 const { total: score } = getProductScore(p as any);
+
+                const parseMoney = (raw: unknown): number | null => {
+                  if (raw === null || raw === undefined || raw === "") return null;
+                  if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
+                  const parsed = parseFloat(String(raw).replace(/[^0-9.+-]/g, ""));
+                  return Number.isFinite(parsed) ? parsed : null;
+                };
+
+                const frameMin = parseMoney((p as any).framePriceMin);
+                const dieMin = parseMoney((p as any).diePriceMin);
+                const hydraulicMin = parseMoney((p as any).hydraulicPriceMin);
+                const standMin = parseMoney((p as any).standPriceMin);
+
+                const frameMax = parseMoney((p as any).framePriceMax);
+                const dieMax = parseMoney((p as any).diePriceMax);
+                const hydraulicMax = parseMoney((p as any).hydraulicPriceMax);
+                const standMax = parseMoney((p as any).standPriceMax);
+
+                const hasMinComponents =
+                  frameMin !== null ||
+                  dieMin !== null ||
+                  hydraulicMin !== null ||
+                  standMin !== null;
+                const hasMaxComponents =
+                  frameMax !== null ||
+                  dieMax !== null ||
+                  hydraulicMax !== null ||
+                  standMax !== null;
+
+                const minSystemTotal =
+                  hasMinComponents
+                    ? (frameMin ?? 0) + (dieMin ?? 0) + (hydraulicMin ?? 0) + (standMin ?? 0)
+                    : parseMoney((p as any).price);
+
+                const maxSystemTotal =
+                  hasMaxComponents
+                    ? (frameMax ?? 0) + (dieMax ?? 0) + (hydraulicMax ?? 0) + (standMax ?? 0)
+                    : null;
+
+                let priceLabel = "—";
+                if (minSystemTotal && maxSystemTotal && maxSystemTotal > 0 && maxSystemTotal !== minSystemTotal) {
+                  priceLabel = `$${minSystemTotal.toFixed(0)}–$${maxSystemTotal.toFixed(0)}`;
+                } else if (minSystemTotal && minSystemTotal > 0) {
+                  priceLabel = `$${minSystemTotal.toFixed(0)}+`;
+                }
+
+                const maxDiameter = p.maxCapacity ?? (p.max_od != null ? String(p.max_od) : "");
+
+                let sBendLabel = "—";
+                const rawSB = (p as any).sBendCapability;
+                if (typeof rawSB === "boolean") {
+                  sBendLabel = rawSB ? "Yes" : "No";
+                } else if (typeof rawSB === "string" && rawSB.trim()) {
+                  sBendLabel = rawSB.trim();
+                }
+
+                const mandrelLabel = p.mandrel && String(p.mandrel).trim().length > 0
+                  ? String(p.mandrel)
+                  : "—";
+
                 return (
                   <tr key={p.id} className="odd:bg-background even:bg-muted/10">
                     <td className="p-2 border-b font-medium">
-                      <Link href={`/reviews/${slugForProduct(p)}`} className="underline hover:no-underline">
+                      <Link
+                        href={`/reviews/${slugForProduct(p)}`}
+                        className="underline hover:no-underline"
+                      >
                         {titleOf(p)}
                       </Link>
                     </td>
                     <td className="p-2 border-b">
                       {score != null ? `${score} / ${TOTAL_POINTS}` : "—"}
                     </td>
-                    <td className="p-2 border-b">{p.brand ?? ""}</td>
-                    <td className="p-2 border-b">{p.model ?? ""}</td>
-                    <td className="p-2 border-b text-xs text-muted-foreground">{p.id}</td>
+                    <td className="p-2 border-b">
+                      {priceLabel}
+                    </td>
+                    <td className="p-2 border-b">
+                      {p.powerType ?? "—"}
+                    </td>
+                    <td className="p-2 border-b">
+                      {maxDiameter || "—"}
+                    </td>
+                    <td className="p-2 border-b">
+                      {mandrelLabel}
+                    </td>
+                    <td className="p-2 border-b">
+                      {sBendLabel}
+                    </td>
                   </tr>
                 );
               })}
