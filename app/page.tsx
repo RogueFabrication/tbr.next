@@ -1,7 +1,6 @@
 // Server component: deploy-safe landing page
 import Link from "next/link";
 import { Tag, ShieldCheck, TrendingUp } from "lucide-react";
-import { VALID_IDS } from "../lib/catalog";
 import { getAllTubeBendersWithOverlay } from "../lib/catalogOverlay";
 import { getProductScore } from "../lib/scoring";
 import { titleOf, slugForProduct } from "../lib/ids";
@@ -14,8 +13,6 @@ export const metadata = {
 };
 
 export default function Page() {
-  const picks = Array.isArray(VALID_IDS) ? VALID_IDS.slice(0, 4) : [];
-
   // Prepare data for landing compare section
   const products = getAllTubeBendersWithOverlay();
   const parseMoney = (raw: unknown): number | null => {
@@ -178,47 +175,6 @@ export default function Page() {
           </div>
           </section>
         </div>
-      </section>
-
-      {/* Quick Picks section, now clearly below hero on white */}
-      <section className="mx-auto max-w-6xl px-6 pb-12 mt-2">
-          <div className="rounded-xl bg-white/95 backdrop-blur shadow-sm border border-black/5 px-5 py-4">
-            <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-semibold text-gray-900">Quick Picks</h2>
-                <p className="text-xs text-gray-500">
-                  Open a model directly in the compare table.
-                </p>
-              </div>
-              <div className="text-xs text-gray-400">
-                4 seeded models • more coming soon
-              </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {picks.length === 0 ? (
-                <div className="text-sm text-gray-500 col-span-full">
-                  No models available yet. Check back soon.
-                </div>
-              ) : (
-                picks.map((id) => (
-                  <Link
-                    key={id as string}
-                    href={`/compare?ids=${encodeURIComponent(id as string)}`}
-                    className="rounded-lg border border-gray-200/80 bg-white hover:border-gray-300 hover:bg-gray-50 px-4 py-3 transition-colors"
-                    aria-label={`Compare ${String(id)}`}
-                  >
-                    <div className="text-sm font-medium text-gray-900 truncate">
-                      {String(id)}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      Open in compare ›
-                    </div>
-                  </Link>
-                ))
-              )}
-            </div>
-          </div>
       </section>
 
       {/* Landing Compare Section */}
