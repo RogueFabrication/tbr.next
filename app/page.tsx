@@ -68,10 +68,13 @@ export default function Page() {
       maxCapacity:
         (p as any).maxCapacity ??
         ((p as any).max_od != null ? String((p as any).max_od) : null),
-      powerType: p.powerType ?? null,
+      powerType: (p as any).powerType ?? null,
       country: (p as any).country ?? null,
-      mandrel: p.mandrel ?? null,
-      sBend: typeof (p as any).sBendCapability === "boolean" ? (p as any).sBendCapability : null,
+      mandrel: (p as any).mandrel ?? null,
+      sBend:
+        typeof (p as any).sBendCapability === "boolean"
+          ? (p as any).sBendCapability
+          : null,
       image: (p as any).image ?? null,
     };
   });
