@@ -26,11 +26,14 @@ export default function Header() {
           {/* Brand link */}
           <Link
             href="/"
-            className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 hover:opacity-90 transition"
+            className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 hover:opacity-90 transition max-w-[60%]"
             aria-label="Return to homepage"
           >
-            <Settings className="w-4 h-4 text-gray-700 dark:text-gray-300" />
-            <span>Tube Bender Reviews</span>
+            <Settings className="w-4 h-4 text-gray-700 dark:text-gray-300 flex-shrink-0" />
+            <span className="font-semibold tracking-tight truncate">
+              <span className="inline sm:hidden text-sm">TBR</span>
+              <span className="hidden sm:inline text-base">Tube Bender Reviews</span>
+            </span>
           </Link>
 
           <nav className="flex items-center gap-1">

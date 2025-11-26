@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ContactForm from "../../components/ContactForm";
 
 export const metadata = {
   title: "About & Disclosures | TubeBenderReviews",
@@ -9,7 +10,11 @@ export const metadata = {
 export default function AboutPage() {
   return (
     <main className="container mx-auto px-4 py-10 max-w-4xl">
-      <h1 className="text-3xl font-semibold mb-6">About & Disclosures</h1>
+      {/* Contact Form - Primary CTA */}
+      <ContactForm />
+
+      <div className="mt-12 space-y-8">
+        <h1 className="text-3xl font-semibold mb-6">About & Disclosures</h1>
 
       <section className="mb-8 space-y-3">
         <h2 className="text-xl font-semibold">Who runs TubeBenderReviews</h2>
@@ -101,18 +106,10 @@ export default function AboutPage() {
         </p>
       </section>
 
-      <section className="mb-10 space-y-3">
-        <h2 className="text-xl font-semibold">How to contact me</h2>
-        <p className="text-sm text-muted-foreground">
-          If you have questions about a score, want to dispute a spec, or think a
-          product should be added, reach out through RogueFab&apos;s normal contact
-          channels and mention TubeBenderReviews in your message.
-        </p>
-      </section>
-
       <p className="text-xs text-muted-foreground">
         Last updated: {new Date().toISOString().split("T")[0]}
       </p>
+      </div>
     </main>
   );
 }
