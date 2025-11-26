@@ -65,7 +65,9 @@ export default function Page() {
       score,
       priceMin,
       priceMax,
-      maxCapacity: p.maxCapacity ?? (p.max_od != null ? String(p.max_od) : null),
+      maxCapacity:
+        (p as any).maxCapacity ??
+        ((p as any).max_od != null ? String((p as any).max_od) : null),
       powerType: p.powerType ?? null,
       country: (p as any).country ?? null,
       mandrel: p.mandrel ?? null,
