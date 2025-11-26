@@ -38,7 +38,16 @@ export function getAllTubeBendersWithOverlay(): Product[] {
       b.highlights = parts as unknown as Product["highlights"];
     }
 
-    return b as Product;
+    // Ensure review content fields are explicitly passed through from overlay
+    const overlayFields = (raw as any);
+    return {
+      ...b,
+      pros: overlayFields.pros ?? b.pros ?? null,
+      cons: overlayFields.cons ?? b.cons ?? null,
+      consSources: overlayFields.consSources ?? b.consSources ?? null,
+      keyFeatures: overlayFields.keyFeatures ?? b.keyFeatures ?? null,
+      materials: overlayFields.materials ?? b.materials ?? null,
+    } as Product;
   });
 }
 

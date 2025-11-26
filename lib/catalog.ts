@@ -26,6 +26,12 @@ export type Product = {
   dimensions?: string;
   warranty?: string;
   price?: string | number;
+  // Review content fields (admin-editable via overlay)
+  pros?: string | null;
+  cons?: string | null;
+  consSources?: string | null;
+  keyFeatures?: string | null;
+  materials?: string | null;
 };
 
 /**

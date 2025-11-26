@@ -30,6 +30,14 @@ type Product = {
   warranty?: string;
   image?: string;
   highlights?: string; // stored comma-separated for simple admin editing
+
+  // Review content fields (all optional; stored in overlay)
+  pros?: string;
+  cons?: string;
+  consSources?: string;
+  keyFeatures?: string;
+  materials?: string;
+
   // Pricing breakdown fields (all optional; stored in overlay)
   framePriceMin?: string;
   framePriceMax?: string;
@@ -553,6 +561,182 @@ export default function ProductsTab() {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* Review content (pros / cons / features / materials) */}
+      <section className="mt-10 border-t border-gray-200 pt-6">
+        <h3 className="text-base font-semibold text-gray-900">Review content</h3>
+        <p className="mt-1 text-xs text-gray-500 max-w-3xl">
+          Pros, cons, key features, and materials compatibility shown on each review page.
+          For cons,{" "}
+          <span className="font-semibold">
+            every line must have a matching source line
+          </span>{" "}
+          (manufacturer docs, product page, or other verifiable reference).
+        </p>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          {(Array.isArray(products) ? products : (products as any)?.items ?? []).map(
+            (product: any) => {
+              const id = String(product?.id ?? "");
+
+              const pros = product?.pros ?? "";
+              const cons = product?.cons ?? "";
+              const consSources = product?.consSources ?? "";
+              const keyFeatures = product?.keyFeatures ?? "";
+              const materialsRaw = product?.materials ?? "";
+
+              const MATERIAL_OPTIONS = [
+                "Mild steel",
+                "Stainless steel",
+                "4130 chromoly",
+                "Aluminum",
+                "Titanium",
+                "Copper",
+                "Brass",
+              ] as const;
+
+              const selectedMaterials = new Set(
+                String(materialsRaw)
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              );
+
+              const toggleMaterial = (label: string) => {
+                const next = new Set(selectedMaterials);
+                if (next.has(label)) {
+                  next.delete(label);
+                } else {
+                  next.add(label);
+                }
+                const serialized = Array.from(next).join(", ");
+                updateProduct(id, "materials", serialized);
+              };
+
+              return (
+                <div
+                  key={id}
+                  className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="mb-2 flex items-baseline justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {id}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {product?.brand || product?.model
+                          ? [product?.brand, product?.model]
+                              .filter(Boolean)
+                              .join(" ")
+                          : "Unnamed product"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 text-xs md:grid-cols-2">
+                    <div>
+                      <div className="mb-1 font-semibold text-gray-800">
+                        Pros (one per line)
+                      </div>
+                      <textarea
+                        className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                        rows={5}
+                        defaultValue={pros}
+                        onBlur={(e) =>
+                          updateProduct(id, "pros", e.target.value ?? "")
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <div className="mb-1 font-semibold text-gray-800">
+                        Cons (one per line) &amp; sources
+                      </div>
+                      <div className="grid gap-2 md:grid-cols-2">
+                        <div>
+                          <div className="mb-0.5 text-[0.7rem] text-gray-500">
+                            Cons
+                          </div>
+                          <textarea
+                            className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                            rows={5}
+                            defaultValue={cons}
+                            onBlur={(e) =>
+                              updateProduct(id, "cons", e.target.value ?? "")
+                            }
+                          />
+                        </div>
+                        <div>
+                          <div className="mb-0.5 text-[0.7rem] text-gray-500">
+                            Sources (matching lines: docs, product pages, etc.)
+                          </div>
+                          <textarea
+                            className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                            rows={5}
+                            defaultValue={consSources}
+                            onBlur={(e) =>
+                              updateProduct(
+                                id,
+                                "consSources",
+                                e.target.value ?? "",
+                              )
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 text-xs md:grid-cols-2">
+                    <div>
+                      <div className="mb-1 font-semibold text-gray-800">
+                        Key features (one per line)
+                      </div>
+                      <textarea
+                        className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                        rows={4}
+                        defaultValue={keyFeatures}
+                        onBlur={(e) =>
+                          updateProduct(id, "keyFeatures", e.target.value ?? "")
+                        }
+                      />
+                    </div>
+                    <div>
+                      <div className="mb-1 font-semibold text-gray-800">
+                        Materials compatibility
+                      </div>
+                      <p className="mb-2 text-[0.7rem] text-gray-500">
+                        Check all materials this machine is suitable for. This is
+                        displayed as read-only tags on the review page.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {MATERIAL_OPTIONS.map((label) => {
+                          const active = selectedMaterials.has(label);
+                          return (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={() => toggleMaterial(label)}
+                              className={[
+                                "rounded-full border px-2.5 py-0.5 text-[0.7rem]",
+                                active
+                                  ? "border-emerald-500 bg-emerald-50 text-emerald-800"
+                                  : "border-gray-300 bg-gray-50 text-gray-700",
+                              ].join(" ")}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            },
+          )}
         </div>
       </section>
     </div>

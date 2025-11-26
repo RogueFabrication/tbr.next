@@ -108,7 +108,42 @@ export default function ReviewPage({ params }: PageProps) {
   const compareHref = `/compare?ids=${encodeURIComponent(product.id)}`;
   const img = product.image || fallbackImg;
   const { total: score, breakdown } = getProductScore(product as any);
-  const highlights = Array.isArray(product.highlights) ? product.highlights : [];
+  
+  // Parse review content fields
+  const splitLines = (raw?: string | null): string[] =>
+    String(raw ?? "")
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+  const prosArray = splitLines((product as any).pros);
+  const consArray = splitLines((product as any).cons);
+  const consSourcesArray = splitLines((product as any).consSources);
+  const keyFeaturesArray = splitLines((product as any).keyFeatures);
+
+  const hasProsOrCons = prosArray.length > 0 || consArray.length > 0;
+
+  const MATERIAL_KEYS = [
+    "Mild steel",
+    "Stainless steel",
+    "4130 chromoly",
+    "Aluminum",
+    "Titanium",
+    "Copper",
+    "Brass",
+  ];
+
+  const materialsLabels = String((product as any).materials ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => MATERIAL_KEYS.includes(s));
+
+  const highlightsArray = Array.isArray(product.highlights)
+    ? product.highlights
+    : String(product.highlights ?? "")
+        .split(/[•\n]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
 
   // --- Pricing: compute min/max system totals from component fields ----------
   const parseMoney = (raw: unknown): number | null => {
@@ -148,6 +183,9 @@ export default function ReviewPage({ params }: PageProps) {
     hasMaxComponents
       ? (frameMax ?? 0) + (dieMax ?? 0) + (hydraulicMax ?? 0) + (standMax ?? 0)
       : null;
+
+  const hasPricingSnapshot =
+    minSystemTotal !== null || maxSystemTotal !== null;
   // ---------------------------------------------------------------------------
 
   const specs = SAFE_FIELDS
@@ -175,122 +213,263 @@ export default function ReviewPage({ params }: PageProps) {
   return (
     <main className="container mx-auto px-4 py-6">
       <h1 className="text-2xl font-semibold mb-3">{title}</h1>
-      {/* Hero image + highlights */}
+      {/* Hero image - keep as-is */}
       <div className="rounded-lg overflow-hidden border mb-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={img} alt={title} className="w-full h-64 object-cover" />
       </div>
-      {highlights.length > 0 && (
-        <ul className="mb-6 list-disc pl-5 text-sm">
-          {highlights.map((h) => <li key={h}>{h}</li>)}
-        </ul>
-      )}
-      <div className="grid gap-6 md:grid-cols-3">
-        <section className="md:col-span-2">
-          <p className="text-sm text-muted-foreground">
-            Review content is coming soon. In the meantime, you can see how this bender scores and how its specs and pricing compare to other models.
-          </p>
-        </section>
-        <aside className="md:col-span-1">
-          <div className="rounded-lg border p-4">
-            <h2 className="text-base font-medium mb-2">Specs &amp; score (preview)</h2>
 
-            {score !== null && (
-              <div className="mb-3 rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-semibold text-emerald-900">
-                    Overall score
-                  </span>
-                  <span className="font-semibold text-emerald-900">
-                    {score} / {TOTAL_POINTS}
-                  </span>
+      {/* Main content grid - responsive with mobile ordering */}
+      <section className="mt-8">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.2fr)]">
+          {/* LEFT: narrative content */}
+          <div className="space-y-6 order-2 lg:order-1">
+            {/* Existing highlights block */}
+            {highlightsArray?.length ? (
+              <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <h2 className="text-sm font-semibold text-gray-900">Highlights</h2>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
+                  {highlightsArray.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {/* Pros / Cons card */}
+            {hasProsOrCons && (
+              <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <h3 className="flex items-center gap-1 text-sm font-semibold text-emerald-700">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs">
+                        ✔
+                      </span>
+                      Pros
+                    </h3>
+                    {prosArray.length ? (
+                      <ul className="mt-2 space-y-1 text-sm text-gray-800">
+                        {prosArray.map((line, idx) => (
+                          <li key={idx} className="flex gap-2">
+                            <span className="mt-[3px] text-emerald-500">•</span>
+                            <span>{line}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-xs text-gray-500">
+                        No pros entered yet.
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="flex items-center gap-1 text-sm font-semibold text-rose-700">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-50 text-rose-600 border border-rose-200 text-xs">
+                        !
+                      </span>
+                      Cons
+                    </h3>
+                    {consArray.length ? (
+                      <ul className="mt-2 space-y-2 text-sm text-gray-800">
+                        {consArray.map((line, idx) => {
+                          const source = consSourcesArray[idx] ?? "";
+                          return (
+                            <li key={idx}>
+                              <div className="flex gap-2">
+                                <span className="mt-[3px] text-rose-500">•</span>
+                                <span>{line}</span>
+                              </div>
+                              {source && (
+                                <div className="mt-0.5 pl-4 text-[0.7rem] text-gray-500">
+                                  Source: {source}
+                                </div>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-xs text-gray-500">
+                        No cons listed. Only enter cons with a clear, documented source.
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </section>
             )}
 
-            {(minSystemTotal || maxSystemTotal) && (
-              <div className="mb-3 rounded-md border border-amber-100 bg-amber-50 px-3 py-2 text-xs">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-semibold text-amber-900">
-                    Pricing snapshot
-                  </span>
-                  <span className="text-right text-amber-900">
-                    {minSystemTotal && (
-                      <span className="block">
-                        Min system:{" "}
-                        <span className="font-semibold">
-                          ${minSystemTotal.toFixed(0)}
-                        </span>
-                      </span>
-                    )}
-                    {maxSystemTotal && (
-                      <span className="block">
-                        Max system:{" "}
-                        <span className="font-semibold">
-                          ${maxSystemTotal.toFixed(0)}
-                        </span>
-                      </span>
-                    )}
-                  </span>
-                </div>
-                <p className="mt-1 text-[0.7rem] text-amber-900/80">
-                  Min system totals are built from the lowest documented prices for frame, dies, hydraulics, and stand/mount that we could verify.{" "}
-                  <Link
-                    href="/scoring#value-for-money"
-                    className="underline"
-                  >
-                    See how we calculate pricing for scoring
-                  </Link>
-                  .
-                </p>
-              </div>
-            )}
-
-            {Array.isArray(breakdown) && breakdown.length > 0 && (
-              <details className="mb-3 text-xs md:text-sm">
-                <summary className="cursor-pointer select-none font-medium">
-                  Score breakdown
-                </summary>
-                <div className="mt-2 space-y-1.5">
-                  {breakdown.map((item, idx) => (
-                    <div key={`${item.criteria}-${idx}`} className="border-b last:border-b-0 pb-1.5 last:pb-0">
-                      <div className="flex justify-between gap-2">
-                        <span className="font-medium">{item.criteria}</span>
-                        <span>
-                          {item.points} / {item.maxPoints}
-                        </span>
-                      </div>
-                      {item.reasoning && (
-                        <p className="text-[0.7rem] md:text-xs text-muted-foreground mt-0.5">
-                          {item.reasoning}
-                        </p>
-                      )}
-                    </div>
+            {/* Key features */}
+            {keyFeaturesArray.length ? (
+              <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Key features
+                </h3>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {keyFeaturesArray.map((feat, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs text-gray-800"
+                    >
+                      {feat}
+                    </span>
                   ))}
                 </div>
-              </details>
-            )}
+              </section>
+            ) : null}
 
-            {specs.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No specs available yet.</p>
-            ) : (
-              <dl className="text-sm">
-                {specs.map(([k, v]) => (
-                  <div key={String(k)} className="flex justify-between gap-3 py-1 border-b last:border-b-0">
-                    <dt className="text-muted-foreground">{labelFor(k)}</dt>
-                    <dd className="font-medium">{String(v)}</dd>
+            {/* Materials compatibility */}
+            {materialsLabels.length ? (
+              <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Materials compatibility
+                </h3>
+                <p className="mt-1 text-[0.7rem] text-gray-500">
+                  Based on manufacturer documentation and test use; not a substitute
+                  for checking your exact material spec.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {materialsLabels.map((label) => (
+                    <span
+                      key={label}
+                      className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs text-gray-800"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </div>
+
+          {/* RIGHT: specs + score (shown first on mobile) */}
+          <aside className="space-y-4 order-1 lg:order-2">
+            <div className="rounded-lg border p-4">
+              <h2 className="text-base font-medium mb-2">Specs &amp; score</h2>
+
+              {score !== null && (
+                <div className="mb-3 rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="font-semibold text-emerald-900">
+                      Overall score
+                    </span>
+                    <span className="font-semibold text-emerald-900">
+                      {score} / {TOTAL_POINTS}
+                    </span>
                   </div>
-                ))}
-              </dl>
-            )}
-            <div className="mt-3">
-              <Link href={compareHref} className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:shadow">
-                Compare models
+                </div>
+              )}
+
+              {hasPricingSnapshot && (
+                <div className="mb-3 rounded-md border border-amber-100 bg-amber-50 px-3 py-2 text-xs">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="font-semibold text-amber-900">
+                      Pricing snapshot
+                    </span>
+                    <span className="text-right text-amber-900">
+                      {minSystemTotal && (
+                        <span className="block">
+                          Min system:{" "}
+                          <span className="font-semibold">
+                            ${minSystemTotal.toFixed(0)}
+                          </span>
+                        </span>
+                      )}
+                      {maxSystemTotal && (
+                        <span className="block">
+                          Max system:{" "}
+                          <span className="font-semibold">
+                            ${maxSystemTotal.toFixed(0)}
+                          </span>
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[0.7rem] text-amber-900/80">
+                    Min system totals are built from the lowest documented prices for frame, dies, hydraulics, and stand/mount that we could verify.{" "}
+                    <Link
+                      href="/scoring#value-for-money"
+                      className="underline"
+                    >
+                      See how we calculate pricing for scoring
+                    </Link>
+                    .
+                  </p>
+                </div>
+              )}
+
+              {Array.isArray(breakdown) && breakdown.length > 0 && (
+                <details className="mb-3 text-xs md:text-sm">
+                  <summary className="cursor-pointer select-none font-medium">
+                    Score breakdown
+                  </summary>
+                  <div className="mt-2 space-y-1.5">
+                    {breakdown.map((item, idx) => {
+                      const scoreColorClass = (points: number, maxPoints: number): string => {
+                        if (!maxPoints || points == null) return "bg-gray-200 text-gray-800";
+                        const ratio = points / maxPoints;
+
+                        if (ratio >= 0.8) return "bg-emerald-500 text-white";          // strong green
+                        if (ratio >= 0.6) return "bg-amber-400 text-gray-900";         // yellow
+                        if (ratio >= 0.4) return "bg-orange-400 text-white";           // orange
+                        return "bg-red-500 text-white";                                // red
+                      };
+
+                      return (
+                        <div key={`${item.criteria}-${idx}`} className="border-b last:border-b-0 pb-1.5 last:pb-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <div className="text-xs font-medium text-gray-900">
+                                {item.criteria}
+                              </div>
+                              {item.reasoning && (
+                                <div className="mt-0.5 text-[0.7rem] text-gray-500">
+                                  {item.reasoning}
+                                </div>
+                              )}
+                            </div>
+                            <span
+                              className={[
+                                "inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-[0.7rem] font-semibold",
+                                scoreColorClass(item.points, item.maxPoints),
+                              ].join(" ")}
+                            >
+                              {item.points}/{item.maxPoints}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+              )}
+
+              {specs.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No specs available yet.</p>
+              ) : (
+                <dl className="text-sm">
+                  {specs.map(([k, v]) => (
+                    <div key={String(k)} className="flex justify-between gap-3 py-1 border-b last:border-b-0">
+                      <dt className="text-muted-foreground">{labelFor(k)}</dt>
+                      <dd className="font-medium">{String(v)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
+
+            {/* "How scores are calculated" link replacing "Compare models" */}
+            <div className="text-xs text-gray-600">
+              <Link
+                href="/scoring"
+                className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:underline"
+              >
+                <span>How scores are calculated</span>
+                <span aria-hidden="true">↗</span>
               </Link>
             </div>
-          </div>
-        </aside>
-      </div>
+          </aside>
+        </div>
+      </section>
       <div className="mt-6 text-sm text-muted-foreground">
         <Link className="underline" href="/reviews">Back to all reviews</Link>
       </div>
