@@ -10,7 +10,8 @@
     "cons": "Higher price point for manual operation\nSteel bushings require more maintenance than bronze\nLimited wall thickness (0.134\" max)\nDies packages increase total cost significantly",
     "consSources": "\n\n\n",
     "keyFeatures": "5/8\" thick frame arms\nSteel bushings\nDegree plate\nUSA manufactured",
-    "materials": "Mild Steel, Chromoly, Aluminum"
+    "materials": "Mild Steel, Chromoly, Aluminum",
+    "mandrel": "No"
   },
   "jd2-model-32": {
     "price": "1002",
@@ -19,7 +20,7 @@
     "model": "ADMIN",
     "maxCapacity": "2.01",
     "clrRange": "1.1-6.6",
-    "image": "qw",
+    "image": "",
     "totalScore": "81",
     "country": "ASIA",
     "powerType": "Electric / CNC",
@@ -29,18 +30,19 @@
     "cons": "No speed or torque control\nMust be mounted to floor with concrete anchors\nWarranty excludes 3rd party components\nNo affordable hydraulic power option from manufacturer\nDegree indicator can be accidentally moved (reported in user reviews on YouTube and fabrication forums)\nDies sold separately (4-6 week lead time per JD2.com/lead-times as of June 2025)",
     "consSources": "\n\n\n\n\n\n",
     "keyFeatures": "36-inch telescopic handle\nDegree indicator wheel\nCNC machined surfaces\n25-year proven design",
-    "materials": "Mild Steel, Chromoly, Aluminum"
+    "materials": "Mild Steel, Chromoly, Aluminum",
+    "mandrel": "No"
   },
   "roguefab-m600-series": {
-    "price": "999",
-    "maxCapacity": "1.25",
-    "clrRange": "1.00-6.00",
+    "price": "",
+    "maxCapacity": "2.375",
+    "clrRange": "2.50-6.00",
     "totalScore": "88",
-    "dieCost": "99",
+    "dieCost": "",
     "cycleTime": "13",
-    "weight": "400",
+    "weight": "313",
     "mandrel": "",
-    "type": "",
+    "type": "Rotary Draw",
     "country": "USA",
     "madeIn": "USA",
     "capacity": ".275",
@@ -48,9 +50,9 @@
     "maxWall": ".250",
     "warranty": "YES",
     "highlights": "Highly customizable with extensive upgrade options • Excellent build quality and American manufacturing • 94° bend achievable without hydraulic adjustment (typical first-stroke market performance is 80-85°)",
-    "brand": "",
-    "powerType": "electric",
-    "sBendCapability": "",
+    "brand": "Rogue Fabrication",
+    "powerType": "Manual + Hydraulic",
+    "sBendCapability": "Yes",
     "framePriceMin": "779",
     "framePriceMax": "1545",
     "diePriceMin": "224",
@@ -60,16 +62,20 @@
     "standPriceMin": "0",
     "standPriceMax": "1560",
     "bendAngle": "94",
-    "wallThicknessCapacity": ".250",
+    "wallThicknessCapacity": ".875",
     "pros": "Highly customizable with extensive upgrade options\nExcellent build quality and American manufacturing\n94° bend achievable without hydraulic adjustment (typical first-stroke market performance is 80-85°)\nLow entry price with affordable upgrades\nDouble-acting hydraulic option (fastest on market)\nSuperior customer support and technical assistance\nFast lead times: Standard dies typically ship within 1-2 weeks",
     "cons": "Many accessories sold separately\nNo reverse bending attachment included\nWarranty covers workmanship, not unlimited coverage",
     "consSources": "\n\n\n",
     "keyFeatures": "Air/Hydraulic ram upgrade\nPressure roller dies\nThin-wall roller\nBackstop\nRotation gauges\nMandrel conversion available",
-    "materials": "Mild steel, 4130 chromoly, Aluminum, Stainless steel, Titanium"
+    "materials": "Mild steel, 4130 chromoly, Aluminum, Stainless steel, Titanium",
+    "model": "M601, M605, M625",
+    "image": "",
+    "dimensions": "22\" x 34\""
   },
   "baileigh-rdb-250": {
     "price": "",
-    "totalScore": "65"
+    "totalScore": "65",
+    "mandrel": "No"
   },
   "baileigh-rdb-050": {
     "totalScore": "64",
@@ -78,7 +84,8 @@
     "cons": "High price tag for manual operation\nDies and reverse bending attachment not included\nNo lifetime warranty\nRequires mounting to floor with concrete anchors",
     "consSources": "\n\n\n",
     "keyFeatures": "Three-speed settings\nAnti-spring-back mechanism\nStand included\nDegree dial\n36-inch telescopic handle",
-    "materials": "Mild Steel, Chromoly, Aluminum"
+    "materials": "Mild Steel, Chromoly, Aluminum",
+    "mandrel": "No"
   },
   "jd2-model-32-hydraulic": {
     "highlights": "Proven 25-year design reliability • Made in USA with quality construction • Double-acting hydraulic system",
@@ -86,7 +93,8 @@
     "cons": "Higher price than manual version\nDegree indicator can be accidentally moved (reported in user reviews on YouTube and fabrication forums)\nDies sold separately (4-6 week lead time per JD2.com/lead-times as of June 2025)\nRequires electrical connection for pump",
     "consSources": "\n\n\n",
     "keyFeatures": "Double-acting hydraulic ram\nElectric pump with controls\nDegree markings\nHeavy-duty stand\nQuick-change tooling",
-    "materials": "Mild Steel, Chromoly, Aluminum"
+    "materials": "Mild Steel, Chromoly, Aluminum",
+    "mandrel": "No"
   },
   "woodward-fab-wfb2": {
     "highlights": "Very affordable price point • CNC machined components • Engraved degree dial",
@@ -94,7 +102,8 @@
     "cons": "No provision for extendable handle\nBuilt-in handle only 27 inches\nBudget-focused construction\nStand sold separately\nLimited material compatibility\nShort warranty period",
     "consSources": "\n\n\n\n\n",
     "keyFeatures": "29-inch handle\nEngraved degree dial\nCNC machined components\nCompact design",
-    "materials": "Mild Steel, Aluminum"
+    "materials": "Mild Steel, Aluminum",
+    "mandrel": "No"
   },
   "jmr-tbm-250r-raceline": {
     "highlights": "American-made quality construction • 3-speed manual operation • Heat treated 4140 steel pins",
@@ -102,7 +111,8 @@
     "cons": "Dies sold separately (4-6 week lead time per JMR website)\nUncoated steel arms require maintenance\nHigher price than budget options\nLimited to 2\" capacity without hydraulic upgrade",
     "consSources": "\n\n\n",
     "keyFeatures": "3-speed operation\nDegree ring with pointer\nHeat-treated pins\nHydraulic upgrade path",
-    "materials": "Mild Steel, Chromoly, Aluminum, Stainless Steel"
+    "materials": "Mild Steel, Chromoly, Aluminum, Stainless Steel",
+    "mandrel": "No"
   },
   "jmr-tbm-250-ultra": {
     "highlights": "Premium JMR construction quality • Bronze bushings for smooth operation • Powder-coated finish",
@@ -110,7 +120,8 @@
     "cons": "Highest price in manual category\nDies sold separately with lead times\nRequires floor mounting for stability\nPremium features may be overkill for hobby use",
     "consSources": "\n\n\n",
     "keyFeatures": "5-speed operation\nBronze bushings\nPowder-coated finish\nPremium construction",
-    "materials": "Mild Steel, Chromoly, Aluminum, Stainless Steel"
+    "materials": "Mild Steel, Chromoly, Aluminum, Stainless Steel",
+    "mandrel": "No"
   },
   "pro-tools-brute": {
     "highlights": "Highest capacity at 2.5\" tube capability • 15-ton hydraulic cylinder with 16\" stroke • 1\" thick main bending frame",
@@ -118,7 +129,8 @@
     "cons": "Highest price point in comparison\nRequires compressed air for operation\nHeavy unit requiring permanent installation\nDies sold separately at premium pricing",
     "consSources": "\n\n\n",
     "keyFeatures": "15-ton hydraulic cylinder\n1\" thick frame\nCNC machined degree ring\n2.5\" capacity",
-    "materials": "Mild Steel, Chromoly, Aluminum, Stainless Steel"
+    "materials": "Mild Steel, Chromoly, Aluminum, Stainless Steel",
+    "mandrel": "No"
   },
   "mittler-bros-2500": {
     "highlights": "25-ton hydraulic ram capacity • 180° bending capability • Portable work stand available",
@@ -126,7 +138,8 @@
     "cons": "Higher price than manual alternatives\nRequires hydraulic pump setup\nHeavy unit for portable applications\nLimited material compatibility compared to competitors",
     "consSources": "\n\n\n",
     "keyFeatures": "25-ton hydraulic ram\n180° bending\nPortable stand option\nHeavy-duty design",
-    "materials": "Mild Steel, Chromoly, Aluminum"
+    "materials": "Mild Steel, Chromoly, Aluminum",
+    "mandrel": "No"
   },
   "hossfeld-no2": {
     "highlights": "100+ years of manufacturing experience • Largest selection of tooling available • Universal design handles multiple materials",
@@ -134,7 +147,8 @@
     "cons": "Older design lacks modern conveniences\nTooling costs add up quickly\nLearning curve for optimal setup\nManual operation requires significant effort",
     "consSources": "\n\n\n",
     "keyFeatures": "Universal material capability\nExtensive tooling catalog\n100+ year heritage\nHydraulic upgrade option",
-    "materials": "Mild Steel, Chromoly, Aluminum, Flat Bar, Angle Iron"
+    "materials": "Mild Steel, Chromoly, Aluminum, Flat Bar, Angle Iron",
+    "mandrel": "No"
   },
   "swag-offroad-rev2": {
     "materials": "Round Tube, DOM Tubing, Chromoly",
@@ -142,6 +156,13 @@
     "pros": "Exceptional build quality and tight tolerances\nOil-impregnated bronze bushings for smooth operation\nPrecision machined aluminum degree wheel\n95% pre-assembled for quick setup\nSuperior repeatability compared to competitors\nMade in USA with premium materials",
     "cons": "Proprietary die system (not compatible with JD2)\nHigher initial cost than basic alternatives\nCurrently limited die selection compared to established brands\nDies sold separately unless specifically bundled",
     "consSources": "\n\n\n",
-    "keyFeatures": "Precision machined components\nOil-impregnated bronze bushings\nMachined aluminum degree wheel\n2\" receiver hitch mount"
+    "keyFeatures": "Precision machined components\nOil-impregnated bronze bushings\nMachined aluminum degree wheel\n2\" receiver hitch mount",
+    "framePriceMin": "",
+    "maxCapacity": "2.00",
+    "country": "",
+    "powerType": "",
+    "bendAngle": "80",
+    "wallThicknessCapacity": ".25",
+    "mandrel": "No"
   }
 }

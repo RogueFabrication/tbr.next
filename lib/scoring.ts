@@ -154,6 +154,35 @@ export function getProductScore(
 
   const p: any = product;
 
+  // Derive a system "entry price" from component-level min/max pricing where available.
+  const parsePrice = (v: unknown): number =>
+    typeof v === "number"
+      ? v
+      : parseFloat(String(v ?? "").replace(/[^0-9.+-]/g, "")) || 0;
+
+  const minTotal =
+    parsePrice(p.framePriceMin) +
+    parsePrice(p.diePriceMin) +
+    parsePrice(p.hydraulicPriceMin) +
+    parsePrice(p.standPriceMin);
+
+  const maxTotal =
+    parsePrice(p.framePriceMax) +
+    parsePrice(p.diePriceMax) +
+    parsePrice(p.hydraulicPriceMax) +
+    parsePrice(p.standPriceMax);
+
+  let priceRange: string | number | undefined = p.priceRange;
+  if (priceRange == null) {
+    if (minTotal > 0 && maxTotal > 0) {
+      priceRange = `${minTotal}-${maxTotal}`;
+    } else if (minTotal > 0) {
+      priceRange = String(minTotal);
+    } else if (maxTotal > 0) {
+      priceRange = String(maxTotal);
+    }
+  }
+
   // Parse bend angle from either number or string.
   let bendAngle: number | undefined;
   if (typeof p.bendAngle === "number") {
@@ -180,11 +209,9 @@ export function getProductScore(
     id: p.id,
     brand: p.brand,
     model: p.model,
-    // Prefer an explicit priceRange; otherwise fall back to a stringified price
-    // so the legacy price-bucket logic has something to classify.
-    priceRange:
-      p.priceRange ??
-      (p.price ? String(p.price) : undefined),
+    // Prefer an explicit priceRange; otherwise derive it from component-level
+    // min/max pricing so Value for Money is always based on a full system.
+    priceRange,
     powerType: p.powerType,
     // Capacity: prefer a dedicated maxCapacity field, then capacity.
     maxCapacity: p.maxCapacity ?? p.capacity,

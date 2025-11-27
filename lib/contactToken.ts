@@ -1,6 +1,7 @@
 import crypto from "crypto";
 
-export type ContactPayload = {
+// Contact token payload matches what we pass from the contact form.
+export type ContactTokenPayload = {
   name: string;
   email: string;
   subject: string;
@@ -9,100 +10,60 @@ export type ContactPayload = {
   createdAt: number;
 };
 
-function getContactSecret(): string {
-  const secret = process.env.CONTACT_SIGNING_SECRET;
-  if (!secret) {
-    throw new Error(
-      "CONTACT_SIGNING_SECRET environment variable is required for contact form verification."
-    );
-  }
-  return secret;
+// Secret for signing tokens – set this in Vercel:
+// CONTACT_TOKEN_SECRET=some-long-random-string
+const SECRET =
+  process.env.CONTACT_TOKEN_SECRET ||
+  process.env.CONTACT_FORM_SECRET ||
+  "dev-contact-secret-do-not-use-in-prod";
+
+// How long a verify link is valid (ms)
+const TOKEN_TTL_MS = 1000 * 60 * 60 * 48; // 48 hours
+
+export function createContactToken(payload: ContactTokenPayload): string {
+  const json = JSON.stringify(payload);
+  const data = Buffer.from(json, "utf8").toString("base64url");
+  const sig = crypto
+    .createHmac("sha256", SECRET)
+    .update(data)
+    .digest("base64url");
+
+  return `${data}.${sig}`;
 }
 
-/**
- * Base64url encode (URL-safe base64)
- */
-function base64urlEncode(buffer: Buffer): string {
-  return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-}
-
-/**
- * Base64url decode
- */
-function base64urlDecode(str: string): Buffer {
-  // Add padding if needed
-  let padded = str.replace(/-/g, "+").replace(/_/g, "/");
-  while (padded.length % 4) {
-    padded += "=";
-  }
-  return Buffer.from(padded, "base64");
-}
-
-export function createContactToken(payload: ContactPayload): string {
-  const secret = getContactSecret();
-
-  // Serialize payload as JSON
-  const jsonPayload = JSON.stringify(payload);
-
-  // Base64url-encode the JSON string
-  const base64Payload = base64urlEncode(Buffer.from(jsonPayload, "utf8"));
-
-  // Compute HMAC-SHA256 of the base64 segment
-  const hmac = crypto.createHmac("sha256", secret);
-  hmac.update(base64Payload);
-  const signature = hmac.digest();
-
-  // Base64url-encode the signature
-  const base64Signature = base64urlEncode(signature);
-
-  // Return token as payload.signature
-  return `${base64Payload}.${base64Signature}`;
-}
-
-export function verifyContactToken(
-  token: string,
-  maxAgeMs = 7 * 24 * 60 * 60 * 1000
-): ContactPayload | null {
+export function verifyContactToken(token: string): ContactTokenPayload | null {
   try {
-    const secret = getContactSecret();
-
-    // Split on '.' into [payloadPart, signaturePart]
+    if (!token || typeof token !== "string") return null;
     const parts = token.split(".");
-    if (parts.length !== 2) {
+    if (parts.length !== 2) return null;
+
+    const [data, sig] = parts;
+    const expected = crypto
+      .createHmac("sha256", SECRET)
+      .update(data)
+      .digest("base64url");
+
+    // Use timing-safe comparison to avoid leaks
+    const sigBuf = Buffer.from(sig, "utf8");
+    const expBuf = Buffer.from(expected, "utf8");
+    if (
+      sigBuf.length !== expBuf.length ||
+      !crypto.timingSafeEqual(sigBuf, expBuf)
+    ) {
       return null;
     }
 
-    const [base64Payload, base64Signature] = parts;
+    const json = Buffer.from(data, "base64url").toString("utf8");
+    const payload = JSON.parse(json) as ContactTokenPayload;
 
-    // Recompute signature from payloadPart using the secret
-    const hmac = crypto.createHmac("sha256", secret);
-    hmac.update(base64Payload);
-    const expectedSignature = hmac.digest();
-    const expectedBase64Signature = base64urlEncode(expectedSignature);
-
-    // Decode the provided signature
-    const providedSignature = base64urlDecode(base64Signature);
-
-    // Use timing-safe comparison
-    if (!crypto.timingSafeEqual(expectedSignature, providedSignature)) {
-      return null;
-    }
-
-    // Decode payload JSON
-    const payloadBuffer = base64urlDecode(base64Payload);
-    const jsonPayload = payloadBuffer.toString("utf8");
-    const payload: ContactPayload = JSON.parse(jsonPayload);
-
-    // Check age
-    const now = Date.now();
-    if (now - payload.createdAt > maxAgeMs) {
+    if (typeof payload.createdAt !== "number") return null;
+    if (Date.now() - payload.createdAt > TOKEN_TTL_MS) {
       return null;
     }
 
     return payload;
-  } catch {
-    // Never throw on malformed tokens; just return null
+  } catch (err) {
+    console.error("[contactToken] Failed to verify token:", err);
     return null;
   }
 }
-

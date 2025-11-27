@@ -8,7 +8,6 @@ type Product = {
   brand?: string;
   model?: string;
   // Scoring-related fields (drive the 100-pt score)
-  price?: string;
   maxCapacity?: string;
   country?: string;
   powerType?: string;
@@ -17,13 +16,11 @@ type Product = {
   sBendCapability?: string | boolean;
   // Other descriptive/display fields
   clrRange?: string;
-  dieCost?: string;
   cycleTime?: string;
   weight?: string;
   mandrel?: string;
   // Newly added public-facing fields
   type?: string;
-  capacity?: string;
   max_od?: string;
   maxWall?: string;
   dimensions?: string;
@@ -133,7 +130,6 @@ export default function ProductsTab() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 top-0 z-30 bg-gray-50">ID</th>
               {/* Scoring drivers first (after ID) */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Max Capacity</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Country / Made In</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Power Type</th>
@@ -145,25 +141,20 @@ export default function ProductsTab() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Brand</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Model</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">CLR Range</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Die Cost</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Cycle Time</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Weight</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Image Path</th>
               {/* Additional display fields */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Capacity</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Max OD</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Max Wall</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Dimensions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Floor footprint</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Warranty</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Highlights</th>
             </tr>
             <tr>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky left-0 top-12 bg-gray-50 z-30">
                 Stable internal ID. Do not change unless catalog data is updated to match.
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Entry / starter setup price (USD) used for Value for Money scoring.
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Largest round tube OD this machine can bend (inches).
@@ -196,13 +187,10 @@ export default function ProductsTab() {
                 Approximate min–max CLR coverage, for future content / specs.
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Rough die price notes (not currently used in scoring).
+                Fastest documented bend cycle time for any available configuration. Leave blank if the manufacturer does not publish this.
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Bend cycle speed notes (not currently used in scoring).
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Approximate shipping/operating weight for the specs table.
+                Approximate weight for an average, commonly sold configuration (for example, averaging lighter and heavier frame/cart variants).
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Relative path under <code className="font-mono">/images/products/</code>. If the file doesn&apos;t exist, the photo will break.
@@ -211,16 +199,13 @@ export default function ProductsTab() {
                 Product type classification (display only).
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Alternative capacity field (display only).
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Maximum outer diameter spec (display only).
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Maximum wall thickness spec (display only).
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Physical dimensions for specs table (display only).
+                Floor footprint, only filled out when published directly by the manufacturer.
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Warranty terms for specs table (display only).
@@ -238,12 +223,6 @@ export default function ProductsTab() {
               >
                 <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-600 sticky left-0 bg-white z-10">
                   {String(product?.id ?? '')}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.price ?? ''}
-                    onSave={(value) => updateProduct(product.id, 'price', value as string)}
-                  />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
@@ -322,12 +301,6 @@ export default function ProductsTab() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
-                    value={product?.dieCost ?? ''}
-                    onSave={(value) => updateProduct(product.id, 'dieCost', value as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
                     value={product?.cycleTime ?? ''}
                     onSave={(value) => updateProduct(product.id, 'cycleTime', value as string)}
                   />
@@ -350,15 +323,9 @@ export default function ProductsTab() {
                   <EditableField
                     value={product?.type ?? ''}
                     onSave={(val) => updateProduct(product.id, 'type', val as string)}
+                    options={['Rotary draw', 'Ram compression', 'Roll']}
                   />
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.capacity ?? ''}
-                    onSave={(val) => updateProduct(product.id, 'capacity', val as string)}
-                  />
-                </td>
-
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
                     value={product?.max_od ?? ''}

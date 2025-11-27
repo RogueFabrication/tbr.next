@@ -1,176 +1,156 @@
-/**
- * Email utilities for contact form.
- * Requires nodemailer to be installed.
- */
-
 import nodemailer from "nodemailer";
 
-export function getContactToAddress(): string {
-  return process.env.CONTACT_TO || "tbradmin@tubebenderreviews.com";
-}
+import type { ContactTokenPayload } from "./contactToken";
 
-export function getContactFromAddress(): string {
-  return process.env.CONTACT_FROM || "no-reply@tubebenderreviews.com";
-}
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = process.env.SMTP_PORT;
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
 
-export function createTransport() {
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const secure = process.env.SMTP_SECURE === "true";
+const CONTACT_FROM_EMAIL =
+  process.env.CONTACT_FROM_EMAIL || SMTP_USER || "no-reply@tubebenderreviews.com";
+const CONTACT_TO_EMAIL =
+  process.env.CONTACT_TO_EMAIL || "tbradmin@tubebenderreviews.com";
 
-  if (!host || !port || !user || !pass) {
+// Basic transport. If this misconfig is the issue, you'll see it in logs.
+const transporter =
+  SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS
+    ? nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: Number(SMTP_PORT) || 587,
+        secure: Number(SMTP_PORT) === 465,
+        auth: {
+          user: SMTP_USER,
+          pass: SMTP_PASS,
+        },
+      })
+    : null;
+
+function assertMailConfigured() {
+  if (!transporter) {
     throw new Error(
-      "SMTP not configured. Please set SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS environment variables."
+      "SMTP not configured – set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, CONTACT_FROM_EMAIL, CONTACT_TO_EMAIL"
     );
   }
-
-  return nodemailer.createTransport({
-    host,
-    port: Number(port),
-    secure,
-    auth: {
-      user,
-      pass,
-    },
-  });
 }
 
-export async function sendContactVerificationEmail(args: {
+type VerificationEmailArgs = {
   to: string;
   name: string;
   subject: string;
   messageType: string;
   message: string;
   verifyUrl: string;
-}): Promise<void> {
-  const transporter = createTransport();
-  const from = getContactFromAddress();
+};
 
-  const subject = "Confirm your message to TubeBenderReviews";
-  const plainText = `We received a contact request from this email address.
+export async function sendContactVerificationEmail(
+  args: VerificationEmailArgs
+) {
+  assertMailConfigured();
 
-To verify and send your message to a reviewer, please click this link:
-${args.verifyUrl}
+  const { to, name, subject, messageType, message, verifyUrl } = args;
 
-If you didn't submit a contact form on TubeBenderReviews, you can safely ignore this email.
+  const safeName = name || "there";
 
-Your message:
----
-Subject: ${args.subject}
-Type: ${args.messageType}
-
-${args.message}
-`;
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Confirm your message</title>
-</head>
-<body style="font-family: sans-serif; line-height: 1.6; color: #333;">
-  <p>We received a contact request from this email address.</p>
-  
-  <p>To verify and send your message to a reviewer, please click this link:</p>
-  <p><a href="${args.verifyUrl}" style="display: inline-block; padding: 10px 20px; background-color: #1f2937; color: white; text-decoration: none; border-radius: 4px;">Verify and Send Message</a></p>
-  
-  <p>If you didn't submit a contact form on TubeBenderReviews, you can safely ignore this email.</p>
-  
-  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-  
-  <p><strong>Your message:</strong></p>
-  <p><strong>Subject:</strong> ${args.subject}</p>
-  <p><strong>Type:</strong> ${args.messageType}</p>
-  <pre style="background-color: #f3f4f6; padding: 15px; border-radius: 4px; white-space: pre-wrap;">${args.message}</pre>
-</body>
-</html>
-`;
-
-  await transporter.sendMail({
-    from,
-    to: args.to,
-    subject,
-    text: plainText,
-    html,
-  });
-}
-
-export async function sendContactToAdmin(args: {
-  name: string;
-  email: string;
-  subject: string;
-  messageType: string;
-  message: string;
-  createdAt: number;
-}): Promise<void> {
-  const transporter = createTransport();
-  const from = getContactFromAddress();
-  const to = getContactToAddress();
-
-  const subject = `[TBR Contact] ${args.messageType} – ${args.subject || "New message"}`;
-  const timestamp = new Date(args.createdAt).toISOString();
-
-  const plainText = `New contact form submission:
-
-Name: ${args.name}
-Email: ${args.email}
-Message Type: ${args.messageType}
-Subject: ${args.subject}
-Submitted: ${timestamp}
-
-Message:
-${args.message}
-`;
+  const text = [
+    `Hi ${safeName},`,
+    "",
+    "You submitted the following message to TubeBenderReviews.com:",
+    "",
+    `Type: ${messageType || "General"}`,
+    `Subject: ${subject}`,
+    "",
+    message,
+    "",
+    "To send this message to the site owner, please click the link below:",
+    verifyUrl,
+    "",
+    "If you did not submit this request, you can safely ignore this email and no message will be sent.",
+  ].join("\n");
 
   const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>New Contact Form Submission</title>
-</head>
-<body style="font-family: sans-serif; line-height: 1.6; color: #333;">
-  <h2>New contact form submission</h2>
-  
-  <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
-    <tr>
-      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Name:</strong></td>
-      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${args.name}</td>
-    </tr>
-    <tr>
-      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Email:</strong></td>
-      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><a href="mailto:${args.email}">${args.email}</a></td>
-    </tr>
-    <tr>
-      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Message Type:</strong></td>
-      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${args.messageType}</td>
-    </tr>
-    <tr>
-      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Subject:</strong></td>
-      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${args.subject}</td>
-    </tr>
-    <tr>
-      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Submitted:</strong></td>
-      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${timestamp}</td>
-    </tr>
-  </table>
-  
-  <h3 style="margin-top: 20px;">Message:</h3>
-  <pre style="background-color: #f3f4f6; padding: 15px; border-radius: 4px; white-space: pre-wrap;">${args.message}</pre>
-</body>
-</html>
-`;
+    <p>Hi ${safeName},</p>
+    <p>You submitted the following message to <strong>TubeBenderReviews.com</strong>:</p>
+    <p>
+      <strong>Type:</strong> ${messageType || "General"}<br />
+      <strong>Subject:</strong> ${subject}
+    </p>
+    <pre style="white-space:pre-wrap;font-family:system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;border:1px solid #e5e7eb;border-radius:6px;padding:10px;background:#f9fafb;">
 
-  await transporter.sendMail({
-    from,
+${message.replace(/</g, "&lt;")}
+
+    </pre>
+    <p>
+      To send this message to the site owner, please click the button below:
+
+    </p>
+    <p>
+      <a href="${verifyUrl}" style="display:inline-block;padding:10px 16px;border-radius:6px;background:#f97316;color:#ffffff;text-decoration:none;font-weight:600;">
+
+        Confirm &amp; Send Message
+
+      </a>
+    </p>
+    <p style="font-size:12px;color:#6b7280;">
+
+      If you did not submit this request, you can safely ignore this email and no message will be sent.
+
+    </p>
+  `;
+
+  await transporter!.sendMail({
+    from: CONTACT_FROM_EMAIL,
     to,
-    replyTo: args.email,
-    subject,
-    text: plainText,
+    subject: `[TubeBenderReviews] Confirm your message: ${subject}`,
+    text,
     html,
   });
 }
 
+export async function sendContactForwardEmail(
+  payload: ContactTokenPayload
+) {
+  assertMailConfigured();
+
+  const { name, email, subject, messageType, message, createdAt } = payload;
+
+  const created = new Date(createdAt);
+
+  const text = [
+    "New verified contact submission from TubeBenderReviews.com",
+    "",
+    `From: ${name} <${email}>`,
+    `Type: ${messageType || "General"}`,
+    `Subject: ${subject}`,
+    `Submitted at: ${created.toISOString()}`,
+    "",
+    "Message:",
+    "",
+    message,
+  ].join("\n");
+
+  const html = `
+    <p>New verified contact submission from <strong>TubeBenderReviews.com</strong></p>
+    <p>
+      <strong>From:</strong> ${name} &lt;${email}&gt;<br />
+      <strong>Type:</strong> ${messageType || "General"}<br />
+      <strong>Subject:</strong> ${subject}<br />
+      <strong>Submitted at:</strong> ${created.toISOString()}
+    </p>
+    <p><strong>Message:</strong></p>
+    <pre style="white-space:pre-wrap;font-family:system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;border:1px solid #e5e7eb;border-radius:6px;padding:10px;background:#f9fafb;">
+
+${message.replace(/</g, "&lt;")}
+
+    </pre>
+  `;
+
+  await transporter!.sendMail({
+    from: CONTACT_FROM_EMAIL,
+    to: CONTACT_TO_EMAIL,
+    replyTo: email,
+    subject: `[TubeBenderReviews] ${subject}`,
+    text,
+    html,
+  });
+}
