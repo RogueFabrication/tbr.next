@@ -174,15 +174,18 @@ export function getProductScore(
     parsePrice(p.hydraulicPriceMax) +
     parsePrice(p.standPriceMax);
 
-  let priceRange: string | number | undefined = p.priceRange;
-  if (priceRange == null) {
-    if (minTotal > 0 && maxTotal > 0) {
-      priceRange = `${minTotal}-${maxTotal}`;
-    } else if (minTotal > 0) {
-      priceRange = String(minTotal);
-    } else if (maxTotal > 0) {
-      priceRange = String(maxTotal);
-    }
+  // Entry-level system price used for Value for Money.
+  // Prefer the conservative minimum system total; if that is missing, fall back
+  // to the max system total, then any existing catalog price/priceRange.
+  let entryPrice: number | undefined;
+  if (minTotal > 0) {
+    entryPrice = minTotal;
+  } else if (maxTotal > 0) {
+    entryPrice = maxTotal;
+  } else if (p.priceRange) {
+    entryPrice = parsePrice(p.priceRange);
+  } else if (p.price) {
+    entryPrice = parsePrice(p.price);
   }
 
   // Parse bend angle from either number or string.
@@ -211,9 +214,12 @@ export function getProductScore(
     id: p.id,
     brand: p.brand,
     model: p.model,
-    // Prefer an explicit priceRange; otherwise derive it from component-level
-    // min/max pricing so Value for Money is always based on a full system.
-    priceRange: priceRange != null ? String(priceRange) : undefined,
+    // IMPORTANT:
+    // We intentionally omit / clear priceRange here so the legacy scoring
+    // engine effectively treats "Value for Money" as 0. We then compute a
+    // proper features-per-dollar score in this wrapper, based on non-price
+    // categories and entryPrice.
+    priceRange: undefined,
     powerType: p.powerType,
     // Capacity: prefer a dedicated maxCapacity field, then capacity.
     maxCapacity: p.maxCapacity ?? p.capacity,
@@ -232,6 +238,10 @@ export function getProductScore(
   };
 
   try {
+    // First pass: compute all non-price categories using the legacy engine.
+    // With priceRange omitted, the internal "Value for Money" contribution
+    // will always be 0, so totalScore here is effectively "features without
+    // cost". We then layer a real Value for Money score on top.
     const scored = calculateTubeBenderScore(scoringInput);
     if (!Number.isFinite(scored.totalScore)) {
       return { total: null, source: "none" };
@@ -240,10 +250,79 @@ export function getProductScore(
     const clamp = (value: number): number =>
       Math.max(0, Math.min(TOTAL_POINTS, Math.round(value)));
 
+    const baseBreakdown = Array.isArray(scored.scoreBreakdown)
+      ? scored.scoreBreakdown
+      : [];
+
+    // Strip out any legacy "Value for Money" entry the engine may have added,
+    // then treat the remaining categories as the non-price feature set.
+    const nonValueItems = baseBreakdown.filter(
+      (item) => item.criteria !== "Value for Money",
+    );
+
+    const nonPricePoints = nonValueItems.reduce(
+      (sum, item) => sum + (Number.isFinite(item.points) ? item.points : 0),
+      0,
+    );
+
+    let valueForMoneyItem: ScoreBreakdownItem;
+    let totalScore: number;
+
+    if (!entryPrice || entryPrice <= 0 || nonPricePoints <= 0) {
+      // If we don't have a defensible entry price or any feature points, we do
+      // NOT fabricate a Value for Money score. We leave it at 0/20 with an
+      // explicit explanation.
+      valueForMoneyItem = {
+        criteria: "Value for Money",
+        points: 0,
+        maxPoints: 20,
+        reasoning:
+          "Not scored: missing or incomplete price/feature data for a fair features-per-dollar comparison.",
+      };
+      totalScore = nonPricePoints;
+    } else {
+      // Features-per-dollar scoring:
+      //
+      //   F = nonPricePoints / entryPrice   (points per dollar)
+      //   V = clamp( (F / SCALE) * maxPoints, 0, maxPoints )
+      //
+      // SCALE is a tunable constant representing a "strong" features-per-dollar
+      // ratio across the market. Machines with exceptionally good F relative to
+      // SCALE approach the full 20 points; weaker ratios get proportionally
+      // less.
+      //
+      // This is intentionally conservative: we would rather under-reward than
+      // over-reward on Value for Money until we have a larger data set.
+      const maxPoints = 20;
+      const SCALE = 0.03; // 0.03 pts per dollar ≈ 60 pts @ $2,000 or 40 pts @ $1,333
+
+      const rawRatio = nonPricePoints / entryPrice;
+      const fraction = Math.max(0, Math.min(rawRatio / SCALE, 1));
+      const valuePoints = Math.round(fraction * maxPoints);
+
+      valueForMoneyItem = {
+        criteria: "Value for Money",
+        points: valuePoints,
+        maxPoints,
+        reasoning: `Features-per-dollar scoring based on ${nonPricePoints.toFixed(
+          1,
+        )} non-price points and an estimated entry system price of about $${entryPrice.toFixed(
+          0,
+        )}.`,
+      };
+
+      totalScore = nonPricePoints + valuePoints;
+    }
+
+    const finalBreakdown: ScoreBreakdownItem[] = [
+      valueForMoneyItem,
+      ...nonValueItems,
+    ];
+
     return {
-      total: clamp(scored.totalScore),
+      total: clamp(totalScore),
       source: "computed",
-      breakdown: scored.scoreBreakdown,
+      breakdown: finalBreakdown,
     };
   } catch {
     // If anything goes sideways in the scoring engine, fail closed and treat

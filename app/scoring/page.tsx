@@ -147,14 +147,19 @@ export default function ScoringPage() {
                         <p>
                           Compares complete setup pricing – including base
                           machine, common die set, and hydraulic or power
-                          options where applicable.
+                          options where applicable – against the rest of each
+                          machine&apos;s objective feature score.
                         </p>
                         <p>
-                          Lower-priced machines that still meet key capability
-                          thresholds receive higher scores for entry-level and
-                          value-focused buyers. This category is currently in
-                          v1 "legacy" mode and will move to a strictly
-                          formula-based, features-per-dollar approach.
+                          We first total up the non-price categories (capacity, bend angle, wall thickness, mandrel/S-bend capability, die ecosystem,
+                          etc.) to get a single &quot;feature score&quot; for each machine. That feature score is then divided by the entry system
+                          price and scaled into a 0–20 point range. Machines with unusually strong features-per-dollar ratios approach 20/20; weaker
+                          ratios receive proportionally fewer points.
+                        </p>
+                        <p>
+                          When we do not have enough data to compute a fair features-per-dollar comparison (for example missing pricing or key
+                          specs), the Value for Money category is left at 0/20 with a note explaining that it is not scored for that machine rather
+                          than guessing.
                         </p>
                       </>
                     )}

@@ -164,5 +164,49 @@
     "bendAngle": "80",
     "wallThicknessCapacity": ".25",
     "mandrel": "No"
+  },
+  "roguefab-m601": {
+    "highlights": "Least expensive from this MFR, test data",
+    "framePriceMin": "799",
+    "framePriceMax": "1199",
+    "diePriceMin": "249",
+    "diePriceMax": "568",
+    "hydraulicPriceMin": "99",
+    "hydraulicPriceMax": "2499",
+    "standPriceMin": "0",
+    "standPriceMax": "1499"
+  },
+  "roguefab-m605": {
+    "highlights": "Mid expensive from this MFR, test data",
+    "framePriceMin": "999",
+    "framePriceMax": "1499",
+    "diePriceMin": "249",
+    "diePriceMax": "568",
+    "hydraulicPriceMin": "99",
+    "hydraulicPriceMax": "2499",
+    "standPriceMin": "0",
+    "standPriceMax": "1499"
+  },
+  "roguefab-m625": {
+    "framePriceMin": "1285",
+    "framePriceMax": "1685",
+    "diePriceMin": "265",
+    "hydraulicPriceMin": "148",
+    "hydraulicPriceMax": "2325",
+    "standPriceMin": "0",
+    "diePriceMax": "417",
+    "maxCapacity": "2.375",
+    "country": "USA",
+    "powerType": "Hydraulic",
+    "bendAngle": "210",
+    "wallThicknessCapacity": ".875",
+    "mandrel": "",
+    "sBendCapability": "Yes",
+    "brand": "Rogue Fabrication",
+    "model": "M625",
+    "clrRange": "2.25-6.00",
+    "cycleTime": "13 Seconds",
+    "weight": "330",
+    "image": ""
   }
 }
