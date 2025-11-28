@@ -1,5 +1,83 @@
-import { allTubeBenders, type Product } from "./catalog";
+import {
+  allTubeBenders,
+  type Product,
+  type ProductCitation,
+  type ProductCitationSourceType,
+} from "./catalog";
 import { mergeWithOverlay } from "./adminStore";
+
+/**
+ * Parse a line-based citations field (as entered in admin) into structured
+ * ProductCitation objects.
+ *
+ * Expected format per line:
+ *   category | sourceType | urlOrRef | title | accessed (YYYY-MM-DD) | note
+ *
+ * - category: scoring category key (e.g. "valueForMoney", "bendAngleCapability").
+ * - sourceType: "web-page" | "pdf" | "manual" | "email" | "other" (case-insensitive).
+ * - urlOrRef: URL or internal reference.
+ * - title: short human label.
+ * - accessed: optional date string (YYYY-MM-DD preferred).
+ * - note: freeform explanation (page/section / what was used).
+ */
+function parseCitationLines(raw: unknown): ProductCitation[] {
+  if (typeof raw !== "string") return [];
+
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  const allowedTypes: ProductCitationSourceType[] = [
+    "web-page",
+    "pdf",
+    "manual",
+    "email",
+    "other",
+  ];
+
+  const citations: ProductCitation[] = [];
+
+  lines.forEach((line, index) => {
+    const parts = line.split("|").map((p) => p.trim());
+    if (parts.length < 3) {
+      // Require at least category, sourceType, urlOrRef.
+      return;
+    }
+
+    const [categoryRaw, sourceTypeRaw, urlOrRefRaw, titleRaw, accessedRaw, ...noteParts] =
+      parts;
+
+    const category = categoryRaw || "unspecified";
+    const urlOrRef = urlOrRefRaw || "";
+    if (!urlOrRef) return;
+
+    const normalizedType = (sourceTypeRaw || "other").toLowerCase();
+    const sourceType = (allowedTypes.includes(
+      normalizedType as ProductCitationSourceType,
+    )
+      ? normalizedType
+      : "other") as ProductCitationSourceType;
+
+    const title = titleRaw || null;
+    const accessed = accessedRaw || null;
+    const note =
+      noteParts.length > 0 ? noteParts.join(" | ").trim() || null : null;
+
+    citations.push({
+      id: `${category}-${index + 1}`,
+      category,
+      field: null,
+      sourceType,
+      urlOrRef,
+      title,
+      accessed,
+      note,
+    });
+  });
+
+  return citations;
+}
 
 /**
  * Returns all tube benders with any admin overlay applied.
@@ -38,8 +116,39 @@ export function getAllTubeBendersWithOverlay(): Product[] {
       b.highlights = parts as unknown as Product["highlights"];
     }
 
-    // Ensure review content fields are explicitly passed through from overlay
-    const overlayFields = (raw as any);
+    // Ensure review content and citations fields are explicitly passed through from overlay.
+    const overlayFields = raw as any;
+
+    let parsedCitations: ProductCitation[] | null = null;
+    if (Array.isArray(overlayFields.citations)) {
+      // If overlay ever writes structured citations directly, trust them but
+      // filter to a minimal shape.
+      parsedCitations = overlayFields.citations
+        .map((c: any, index: number) => {
+          if (!c || typeof c !== "object") return null;
+          const id = typeof c.id === "string" && c.id.length > 0
+            ? c.id
+            : `citation-${index + 1}`;
+          return {
+            id,
+            category: String(c.category ?? "unspecified"),
+            field: c.field ?? null,
+            sourceType: (c.sourceType ??
+              "other") as ProductCitationSourceType,
+            urlOrRef: String(c.urlOrRef ?? ""),
+            title: c.title ?? null,
+            accessed: c.accessed ?? null,
+            note: c.note ?? null,
+          } satisfies ProductCitation;
+        })
+        .filter(Boolean) as ProductCitation[];
+    } else if (typeof overlayFields.citationsRaw === "string") {
+      const parsed = parseCitationLines(overlayFields.citationsRaw);
+      if (parsed.length > 0) {
+        parsedCitations = parsed;
+      }
+    }
+
     return {
       ...b,
       pros: overlayFields.pros ?? b.pros ?? null,
@@ -47,6 +156,9 @@ export function getAllTubeBendersWithOverlay(): Product[] {
       consSources: overlayFields.consSources ?? b.consSources ?? null,
       keyFeatures: overlayFields.keyFeatures ?? b.keyFeatures ?? null,
       materials: overlayFields.materials ?? b.materials ?? null,
+      citationsRaw:
+        overlayFields.citationsRaw ?? b.citationsRaw ?? null,
+      citations: parsedCitations ?? b.citations ?? null,
     } as Product;
   });
 }

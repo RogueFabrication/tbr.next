@@ -2,6 +2,39 @@
  * Canonical, minimal catalog for TubeBenderReviews.
  * This file is the single source of truth used by pages and the public API.
  */
+
+export type ProductCitationSourceType =
+  | "web-page"
+  | "pdf"
+  | "manual"
+  | "email"
+  | "other";
+
+/**
+ * Structured citation for any score-driving or spec-driving fact.
+ *
+ * Most of these will come from the admin overlay (citationsRaw → parsed),
+ * not from the base catalog.
+ */
+export type ProductCitation = {
+  /** Stable id within a product (not globally unique, just for UI keys). */
+  id: string;
+  /** Scoring category key (e.g. "valueForMoney", "bendAngleCapability"). */
+  category: string;
+  /** Optional more granular field name (e.g. "bendAngle", "maxCapacity"). */
+  field?: string | null;
+  /** Type of source – web page, PDF, manual, etc. */
+  sourceType: ProductCitationSourceType;
+  /** URL or internal reference to the source. */
+  urlOrRef: string;
+  /** Human-readable title or label for the source. */
+  title?: string | null;
+  /** Date accessed (for web/PDF), preferably YYYY-MM-DD. */
+  accessed?: string | null;
+  /** Optional explanatory note (e.g. page/section and what was used). */
+  note?: string | null;
+};
+
 export type Product = {
   /** Stable canonical id used in routes and compare. */
   id: string;
@@ -32,6 +65,17 @@ export type Product = {
   consSources?: string | null;
   keyFeatures?: string | null;
   materials?: string | null;
+  // Citations and source documentation (overlay-driven)
+  /**
+   * Raw, line-based citations as entered in the admin UI. This is parsed
+   * into `citations` for use by the public UI.
+   *
+   * Format per line:
+   *   category | sourceType | urlOrRef | title | accessed (YYYY-MM-DD) | note
+   */
+  citationsRaw?: string | null;
+  /** Parsed citations. Typically populated from overlay + citationsRaw. */
+  citations?: ProductCitation[] | null;
 };
 
 /**

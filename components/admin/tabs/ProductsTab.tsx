@@ -44,12 +44,28 @@ type Product = {
   hydraulicPriceMax?: string;
   standPriceMin?: string;
   standPriceMax?: string;
+
+  // Raw citations field (line-based, parsed into structured citations server-side)
+  citationsRaw?: string;
+
+  // Dynamic per-field citation data (we don't enumerate every key here)
+  [key: string]: any;
+};
+
+type RowCitationClipboard = {
+  source1: string;
+  source2: string;
+  notes: string;
+  userCode: string;
 };
 
 export default function ProductsTab() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [citationClipboard, setCitationClipboard] =
+    useState<RowCitationClipboard | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -57,14 +73,16 @@ export default function ProductsTab() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/admin/products', { cache: 'no-store' });
+      const res = await fetch("/api/admin/products", { cache: "no-store" });
+
       if (!res.ok) {
-        setError('Failed to fetch products');
+        setError("Failed to fetch products");
         return;
       }
       const json: any = await res.json();
       // Accept either { ok, data } or a raw array (defensive)
       let rows: any[] = [];
+
       if (Array.isArray(json)) {
         rows = json;
       } else if (Array.isArray(json?.data)) {
@@ -75,507 +93,212 @@ export default function ProductsTab() {
         rows = [];
       }
       setProducts(rows as Product[]);
-      setError('');
+      setError("");
     } catch {
-      setError('Failed to fetch products');
+      setError("Failed to fetch products");
     } finally {
       setLoading(false);
     }
   };
 
-  const updateProduct = async (id: string, field: keyof Product, value: string) => {
+  // Update helper – keep type loose so we can use dynamic citation keys.
+  const updateProduct = async (id: string, field: string, value: string) => {
     try {
       const response = await fetch(`/api/admin/products/${id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ [field]: value }),
       });
 
       if (response.ok) {
-        // Refresh the products list to show the updated data
         fetchProducts();
       } else {
-        console.error('Failed to update product');
+        console.error("Failed to update product");
       }
     } catch (error) {
-      console.error('Error updating product:', error);
+      console.error("Error updating product:", error);
     }
   };
 
+  // Default to first product once loaded
+  useEffect(() => {
+    if (!selectedId && products.length > 0) {
+      setSelectedId(products[0].id);
+    }
+  }, [products, selectedId]);
+
   if (loading) {
-    return <div className="text-center py-8">Loading products...</div>;
+    return <div className="py-8 text-center">Loading products...</div>;
   }
 
   if (error) {
-    return <div className="text-center py-8 text-red-600">Error: {error}</div>;
+    return (
+      <div className="py-8 text-center text-red-600">
+        Error: {error}
+      </div>
+    );
   }
 
+  const selectedProduct =
+    products.find((p) => p.id === selectedId) ?? products[0] ?? null;
+
+  if (!selectedProduct) {
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Products</h2>
-        <p className="text-sm text-gray-500">
-          Click on any field to edit. Fields marked <span className="font-semibold">*</span> directly influence scoring.
-        </p>
-        <p className="text-xs text-gray-400 mt-1">
-          Image path expects a file under <code className="font-mono text-[0.7rem]">/public/images/products/</code>. Changing the path without a matching file will break the photo.
+      <div className="rounded-lg bg-white p-6 shadow">
+        <p className="text-sm text-gray-600">
+          No products loaded. Check base catalog / overlay.
         </p>
       </div>
-      
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 relative">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 top-0 z-30 bg-gray-50">ID</th>
-              {/* Scoring drivers first (after ID) */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Max Capacity</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Country / Made In</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Power Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Bend Angle (°)</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Wall Thickness</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* Mandrel</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">* S-Bend Capable</th>
-              {/* Non-scoring / display fields to the right */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Brand</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Model</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">CLR Range</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Cycle Time</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Weight</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Image Path</th>
-              {/* Additional display fields */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Max OD</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Max Wall</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Floor Footprint</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Warranty</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Highlights</th>
-            </tr>
-            <tr>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky left-0 top-12 bg-gray-50 z-30">
-                Stable internal ID. Do not change unless catalog data is updated to match.
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Largest round tube OD this machine can bend (inches).
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Origin / claim category. Only machines that meet FTC-unqualified
-                &quot;Made in USA&quot; criteria receive USA Manufacturing points.
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Manual / Hydraulic / Electric, etc. Affects Ease of Use &amp; Setup score.
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Maximum advertised single-pass bend angle in degrees.
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Max wall for 1.75&quot; DOM used for wall thickness scoring (inches).
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Mandrel option: Available / None. Only mark as Available when the manufacturer documents mandrel support or upgrades.
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Yes/No: documented ability to create S-bends (affects S-Bend score).
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Brand / manufacturer name (display only).
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Model designation exactly as marketed (display only).
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Approximate min–max CLR coverage, for future content / specs.
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Bend cycle time as published by the manufacturer. If multiple modes or power options exist, use the fastest documented case. Leave
-                blank if the manufacturer does not publish cycle time.
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Our opinion of an average real-world configuration weight (for example, averaging between light/no-cart and heavy/cart setups). Only
-                enter a value when we have enough data to make a fair average; otherwise leave blank.
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Relative path under <code className="font-mono">/images/products/</code>. If the file doesn&apos;t exist, the photo will break.
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Product type classification (display only).
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Maximum outer diameter spec (display only).
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Maximum wall thickness spec (display only).
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Floor footprint dimensions for the specs table. Only filled out when the manufacturer publishes a footprint; otherwise left blank.
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Warranty terms for specs table (display only).
-              </th>
-              <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Comma-separated highlight bullets for review pages (display only).
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {(Array.isArray(products) ? products : (products as any)?.items ?? []).map((product: any) => (
-              <tr
-                key={String(product?.id ?? "")}
-                className="hover:bg-gray-50"
-              >
-                <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-600 sticky left-0 bg-white z-10">
-                  {String(product?.id ?? '')}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.maxCapacity ?? ''}
-                    onSave={(value) => updateProduct(product.id, 'maxCapacity', value as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.country ?? ''}
-                    onSave={(value) => {
-                      updateProduct(product.id, 'country', value as string);
-                    }}
-                    options={[
-                      'FTC-unqualified "Made in USA"',
-                      'Assembled in USA / qualified USA claim',
-                      'Non-USA or no USA claim',
-                    ]}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.powerType ?? ''}
-                    onSave={(value) => updateProduct(product.id, 'powerType', value as string)}
-                    options={[
-                      'Manual',
-                      'Hydraulic',
-                      'Manual + Hydraulic',
-                      'Electric / CNC',
-                      'Other',
-                    ]}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.bendAngle != null ? String(product.bendAngle) : ''}
-                    onSave={(value) => updateProduct(product.id, 'bendAngle', value as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.wallThicknessCapacity ?? ''}
-                    onSave={(value) => updateProduct(product.id, 'wallThicknessCapacity', value as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={
-                      // Prefer the new "mandrel" field, but fall back to any
-                      // existing legacy "mandrelBender" value so older data
-                      // actually shows up in the grid.
-                      product?.mandrel ??
-                      (typeof (product as any).mandrelBender === 'string'
-                        ? ((product as any).mandrelBender as string)
-                        : '')
-                    }
-                    onSave={(value) => updateProduct(product.id, 'mandrel', value as string)}
-                    options={['Available', 'None']}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={
-                      typeof product?.sBendCapability === 'boolean'
-                        ? (product.sBendCapability ? 'Yes' : 'No')
-                        : (product?.sBendCapability ?? '')
-                    }
-                    onSave={(value) => updateProduct(product.id, 'sBendCapability', value as string)}
-                    options={['', 'Yes', 'No']}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.brand ?? ''}
-                    onSave={(value) => updateProduct(product.id, 'brand', value as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.model ?? ''}
-                    onSave={(value) => updateProduct(product.id, 'model', value as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.clrRange ?? ''}
-                    onSave={(value) => updateProduct(product.id, 'clrRange', value as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.cycleTime ?? ''}
-                    onSave={(value) => updateProduct(product.id, 'cycleTime', value as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.weight ?? ''}
-                    onSave={(value) => updateProduct(product.id, 'weight', value as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.image ?? ''}
-                    onSave={(value) => updateProduct(product.id, 'image', value as string)}
-                  />
-                </td>
+    );
+  }
 
-                {/* Additional display fields */}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.type ?? ''}
-                    onSave={(val) => updateProduct(product.id, 'type', val as string)}
-                    options={['Rotary draw', 'Ram compression', 'Roll']}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.max_od ?? ''}
-                    onSave={(val) => updateProduct(product.id, 'max_od', val as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.maxWall ?? ''}
-                    onSave={(val) => updateProduct(product.id, 'maxWall', val as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.dimensions ?? ''}
-                    onSave={(val) => updateProduct(product.id, 'dimensions', val as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={product?.warranty ?? ''}
-                    onSave={(val) => updateProduct(product.id, 'warranty', val as string)}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <EditableField
-                    value={
-                      product?.highlights
-                        ? Array.isArray(product.highlights)
-                          ? product.highlights.join(', ')
-                          : String(product.highlights)
-                        : ''
-                    }
-                    onSave={(val) => updateProduct(product.id, 'highlights', val as string)}
-                  />
-                </td>
+  const specRows: {
+    key: string;
+    label: string;
+    description: string;
+    options?: string[];
+  }[] = [
+    {
+      key: "maxCapacity",
+      label: "* Max Capacity (OD, inches)",
+      description: "Largest round tube OD this machine can bend.",
+    },
+    {
+      key: "country",
+      label: '* Country / Made In (FTC claim bucket)',
+      description:
+        'Origin / claim category. Only machines meeting FTC-unqualified "Made in USA" criteria receive USA Manufacturing points.',
+      options: [
+        'FTC-unqualified "Made in USA"',
+        "Assembled in USA / qualified USA claim",
+        "Non-USA or no USA claim",
+      ],
+    },
+    {
+      key: "powerType",
+      label: "* Power Type",
+      description:
+        "Manual / Hydraulic / Manual + Hydraulic / Electric / CNC. Affects Ease of Use & Setup score.",
+      options: [
+        "Manual",
+        "Hydraulic",
+        "Manual + Hydraulic",
+        "Electric / CNC",
+        "Other",
+      ],
+    },
+    {
+      key: "bendAngle",
+      label: "* Bend Angle (°)",
+      description:
+        "Maximum advertised single-pass bend angle in degrees (for the machine and tooling used in scoring).",
+    },
+    {
+      key: "wallThicknessCapacity",
+      label: '* Wall Thickness (1.75" DOM, inches)',
+      description:
+        'Max wall for 1.75" DOM used for wall thickness scoring. Use the thickest published spec.',
+    },
+    {
+      key: "mandrel",
+      label: "* Mandrel option",
+      description:
+        "Available / None. Only mark as Available when the manufacturer documents mandrel support or upgrades.",
+      options: ["Available", "None"],
+    },
+    {
+      key: "sBendCapability",
+      label: "* S-Bend capable (Yes/No)",
+      description:
+        "Yes/No: documented ability to create S-bends with this machine/tooling. Must be supported by specs or published examples.",
+      options: ["", "Yes", "No"],
+    },
+    {
+      key: "framePriceMin",
+      label: "Frame price – Min",
+      description:
+        "Lowest documented frame price we would actually recommend for a safe, usable system.",
+    },
+    {
+      key: "framePriceMax",
+      label: "Frame price – Max",
+      description:
+        "Highest documented frame price that is still a normal catalog option (no special-order / custom builds).",
+    },
+    {
+      key: "diePriceMin",
+      label: "Die price – Min (180° complete)",
+      description:
+        "Lowest priced 180° complete die (ready to bend in the machine), if available. Excludes exotic options (polishing, billet spacers, alternate alloys, specialty pressure-die upgrades).",
+    },
+    {
+      key: "diePriceMax",
+      label: "Die price – Max (limiting OD / CLR)",
+      description:
+        "Lowest priced 180° complete die (ready to bend in the machine) that matches either the published max OD or the published max CLR for this machine (whichever represents the higher/limiting capability). Excludes optional upgrades like coatings, premium alloys, billet components, or special pressure-die materials.",
+    },
+    {
+      key: "hydraulicPriceMin",
+      label: "Hydraulics price – Min",
+      description:
+        "Lowest price manufacturer-endorsed hydraulic or power option (can be third-party if explicitly supported).",
+    },
+    {
+      key: "hydraulicPriceMax",
+      label: "Hydraulics price – Max",
+      description:
+        "Highest price normal catalog hydraulic / power option (no custom one-off systems).",
+    },
+    {
+      key: "standPriceMin",
+      label: "Stand / cart price – Min",
+      description:
+        "Lowest price stand or cart required for safe operation. If the machine is stable and usable with no stand, this can be left blank.",
+    },
+    {
+      key: "standPriceMax",
+      label: "Stand / cart price – Max",
+      description:
+        "Highest price normal catalog stand / cart that is still representative for a typical buyer (no boutique or specialty stands).",
+    },
+    {
+      key: "clrRange",
+      label: "CLR range (display only)",
+      description:
+        "Approximate min–max CLR coverage for specs tables and buyer guide copy.",
+    },
+    {
+      key: "cycleTime",
+      label: "Cycle time (display only)",
+      description:
+        "Bend cycle time as published. If multiple modes or power options exist, use the fastest documented case. Leave blank if not published.",
+    },
+    {
+      key: "weight",
+      label: "Typical system weight (display only)",
+      description:
+        "Our opinion of a real-world configuration weight (averaging between light/no-cart and heavy/cart setups). Only enter when we have enough data to be fair.",
+    },
+  ];
 
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pricing breakdown section (component-level min/max) */}
-      <section className="mt-10 border-t border-gray-200 pt-6">
-        <h3 className="text-base font-semibold text-gray-900">Pricing breakdown (min / max)</h3>
-        <p className="mt-1 text-xs text-gray-500 max-w-3xl">
-          These values are used for transparent pricing when we explain Value for Money scoring.
-          Enter conservative, documented prices only. System totals are calculated as the sum of all component min/max values.
-        </p>
-
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          {(Array.isArray(products) ? products : (products as any)?.items ?? []).map((product: any) => {
-            const parse = (v: unknown): number =>
-              typeof v === 'number'
-                ? v
-                : parseFloat(String(v ?? '').replace(/[^0-9.+-]/g, '')) || 0;
+  const parseMoney = (v: unknown): number =>
+    typeof v === "number"
+      ? v
+      : parseFloat(String(v ?? "").replace(/[^0-9.+-]/g, "")) || 0;
 
             const minTotal =
-              parse(product?.framePriceMin) +
-              parse(product?.diePriceMin) +
-              parse(product?.hydraulicPriceMin) +
-              parse(product?.standPriceMin);
+    parseMoney(selectedProduct.framePriceMin) +
+    parseMoney(selectedProduct.diePriceMin) +
+    parseMoney(selectedProduct.hydraulicPriceMin) +
+    parseMoney(selectedProduct.standPriceMin);
 
             const maxTotal =
-              parse(product?.framePriceMax) +
-              parse(product?.diePriceMax) +
-              parse(product?.hydraulicPriceMax) +
-              parse(product?.standPriceMax);
-
-            return (
-              <div
-                key={String(product?.id ?? '')}
-                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-              >
-                <div className="flex items-baseline justify-between gap-3 mb-2">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      {String(product?.id ?? '')}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {product?.brand || product?.model
-                        ? [product?.brand, product?.model].filter(Boolean).join(' ')
-                        : 'Unnamed product'}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[0.65rem] uppercase tracking-wide text-gray-500">
-                      Min system total
-                    </div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">
-                      {minTotal > 0 ? `$${minTotal.toFixed(0)}` : '—'}
-                    </div>
-                    <div className="text-[0.65rem] uppercase tracking-wide text-gray-500">
-                      Max system total
-                    </div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      {maxTotal > 0 ? `$${maxTotal.toFixed(0)}` : '—'}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <div className="font-semibold text-gray-800 mb-1">Frame</div>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Min</div>
-                        <EditableField
-                          value={product?.framePriceMin ?? ''}
-                          onSave={(value) =>
-                            updateProduct(product.id, 'framePriceMin', value as string)
-                          }
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Max</div>
-                        <EditableField
-                          value={product?.framePriceMax ?? ''}
-                          onSave={(value) =>
-                            updateProduct(product.id, 'framePriceMax', value as string)
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="font-semibold text-gray-800 mb-1">Dies (180° complete sets only)</div>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <div className="text-[0.65rem] text-gray-500 mb-0.5">
-                          Min – lowest priced 180° complete die (ready to bend in the machine), if available.
-                          Excludes exotic options (polishing, billet spacers, alternate alloys, specialty pressure-die upgrades).
-                        </div>
-                        <EditableField
-                          value={product?.diePriceMin ?? ''}
-                          onSave={(value) =>
-                            updateProduct(product.id, 'diePriceMin', value as string)
-                          }
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-[0.65rem] text-gray-500 mb-0.5">
-                          Max – lowest priced 180° complete die (ready to bend in the machine) that matches either the published max OD 
-                          or the published max CLR for this machine (whichever represents the higher/limiting capability). 
-                          Excludes optional upgrades such as coatings, premium alloys, billet components, or special pressure-die materials.
-                        </div>
-                        <EditableField
-                          value={product?.diePriceMax ?? ''}
-                          onSave={(value) =>
-                            updateProduct(product.id, 'diePriceMax', value as string)
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="font-semibold text-gray-800 mb-1">Hydraulics</div>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Min</div>
-                        <EditableField
-                          value={product?.hydraulicPriceMin ?? ''}
-                          onSave={(value) =>
-                            updateProduct(product.id, 'hydraulicPriceMin', value as string)
-                          }
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Max</div>
-                        <EditableField
-                          value={product?.hydraulicPriceMax ?? ''}
-                          onSave={(value) =>
-                            updateProduct(product.id, 'hydraulicPriceMax', value as string)
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="font-semibold text-gray-800 mb-1">Stand / Mount</div>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Min</div>
-                        <EditableField
-                          value={product?.standPriceMin ?? ''}
-                          onSave={(value) =>
-                            updateProduct(product.id, 'standPriceMin', value as string)
-                          }
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Max</div>
-                        <EditableField
-                          value={product?.standPriceMax ?? ''}
-                          onSave={(value) =>
-                            updateProduct(product.id, 'standPriceMax', value as string)
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Review content (pros / cons / features / materials) */}
-      <section className="mt-10 border-t border-gray-200 pt-6">
-        <h3 className="text-base font-semibold text-gray-900">Review content</h3>
-        <p className="mt-1 text-xs text-gray-500 max-w-3xl">
-          Pros, cons, key features, and materials compatibility shown on each review page.
-          For cons,{" "}
-          <span className="font-semibold">
-            every line must have a matching source line
-          </span>{" "}
-          (manufacturer docs, product page, or other verifiable reference).
-        </p>
-
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          {(Array.isArray(products) ? products : (products as any)?.items ?? []).map(
-            (product: any) => {
-              const id = String(product?.id ?? "");
-
-              const pros = product?.pros ?? "";
-              const cons = product?.cons ?? "";
-              const consSources = product?.consSources ?? "";
-              const keyFeatures = product?.keyFeatures ?? "";
-              const materialsRaw = product?.materials ?? "";
+    parseMoney(selectedProduct.framePriceMax) +
+    parseMoney(selectedProduct.diePriceMax) +
+    parseMoney(selectedProduct.hydraulicPriceMax) +
+    parseMoney(selectedProduct.standPriceMax);
 
               const MATERIAL_OPTIONS = [
                 "Mild steel",
@@ -587,6 +310,7 @@ export default function ProductsTab() {
                 "Brass",
               ] as const;
 
+  const materialsRaw = selectedProduct.materials ?? "";
               const selectedMaterials = new Set(
                 String(materialsRaw)
                   .split(",")
@@ -602,27 +326,332 @@ export default function ProductsTab() {
                   next.add(label);
                 }
                 const serialized = Array.from(next).join(", ");
-                updateProduct(id, "materials", serialized);
-              };
+    updateProduct(selectedProduct.id, "materials", serialized);
+  };
+
+  return (
+    <div className="rounded-lg bg-white shadow">
+      {/* Header + product selector */}
+      <div className="flex flex-col gap-3 border-b border-gray-200 px-6 py-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Products</h2>
+          <p className="text-sm text-gray-500">
+            Edit one model at a time. Fields marked{" "}
+            <span className="font-semibold">*</span> directly influence scoring.
+          </p>
+          <p className="mt-1 text-xs text-gray-400">
+            Image path expects a file under{" "}
+            <code className="font-mono text-[0.7rem]">
+              /public/images/products/
+            </code>
+            . Changing the path without a matching file will break the photo.
+          </p>
+        </div>
+        <div className="flex flex-col gap-1 text-sm md:items-end">
+          <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            Select model
+          </label>
+          <select
+            className="w-full max-w-xs rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+            value={selectedProduct.id}
+            onChange={(e) => {
+              setSelectedId(e.target.value);
+              setCitationClipboard(null);
+            }}
+          >
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.id} — {[p.brand, p.model].filter(Boolean).join(" ") || "Unnamed"}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Per-field grid with row-level citation copy/paste */}
+      <section className="border-b border-gray-200 px-6 py-5">
+        <h3 className="text-base font-semibold text-gray-900">
+          Specs, scoring drivers &amp; citations
+        </h3>
+        <p className="mt-1 text-xs text-gray-500 max-w-4xl">
+          Work row by row. For each spec, record the value plus how you proved
+          it. Use the{" "}
+          <span className="font-semibold">Copy</span> /{" "}
+          <span className="font-semibold">Paste</span> buttons on the right to
+          reuse citation details and your{" "}
+          <span className="font-mono text-[0.7rem]">XXXNNNN</span> initials /
+          employee code across rows.
+        </p>
+
+        <div className="mt-4 overflow-x-auto">
+          <div className="min-w-[1800px] rounded-lg border border-gray-200">
+            <div className="grid grid-cols-[1.6fr_1fr_1.4fr_0.8fr_1.4fr_0.7fr_0.7fr] border-b border-gray-200 bg-gray-50 px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-wide text-gray-500">
+              <div className="border-r border-gray-200 pr-2">Field</div>
+              <div className="border-r border-gray-200 pr-2">Value</div>
+              <div className="border-r border-gray-200 pr-2">
+                Citation 1 (URL / doc ref)
+              </div>
+              <div className="border-r border-gray-200 pr-2">
+                Accessed (YYYY-MM-DD)
+              </div>
+              <div className="border-r border-gray-200 pr-2">
+                Notes / how we found it
+              </div>
+              <div className="border-r border-gray-200 pr-2">
+                Initials / Emp#
+              </div>
+              <div className="text-right pr-1">Row tools</div>
+            </div>
+
+            {specRows.map((row) => {
+              const valueRaw = selectedProduct[row.key];
+              const value =
+                valueRaw == null
+                  ? ""
+                  : typeof valueRaw === "number"
+                  ? String(valueRaw)
+                  : String(valueRaw);
+
+              const source1Key = `${row.key}Source1`;
+              const source2Key = `${row.key}Source2`;
+              const notesKey = `${row.key}Notes`;
+              const userKey = `${row.key}UserCode`;
+
+              const source1 = String(selectedProduct[source1Key] ?? "");
+              const source2 = String(selectedProduct[source2Key] ?? "");
+              const notes = String(selectedProduct[notesKey] ?? "");
+              const userCode = String(selectedProduct[userKey] ?? "");
 
               return (
                 <div
-                  key={id}
-                  className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                  key={row.key}
+                  className="grid grid-cols-[1.6fr_1fr_1.4fr_0.8fr_1.4fr_0.7fr_0.7fr] border-t border-gray-100 px-3 py-2 text-xs"
                 >
-                  <div className="mb-2 flex items-baseline justify-between gap-3">
+                  <div className="pr-3">
+                    <div className="font-medium text-gray-900">
+                      {row.label}
+                    </div>
+                    <div className="mt-0.5 text-[0.7rem] text-gray-500">
+                      {row.description}
+                    </div>
+                  </div>
+
+                  <div className="pr-2">
+                    <EditableField
+                      value={value}
+                      onSave={(val) => updateProduct(selectedProduct.id, row.key, val)}
+                      options={row.options}
+                    />
+                  </div>
+
+                  <div className="pr-2">
+                    <input
+                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                      value={source1}
+                      onChange={(e) =>
+                        updateProduct(
+                          selectedProduct.id,
+                          source1Key,
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Spec page, PDF, catalog ref, etc."
+                    />
+                  </div>
+
+                  <div className="pr-2">
+                    <input
+                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                      value={source2}
+                      onChange={(e) =>
+                        updateProduct(
+                          selectedProduct.id,
+                          source2Key,
+                          e.target.value,
+                        )
+                      }
+                      placeholder="2025-11-28"
+                    />
+                  </div>
+
+                  <div className="pr-2">
+                    <input
+                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                      value={notes}
+                      onChange={(e) =>
+                        updateProduct(
+                          selectedProduct.id,
+                          notesKey,
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Search path, clarifications from support, etc."
+                    />
+                  </div>
+
+                  <div className="pr-2">
+                    <input
+                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs font-mono text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                      value={userCode}
+                      onChange={(e) =>
+                        updateProduct(
+                          selectedProduct.id,
+                          userKey,
+                          e.target.value.toUpperCase(),
+                        )
+                      }
+                      maxLength={8}
+                      placeholder="XXXNNNN"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      className="rounded border border-gray-300 px-2 py-0.5 text-[0.7rem] text-gray-700 hover:bg-gray-50"
+                      onClick={() =>
+                        setCitationClipboard({
+                          source1,
+                          source2,
+                          notes,
+                          userCode,
+                        })
+                      }
+                    >
+                      Copy
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!citationClipboard}
+                      className={`rounded border px-2 py-0.5 text-[0.7rem] ${
+                        citationClipboard
+                          ? "border-gray-300 text-gray-700 hover:bg-gray-50"
+                          : "cursor-not-allowed border-gray-200 text-gray-300"
+                      }`}
+                      onClick={() => {
+                        if (!citationClipboard) return;
+                        updateProduct(
+                          selectedProduct.id,
+                          source1Key,
+                          citationClipboard.source1,
+                        );
+                        updateProduct(
+                          selectedProduct.id,
+                          source2Key,
+                          citationClipboard.source2,
+                        );
+                        updateProduct(
+                          selectedProduct.id,
+                          notesKey,
+                          citationClipboard.notes,
+                        );
+                        updateProduct(
+                          selectedProduct.id,
+                          userKey,
+                          citationClipboard.userCode,
+                        );
+                      }}
+                    >
+                      Paste
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <p className="mt-3 text-[0.7rem] text-gray-500 max-w-4xl">
+          The last cell of every row is your{" "}
+          <span className="font-mono">XXXNNNN</span> initials + employee #
+          (letters + numbers, no spaces). This gives us a simple human-readable
+          audit trail for who pulled which spec, when, and from where.
+        </p>
+      </section>
+
+      {/* Summary of min/max system cost for this model */}
+      <section className="border-b border-gray-200 px-6 py-5">
+        <h3 className="text-base font-semibold text-gray-900">
+          System cost snapshot (for Value for Money)
+        </h3>
+        <p className="mt-1 text-xs text-gray-500 max-w-3xl">
+          These totals are the sums of the min/max components above. They are
+          what the scoring engine uses as the "minimum safe operating system
+          cost" and "upper range" price for this machine.
+        </p>
+
+        <div className="mt-3 inline-flex gap-8 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-xs">
+          <div>
+            <div className="text-[0.7rem] uppercase tracking-wide text-gray-500">
+              Min system total
+            </div>
+            <div className="text-sm font-semibold text-gray-900">
+              {minTotal > 0 ? `$${minTotal.toFixed(0)}` : "—"}
+            </div>
+          </div>
                     <div>
+            <div className="text-[0.7rem] uppercase tracking-wide text-gray-500">
+              Max system total
+            </div>
                       <div className="text-sm font-semibold text-gray-900">
-                        {id}
+              {maxTotal > 0 ? `$${maxTotal.toFixed(0)}` : "—"}
+            </div>
+          </div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {product?.brand || product?.model
-                          ? [product?.brand, product?.model]
+      </section>
+
+      {/* Raw citations blob for this model (optional, machine-readable) */}
+      <section className="border-b border-gray-200 px-6 py-5">
+        <h3 className="text-base font-semibold text-gray-900">
+          Raw citation log (optional, machine-readable)
+        </h3>
+        <p className="mt-1 text-xs text-gray-500 max-w-3xl">
+          This is a compact, line-based log of every citation you want to keep.
+          It&apos;s another layer of defense on top of the per-row fields
+          above. Format:
+          {" "}
+          <code className="font-mono text-[0.7rem]">
+            category | sourceType | urlOrRef | title | accessed (YYYY-MM-DD) |
+            note
+          </code>
+          .
+        </p>
+        <textarea
+          className="mt-3 w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+          rows={5}
+          defaultValue={selectedProduct.citationsRaw ?? ""}
+          onBlur={(e) =>
+            updateProduct(
+              selectedProduct.id,
+              "citationsRaw",
+              e.target.value ?? "",
+            )
+          }
+        />
+      </section>
+
+      {/* Review content (pros / cons / features / materials) for the selected model */}
+      <section className="px-6 py-5">
+        <h3 className="text-base font-semibold text-gray-900">
+          Review content – {selectedProduct.id}
+        </h3>
+        <p className="mt-1 text-xs text-gray-500 max-w-3xl">
+          Pros, cons, key features, and materials compatibility shown on this
+          model&apos;s review page. For cons,{" "}
+          <span className="font-semibold">
+            every line must have a matching source line
+          </span>{" "}
+          (manufacturer docs, product page, or other verifiable reference).
+        </p>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="mb-2 text-xs text-gray-500">
+              {selectedProduct.brand || selectedProduct.model
+                ? [selectedProduct.brand, selectedProduct.model]
                               .filter(Boolean)
                               .join(" ")
                           : "Unnamed product"}
-                      </div>
-                    </div>
                   </div>
 
                   <div className="grid gap-3 text-xs md:grid-cols-2">
@@ -633,9 +662,13 @@ export default function ProductsTab() {
                       <textarea
                         className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
                         rows={5}
-                        defaultValue={pros}
+                  defaultValue={selectedProduct.pros ?? ""}
                         onBlur={(e) =>
-                          updateProduct(id, "pros", e.target.value ?? "")
+                    updateProduct(
+                      selectedProduct.id,
+                      "pros",
+                      e.target.value ?? "",
+                    )
                         }
                       />
                     </div>
@@ -652,23 +685,27 @@ export default function ProductsTab() {
                           <textarea
                             className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
                             rows={5}
-                            defaultValue={cons}
+                      defaultValue={selectedProduct.cons ?? ""}
                             onBlur={(e) =>
-                              updateProduct(id, "cons", e.target.value ?? "")
+                        updateProduct(
+                          selectedProduct.id,
+                          "cons",
+                          e.target.value ?? "",
+                        )
                             }
                           />
                         </div>
                         <div>
                           <div className="mb-0.5 text-[0.7rem] text-gray-500">
-                            Sources (matching lines: docs, product pages, etc.)
+                      Sources (matching lines)
                           </div>
                           <textarea
                             className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
                             rows={5}
-                            defaultValue={consSources}
+                      defaultValue={selectedProduct.consSources ?? ""}
                             onBlur={(e) =>
                               updateProduct(
-                                id,
+                          selectedProduct.id,
                                 "consSources",
                                 e.target.value ?? "",
                               )
@@ -687,9 +724,13 @@ export default function ProductsTab() {
                       <textarea
                         className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
                         rows={4}
-                        defaultValue={keyFeatures}
+                  defaultValue={selectedProduct.keyFeatures ?? ""}
                         onBlur={(e) =>
-                          updateProduct(id, "keyFeatures", e.target.value ?? "")
+                    updateProduct(
+                      selectedProduct.id,
+                      "keyFeatures",
+                      e.target.value ?? "",
+                    )
                         }
                       />
                     </div>
@@ -698,8 +739,8 @@ export default function ProductsTab() {
                         Materials compatibility
                       </div>
                       <p className="mb-2 text-[0.7rem] text-gray-500">
-                        Check all materials this machine is suitable for. This is
-                        displayed as read-only tags on the review page.
+                  Check all materials this machine is suitable for. Displayed
+                  as read-only tags on the review page.
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {MATERIAL_OPTIONS.map((label) => {
@@ -723,10 +764,38 @@ export default function ProductsTab() {
                       </div>
                     </div>
                   </div>
+
+            <div className="mt-3 grid gap-3 text-xs md:grid-cols-2">
+              <div>
+                <div className="mb-1 font-semibold text-gray-800">
+                  Image path
                 </div>
-              );
-            },
-          )}
+                <EditableField
+                  value={selectedProduct.image ?? ""}
+                  onSave={(val) =>
+                    updateProduct(selectedProduct.id, "image", val)
+                  }
+                />
+              </div>
+              <div>
+                <div className="mb-1 font-semibold text-gray-800">
+                  Highlights (comma-separated)
+                </div>
+                <EditableField
+                  value={
+                    selectedProduct.highlights
+                      ? Array.isArray(selectedProduct.highlights)
+                        ? selectedProduct.highlights.join(", ")
+                        : String(selectedProduct.highlights)
+                      : ""
+                  }
+                  onSave={(val) =>
+                    updateProduct(selectedProduct.id, "highlights", val)
+                  }
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
@@ -737,7 +806,7 @@ export default function ProductsTab() {
 function EditableField({ 
   value, 
   onSave, 
-  options 
+  options,
 }: { 
   value: string; 
   onSave: (value: string) => void; 
