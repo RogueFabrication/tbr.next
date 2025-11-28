@@ -131,7 +131,9 @@ export default function ScoringPage() {
                     For each machine we build a conservative minimum system price from the lowest documented cost of four components:{" "}
                     <span className="font-medium">frame, dies, hydraulics, and stand/mount</span>. This minimum system total is what drives the
                     Value for Money score – not a single sale price or marketing claim. When we cannot verify a component price, we either omit it
-                    (for hydraulics/stands that are truly optional) or assign a conservative baseline so that incomplete data never inflates a score.
+                    (for hydraulics/stands that are truly optional) or assign a conservative baseline so that incomplete data never inflates a score.{" "}
+                    Today this category still uses a legacy price-bucketing formula from our original test dataset; it is being rebuilt into a pure
+                    "features per dollar" calculation that will be fully documented here.
                   </p>
                 )}
 
@@ -150,7 +152,9 @@ export default function ScoringPage() {
                         <p>
                           Lower-priced machines that still meet key capability
                           thresholds receive higher scores for entry-level and
-                          value-focused buyers.
+                          value-focused buyers. This category is currently in
+                          v1 "legacy" mode and will move to a strictly
+                          formula-based, features-per-dollar approach.
                         </p>
                       </>
                     )}
@@ -183,13 +187,16 @@ export default function ScoringPage() {
                     {cat.key === "usaManufacturing" && (
                       <>
                         <p>
-                          Binary score based on whether the machine is made in
-                          the USA, verified through manufacturer
-                          documentation.
+                          Currently a simple binary score based on whether the
+                          catalog lists the machine&apos;s origin as the USA.
+                          If the manufacturer publishes USA as the country of
+                          origin, the machine receives full points in this
+                          category; otherwise it receives zero.
                         </p>
                         <p>
-                          Reflects customer preference for domestic
-                          manufacturing, support, and parts availability.
+                          This will be upgraded to an FTC-style tiered system
+                          (for example "Made in USA" vs "Assembled in USA") once
+                          those origin claims are modeled explicitly in our data.
                         </p>
                       </>
                     )}
@@ -203,6 +210,15 @@ export default function ScoringPage() {
                           Higher angles reduce the need for multi-stage bends
                           and enable more complex geometries.
                         </p>
+                        <p>
+                          Scoring is threshold-based on the manufacturer&apos;s
+                          published maximum angle: 195° or more earns full
+                          points, 180–194° earns a strong score, 120–179°
+                          earns a mid-range score, and lower published angles
+                          earn reduced points. If no bend angle is published,
+                          this category receives zero points and is labeled
+                          as "Not Published" on the product page.
+                        </p>
                       </>
                     )}
                     {cat.key === "wallThicknessCapability" && (
@@ -213,8 +229,12 @@ export default function ScoringPage() {
                           they can bend.
                         </p>
                         <p>
-                          Machines without published wall data receive a
-                          conservative baseline score.
+                          Machines with published wall data are tiered by
+                          thickness: heavier-wall capacity earns more points,
+                          while lighter-wall capacity earns fewer points. When
+                          no wall thickness is published, we apply a conservative
+                          baseline score and clearly label the data as "Not
+                          Published" rather than guessing.
                         </p>
                       </>
                     )}
@@ -291,12 +311,13 @@ export default function ScoringPage() {
                       Data sources & verification
                     </p>
                     <ul className="space-y-1 list-disc pl-4">
-                      <li>Manufacturer technical specifications</li>
-                      <li>Published capacity charts and manuals</li>
-                      <li>Direct clarification from manufacturer reps</li>
+                      <li>Manufacturer technical specs and capacity charts</li>
+                      <li>Official product manuals and documentation</li>
+                      <li>Manufacturer-published origin and company history</li>
                       <li>
-                        When data is missing, conservative baseline scores are
-                        applied.
+                        When a spec is not published, we mark it as "Not
+                        Published" in the UI and apply conservative defaults
+                        rather than estimating.
                       </li>
                   </ul>
                 </div>
@@ -313,9 +334,10 @@ export default function ScoringPage() {
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             All scoring data is based on publicly available manufacturer
-            specifications, product documentation, and verifiable technical
-            capabilities. When specifications are not published, conservative
-            baseline scores are applied to maintain fairness.
+            specifications, product documentation, and clearly published
+            technical capabilities. When specifications are not published, we
+            label them as "Not Published" and avoid estimating wherever
+            possible; any required fallbacks are intentionally conservative.
           </p>
           <div className="mt-4 grid gap-6 md:grid-cols-2 text-xs text-gray-600">
               <div>
@@ -323,8 +345,7 @@ export default function ScoringPage() {
               <ul className="space-y-1 list-disc pl-4">
                 <li>Manufacturer technical specs and capacity charts</li>
                 <li>Product manuals and official documentation</li>
-                <li>Company founding dates and history</li>
-                <li>Clarification from support and sales teams</li>
+                <li>Company founding dates and manufacturer-published history</li>
                 </ul>
               </div>
               <div>

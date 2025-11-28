@@ -133,6 +133,10 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   let totalScore = 0;
 
   // 1. Value for Money (20 points)
+  // TODO: Replace this legacy string-matching logic with a data-driven
+  // "features per dollar" formula that uses component-level entry pricing
+  // (frame + starter die + hydraulics + stand) and normalizes across all
+  // products. The scoring page describes this planned behavior explicitly.
   let valueScore = 0;
   const priceRange = String(bender.priceRange ?? "").toLowerCase();
   if (priceRange.includes("$780") || priceRange.includes("$885")) valueScore = 20;
@@ -192,6 +196,10 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   totalScore += capacityScore;
 
   // 4. USA Manufacturing (10 points)
+  // TODO: Upgrade from a simple binary USA vs non-USA rule to FTC-style tiers
+  // based on explicit manufacturer origin statements ("Made in USA",
+  // "Assembled in USA", etc.) once the catalog/overlay model exposes those
+  // origin claims in a structured way.
   const countryOfOrigin = String(bender.countryOfOrigin ?? "");
   const usaScore = countryOfOrigin === "USA" ? 10 : 0;
   scoreBreakdown.push({

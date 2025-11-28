@@ -36,7 +36,8 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     name: "Value for Money",
     maxPoints: 20,
     method: "tier",
-    tagline: "Tier-based scoring by complete setup price range.",
+    tagline:
+      "Legacy tier-based scoring by complete setup price range (v1; being rebuilt around features-per-dollar).",
   },
   {
     index: 2,
@@ -60,7 +61,8 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     name: "USA Manufacturing",
     maxPoints: 10,
     method: "binary",
-    tagline: "Binary scoring based on country of origin.",
+    tagline:
+      "Binary scoring based on catalog origin listed as USA (v1; moving to FTC-style tiers).",
   },
   {
     index: 5,
@@ -211,7 +213,7 @@ export function getProductScore(
     model: p.model,
     // Prefer an explicit priceRange; otherwise derive it from component-level
     // min/max pricing so Value for Money is always based on a full system.
-    priceRange,
+    priceRange: priceRange != null ? String(priceRange) : undefined,
     powerType: p.powerType,
     // Capacity: prefer a dedicated maxCapacity field, then capacity.
     maxCapacity: p.maxCapacity ?? p.capacity,

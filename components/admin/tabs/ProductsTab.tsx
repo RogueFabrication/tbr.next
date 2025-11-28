@@ -148,7 +148,7 @@ export default function ProductsTab() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Max OD</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Max Wall</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Floor footprint</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Floor Footprint</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Warranty</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky top-0 z-20 bg-gray-50">Highlights</th>
             </tr>
@@ -187,10 +187,12 @@ export default function ProductsTab() {
                 Approximate min–max CLR coverage, for future content / specs.
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Fastest documented bend cycle time for any available configuration. Leave blank if the manufacturer does not publish this.
+                Bend cycle time as published by the manufacturer. If multiple modes or power options exist, use the fastest documented case. Leave
+                blank if the manufacturer does not publish cycle time.
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Approximate weight for an average, commonly sold configuration (for example, averaging lighter and heavier frame/cart variants).
+                Our opinion of an average real-world configuration weight (for example, averaging between light/no-cart and heavy/cart setups). Only
+                enter a value when we have enough data to make a fair average; otherwise leave blank.
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Relative path under <code className="font-mono">/images/products/</code>. If the file doesn&apos;t exist, the photo will break.
@@ -205,7 +207,7 @@ export default function ProductsTab() {
                 Maximum wall thickness spec (display only).
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Floor footprint, only filled out when published directly by the manufacturer.
+                Floor footprint dimensions for the specs table. Only filled out when the manufacturer publishes a footprint; otherwise left blank.
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Warranty terms for specs table (display only).

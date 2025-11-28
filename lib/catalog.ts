@@ -44,24 +44,60 @@ export type Product = {
  * - Additional IDs are UI-only for now and can be wired to the API later.
  */
 export const allTubeBenders: Product[] = [
-  // --- Canonical 4 (match existing public API IDs) -------------------------
+  // --- Canonical RogueFab M6 family (now split per model) ------------------
   {
-    id: "roguefab-m600-series",
-    slug: "roguefab-m600-series",
-    name: "RogueFab M6xx Series",
+    id: "roguefab-m601",
+    slug: "roguefab-m601",
+    name: "RogueFab M601",
     brand: "RogueFab",
-    model: "M600/M605/M625",
+    model: "M601",
     image: "/images/products/roguefab-m600-series.jpg",
     country: "USA",
     capacity: '2-3/8" OD',
     warranty: "Lifetime (workmanship & material)",
-    price: "$1,895 – $2,695",
+    price: "Typical starter configuration pricing",
     highlights: [
       "High-end shop bender with serious capacity",
       "Extensive upgrade path (air/hydraulic, mandrel, tooling)",
-      "Strong value score in long-term ownership",
+      "Strong long-term ownership value",
     ],
   },
+  {
+    id: "roguefab-m605",
+    slug: "roguefab-m605",
+    name: "RogueFab M605",
+    brand: "RogueFab",
+    model: "M605",
+    image: "/images/products/roguefab-m600-series.jpg",
+    country: "USA",
+    capacity: '2-3/8" OD',
+    warranty: "Lifetime (workmanship & material)",
+    price: "Typical starter configuration pricing",
+    highlights: [
+      "High-end shop bender with serious capacity",
+      "Extensive upgrade path (air/hydraulic, mandrel, tooling)",
+      "Strong long-term ownership value",
+    ],
+  },
+  {
+    id: "roguefab-m625",
+    slug: "roguefab-m625",
+    name: "RogueFab M625",
+    brand: "RogueFab",
+    model: "M625",
+    image: "/images/products/roguefab-m600-series.jpg",
+    country: "USA",
+    capacity: '2-3/8" OD',
+    warranty: "Lifetime (workmanship & material)",
+    price: "Typical starter configuration pricing",
+    highlights: [
+      "High-end shop bender with serious capacity",
+      "Extensive upgrade path (air/hydraulic, mandrel, tooling)",
+      "Strong long-term ownership value",
+    ],
+  },
+
+  // --- Remaining canonical models (match existing public API IDs) ----------
   {
     id: "jd2-model-32",
     slug: "jd2-model-32",
