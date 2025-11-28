@@ -128,12 +128,9 @@ export default function ScoringPage() {
 
                 {cat.key === "valueForMoney" && (
                   <p className="mb-2 text-xs text-muted-foreground">
-                    For each machine we build a conservative minimum system price from the lowest documented cost of four components:{" "}
-                    <span className="font-medium">frame, dies, hydraulics, and stand/mount</span>. This minimum system total is what drives the
-                    Value for Money score – not a single sale price or marketing claim. When we cannot verify a component price, we either omit it
-                    (for hydraulics/stands that are truly optional) or assign a conservative baseline so that incomplete data never inflates a score.{" "}
-                    Today this category still uses a legacy price-bucketing formula from our original test dataset; it is being rebuilt into a pure
-                    "features per dollar" calculation that will be fully documented here.
+                    For each machine we build a conservative minimum safe operating system cost from the lowest documented price of four components:{" "}
+                    <span className="font-medium">frame, a ready-to-bend 180° die in a common size (typically 1.50&quot; tube), hydraulics (if required), and stand/mount when the machine cannot be safely operated without one</span>. Optional carts or premium stands that are not required for safe use are excluded from this calculation. When we cannot verify a component price, we either omit it
+                    (for hydraulics/stands that are truly optional) or assign a conservative baseline so that incomplete data never inflates a score.
                   </p>
                 )}
 
@@ -146,20 +143,26 @@ export default function ScoringPage() {
                       <>
                         <p>
                           Compares complete setup pricing – including base
-                          machine, common die set, and hydraulic or power
-                          options where applicable – against the rest of each
+                          machine, a middle-of-the-road 180° die, and hydraulic or power
+                          options where required – against the rest of each
                           machine&apos;s objective feature score.
                         </p>
                         <p>
                           We first total up the non-price categories (capacity, bend angle, wall thickness, mandrel/S-bend capability, die ecosystem,
-                          etc.) to get a single &quot;feature score&quot; for each machine. That feature score is then divided by the entry system
-                          price and scaled into a 0–20 point range. Machines with unusually strong features-per-dollar ratios approach 20/20; weaker
+                          etc.) to get a single &quot;feature score&quot; out of 80 possible feature points for each machine. That feature score is then divided by the
+                          minimum safe operating system cost and scaled into a 0–20 point range. Machines with unusually strong features-per-dollar ratios approach 20/20; weaker
                           ratios receive proportionally fewer points.
                         </p>
                         <p>
                           When we do not have enough data to compute a fair features-per-dollar comparison (for example missing pricing or key
                           specs), the Value for Money category is left at 0/20 with a note explaining that it is not scored for that machine rather
                           than guessing.
+                        </p>
+                        <p>
+                          For die pricing we standardise on a single, ready-to-bend 180° die in a common size (typically 1.50&quot; tube) rather than
+                          chasing the absolute cheapest small or low-degree die that might technically fit. For hydraulics, we use the lowest
+                          manufacturer-endorsed power option rather than unsupported third-party jacks. For stands and carts, we only include
+                          the lowest-cost option required for safe, stable operation; optional carts are treated as accessories, not mandatory system cost.
                         </p>
                       </>
                     )}
@@ -192,16 +195,19 @@ export default function ScoringPage() {
                     {cat.key === "usaManufacturing" && (
                       <>
                         <p>
-                          Currently a simple binary score based on whether the
-                          catalog lists the machine&apos;s origin as the USA.
-                          If the manufacturer publishes USA as the country of
-                          origin, the machine receives full points in this
-                          category; otherwise it receives zero.
+                          Binary score based on whether the machine qualifies
+                          for an FTC-unqualified &quot;Made in USA&quot; claim –
+                          meaning all or virtually all significant parts and
+                          processing are of U.S. origin – as documented by the
+                          manufacturer.
                         </p>
                         <p>
-                          This will be upgraded to an FTC-style tiered system
-                          (for example "Made in USA" vs "Assembled in USA") once
-                          those origin claims are modeled explicitly in our data.
+                          Machines that are assembled in the USA from mixed
+                          components, or that only make qualified origin
+                          claims, are treated as non-USA for scoring in this
+                          category to stay conservative. This category reflects
+                          customer preference for domestic manufacturing,
+                          support, and parts availability.
                         </p>
                       </>
                     )}

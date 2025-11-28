@@ -200,13 +200,30 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   // based on explicit manufacturer origin statements ("Made in USA",
   // "Assembled in USA", etc.) once the catalog/overlay model exposes those
   // origin claims in a structured way.
-  const countryOfOrigin = String(bender.countryOfOrigin ?? "");
-  const usaScore = countryOfOrigin === "USA" ? 10 : 0;
+  const countryOfOriginRaw = String(bender.countryOfOrigin ?? "");
+  const country = countryOfOriginRaw.toLowerCase();
+  let usaScore = 0;
+
+  // We only award "USA Manufacturing" points when the data entry explicitly
+  // indicates an FTC-unqualified "Made in USA" claim (all or virtually all
+  // content). Qualified or assembled-in-USA claims are treated as non-USA for
+  // this category today, to stay conservative.
+  if (
+    country === "usa" ||
+    (country.includes("ftc") && country.includes("unqualified") && country.includes("made in usa"))
+  ) {
+    usaScore = 10;
+  } else {
+    usaScore = 0;
+  }
+
   scoreBreakdown.push({
     criteria: "USA Manufacturing",
     points: usaScore,
     maxPoints: 10,
-    reasoning: countryOfOrigin ? `Made in ${countryOfOrigin}` : "Country of origin not specified",
+    reasoning: countryOfOriginRaw
+      ? `Origin/claim: ${countryOfOriginRaw}`
+      : "Country of origin not specified",
   });
   totalScore += usaScore;
 
@@ -317,14 +334,26 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
 
   // 10. Mandrel Availability (4 points)
   let mandrelScore = 0;
-  const mandrelBender = String(bender.mandrelBender ?? "");
-  if (mandrelBender === "Available") mandrelScore = 4;
+  const mandrelBenderRaw = String(bender.mandrelBender ?? "");
+  const mandrelNorm = mandrelBenderRaw.trim().toLowerCase();
+  // Treat a few legacy labels as "available" so older data still scores correctly.
+  if (
+    mandrelNorm === "available" ||
+    mandrelNorm === "standard" ||
+    mandrelNorm === "yes" ||
+    mandrelNorm === "y"
+  ) {
+    mandrelScore = 4;
+  }
 
   scoreBreakdown.push({
     criteria: "Mandrel Availability",
     points: mandrelScore,
     maxPoints: 4,
-    reasoning: mandrelScore === 4 ? "Mandrel bending capability available" : "No mandrel capability",
+    reasoning:
+      mandrelScore === 4
+        ? "Mandrel bending capability available"
+        : "No mandrel capability",
   });
   totalScore += mandrelScore;
 

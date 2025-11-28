@@ -11,7 +11,7 @@
     "consSources": "\n\n\n",
     "keyFeatures": "5/8\" thick frame arms\nSteel bushings\nDegree plate\nUSA manufactured",
     "materials": "Mild Steel, Chromoly, Aluminum",
-    "mandrel": "No"
+    "mandrel": "None"
   },
   "jd2-model-32": {
     "price": "1002",
@@ -31,7 +31,7 @@
     "consSources": "\n\n\n\n\n\n",
     "keyFeatures": "36-inch telescopic handle\nDegree indicator wheel\nCNC machined surfaces\n25-year proven design",
     "materials": "Mild Steel, Chromoly, Aluminum",
-    "mandrel": "No"
+    "mandrel": "None"
   },
   "roguefab-m600-series": {
     "price": "",
@@ -75,7 +75,7 @@
   "baileigh-rdb-250": {
     "price": "",
     "totalScore": "65",
-    "mandrel": "No"
+    "mandrel": "None"
   },
   "baileigh-rdb-050": {
     "totalScore": "64",
@@ -85,7 +85,7 @@
     "consSources": "\n\n\n",
     "keyFeatures": "Three-speed settings\nAnti-spring-back mechanism\nStand included\nDegree dial\n36-inch telescopic handle",
     "materials": "Mild Steel, Chromoly, Aluminum",
-    "mandrel": "No"
+    "mandrel": "None"
   },
   "jd2-model-32-hydraulic": {
     "highlights": "Proven 25-year design reliability • Made in USA with quality construction • Double-acting hydraulic system",
@@ -94,7 +94,7 @@
     "consSources": "\n\n\n",
     "keyFeatures": "Double-acting hydraulic ram\nElectric pump with controls\nDegree markings\nHeavy-duty stand\nQuick-change tooling",
     "materials": "Mild Steel, Chromoly, Aluminum",
-    "mandrel": "No"
+    "mandrel": "None"
   },
   "woodward-fab-wfb2": {
     "highlights": "Very affordable price point • CNC machined components • Engraved degree dial",
@@ -103,7 +103,7 @@
     "consSources": "\n\n\n\n\n",
     "keyFeatures": "29-inch handle\nEngraved degree dial\nCNC machined components\nCompact design",
     "materials": "Mild Steel, Aluminum",
-    "mandrel": "No"
+    "mandrel": "None"
   },
   "jmr-tbm-250r-raceline": {
     "highlights": "American-made quality construction • 3-speed manual operation • Heat treated 4140 steel pins",
@@ -112,7 +112,7 @@
     "consSources": "\n\n\n",
     "keyFeatures": "3-speed operation\nDegree ring with pointer\nHeat-treated pins\nHydraulic upgrade path",
     "materials": "Mild Steel, Chromoly, Aluminum, Stainless Steel",
-    "mandrel": "No"
+    "mandrel": "None"
   },
   "jmr-tbm-250-ultra": {
     "highlights": "Premium JMR construction quality • Bronze bushings for smooth operation • Powder-coated finish",
@@ -121,7 +121,7 @@
     "consSources": "\n\n\n",
     "keyFeatures": "5-speed operation\nBronze bushings\nPowder-coated finish\nPremium construction",
     "materials": "Mild Steel, Chromoly, Aluminum, Stainless Steel",
-    "mandrel": "No"
+    "mandrel": "None"
   },
   "pro-tools-brute": {
     "highlights": "Highest capacity at 2.5\" tube capability • 15-ton hydraulic cylinder with 16\" stroke • 1\" thick main bending frame",
@@ -130,7 +130,7 @@
     "consSources": "\n\n\n",
     "keyFeatures": "15-ton hydraulic cylinder\n1\" thick frame\nCNC machined degree ring\n2.5\" capacity",
     "materials": "Mild Steel, Chromoly, Aluminum, Stainless Steel",
-    "mandrel": "No"
+    "mandrel": "None"
   },
   "mittler-bros-2500": {
     "highlights": "25-ton hydraulic ram capacity • 180° bending capability • Portable work stand available",
@@ -139,7 +139,7 @@
     "consSources": "\n\n\n",
     "keyFeatures": "25-ton hydraulic ram\n180° bending\nPortable stand option\nHeavy-duty design",
     "materials": "Mild Steel, Chromoly, Aluminum",
-    "mandrel": "No"
+    "mandrel": "None"
   },
   "hossfeld-no2": {
     "highlights": "100+ years of manufacturing experience • Largest selection of tooling available • Universal design handles multiple materials",
@@ -148,7 +148,7 @@
     "consSources": "\n\n\n",
     "keyFeatures": "Universal material capability\nExtensive tooling catalog\n100+ year heritage\nHydraulic upgrade option",
     "materials": "Mild Steel, Chromoly, Aluminum, Flat Bar, Angle Iron",
-    "mandrel": "No"
+    "mandrel": "None"
   },
   "swag-offroad-rev2": {
     "materials": "Round Tube, DOM Tubing, Chromoly",
@@ -163,7 +163,7 @@
     "powerType": "",
     "bendAngle": "80",
     "wallThicknessCapacity": ".25",
-    "mandrel": "No"
+    "mandrel": "None"
   },
   "roguefab-m601": {
     "highlights": "Least expensive from this MFR, test data",
@@ -174,7 +174,8 @@
     "hydraulicPriceMin": "99",
     "hydraulicPriceMax": "2499",
     "standPriceMin": "0",
-    "standPriceMax": "1499"
+    "standPriceMax": "1499",
+    "mandrel": "Available"
   },
   "roguefab-m605": {
     "highlights": "Mid expensive from this MFR, test data",
@@ -185,7 +186,8 @@
     "hydraulicPriceMin": "99",
     "hydraulicPriceMax": "2499",
     "standPriceMin": "0",
-    "standPriceMax": "1499"
+    "standPriceMax": "1499",
+    "mandrel": "Available"
   },
   "roguefab-m625": {
     "framePriceMin": "1285",
@@ -200,7 +202,7 @@
     "powerType": "Hydraulic",
     "bendAngle": "210",
     "wallThicknessCapacity": ".875",
-    "mandrel": "",
+    "mandrel": "Available",
     "sBendCapability": "Yes",
     "brand": "Rogue Fabrication",
     "model": "M625",

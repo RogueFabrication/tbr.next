@@ -232,8 +232,9 @@ export function getProductScore(
     features: Array.isArray(p.features) ? p.features : [],
     materials: Array.isArray(p.materials) ? p.materials : [],
     // Mandrel availability in the new admin grid is stored as "mandrel" with
-    // values like "Available" / "Standard" / "No".
-    mandrelBender: p.mandrelBender ?? p.mandrel,
+    // values like "Available" / "None". We let this override any legacy
+    // "mandrelBender" field so admin edits always win.
+    mandrelBender: p.mandrel ?? p.mandrelBender,
     sBendCapability,
   };
 
@@ -306,7 +307,7 @@ export function getProductScore(
         maxPoints,
         reasoning: `Features-per-dollar scoring based on ${nonPricePoints.toFixed(
           1,
-        )} non-price points and an estimated entry system price of about $${entryPrice.toFixed(
+        )} points earned in the other categories (out of 80 possible feature points) and an estimated minimum safe operating system cost of about $${entryPrice.toFixed(
           0,
         )}.`,
       };

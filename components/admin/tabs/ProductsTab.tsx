@@ -160,7 +160,8 @@ export default function ProductsTab() {
                 Largest round tube OD this machine can bend (inches).
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Primary manufacturing country (e.g. USA). Drives USA Manufacturing score.
+                Origin / claim category. Only machines that meet FTC-unqualified
+                &quot;Made in USA&quot; criteria receive USA Manufacturing points.
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Manual / Hydraulic / Electric, etc. Affects Ease of Use &amp; Setup score.
@@ -172,7 +173,7 @@ export default function ProductsTab() {
                 Max wall for 1.75&quot; DOM used for wall thickness scoring (inches).
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
-                Mandrel option: Available / Standard / No, used for Mandrel score.
+                Mandrel option: Available / None. Only mark as Available when the manufacturer documents mandrel support or upgrades.
               </th>
               <th className="px-6 pb-3 text-left text-[0.65rem] text-gray-400 font-normal sticky top-12 bg-gray-50 z-20">
                 Yes/No: documented ability to create S-bends (affects S-Bend score).
@@ -238,6 +239,11 @@ export default function ProductsTab() {
                     onSave={(value) => {
                       updateProduct(product.id, 'country', value as string);
                     }}
+                    options={[
+                      'FTC-unqualified "Made in USA"',
+                      'Assembled in USA / qualified USA claim',
+                      'Non-USA or no USA claim',
+                    ]}
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -267,9 +273,17 @@ export default function ProductsTab() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EditableField
-                    value={product?.mandrel ?? ''}
+                    value={
+                      // Prefer the new "mandrel" field, but fall back to any
+                      // existing legacy "mandrelBender" value so older data
+                      // actually shows up in the grid.
+                      product?.mandrel ??
+                      (typeof (product as any).mandrelBender === 'string'
+                        ? ((product as any).mandrelBender as string)
+                        : '')
+                    }
                     onSave={(value) => updateProduct(product.id, 'mandrel', value as string)}
-                    options={['Available', 'Standard', 'No']}
+                    options={['Available', 'None']}
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -456,10 +470,13 @@ export default function ProductsTab() {
                   </div>
 
                   <div>
-                    <div className="font-semibold text-gray-800 mb-1">Dies</div>
+                    <div className="font-semibold text-gray-800 mb-1">Dies (180° complete sets only)</div>
                     <div className="flex gap-2">
                       <div className="flex-1">
-                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Min</div>
+                        <div className="text-[0.65rem] text-gray-500 mb-0.5">
+                          Min – lowest priced 180° complete die (ready to bend in the machine), if available.
+                          Excludes exotic options (polishing, billet spacers, alternate alloys, specialty pressure-die upgrades).
+                        </div>
                         <EditableField
                           value={product?.diePriceMin ?? ''}
                           onSave={(value) =>
@@ -468,7 +485,11 @@ export default function ProductsTab() {
                         />
                       </div>
                       <div className="flex-1">
-                        <div className="text-[0.65rem] text-gray-500 mb-0.5">Max</div>
+                        <div className="text-[0.65rem] text-gray-500 mb-0.5">
+                          Max – lowest priced 180° complete die (ready to bend in the machine) that matches either the published max OD 
+                          or the published max CLR for this machine (whichever represents the higher/limiting capability). 
+                          Excludes optional upgrades such as coatings, premium alloys, billet components, or special pressure-die materials.
+                        </div>
                         <EditableField
                           value={product?.diePriceMax ?? ''}
                           onSave={(value) =>
