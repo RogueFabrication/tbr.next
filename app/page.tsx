@@ -56,6 +56,17 @@ export default function Page() {
         ? (frameMax ?? 0) + (dieMax ?? 0) + (hydraulicMax ?? 0) + (standMax ?? 0)
         : null;
 
+    // Normalize S-bend capability: accept both boolean and "Yes"/"No" from admin
+    let sBend: boolean | null = null;
+    const rawSB = (p as any).sBendCapability;
+    if (typeof rawSB === "boolean") {
+      sBend = rawSB;
+    } else if (typeof rawSB === "string") {
+      const s = rawSB.trim().toLowerCase();
+      if (s === "yes") sBend = true;
+      else if (s === "no") sBend = false;
+    }
+
     return {
       id: p.id,
       slug: slugForProduct(p),
@@ -71,10 +82,7 @@ export default function Page() {
       powerType: (p as any).powerType ?? null,
       country: (p as any).country ?? null,
       mandrel: (p as any).mandrel ?? null,
-      sBend:
-        typeof (p as any).sBendCapability === "boolean"
-          ? (p as any).sBendCapability
-          : null,
+      sBend,
       image: (p as any).image ?? null,
     };
   });

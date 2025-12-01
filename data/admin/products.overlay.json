@@ -2,7 +2,7 @@
   "pro-tools-105hd": {
     "price": "1003",
     "weight": "",
-    "image": "",
+    "image": "105hd.jpg",
     "highlights": "Heavy-duty 5/8\" thick main frame arms • 100% USA designed and manufactured • Steel bushings for durability",
     "totalScore": "77",
     "country": "USA",
@@ -12,7 +12,8 @@
     "keyFeatures": "5/8\" thick frame arms\nSteel bushings\nDegree plate\nUSA manufactured",
     "materials": "Mild Steel, Chromoly, Aluminum",
     "mandrel": "None",
-    "sBendCapability": "No"
+    "sBendCapability": "No",
+    "powerType": "Manual + Air / Hydraulic + Electric / Hydraulic"
   },
   "jd2-model-32": {
     "price": "1002",
@@ -21,10 +22,10 @@
     "model": "ADMIN",
     "maxCapacity": "2.01",
     "clrRange": "1.1-6.6",
-    "image": "",
+    "image": "jd2m32.jpg",
     "totalScore": "81",
     "country": "ASIA",
-    "powerType": "Electric / CNC",
+    "powerType": "Electric / CNC + Manual",
     "framePriceMin": "",
     "highlights": "Affordable with all add-ons and attachments • Simple construction with fewer maintenance issues • Degree pointer for precision bending angles",
     "pros": "Affordable with all add-ons and attachments\nSimple construction with fewer maintenance issues\nDegree pointer for precision bending angles\nGood overall performance\nGreat die selection available\nManufacturer has decades of experience",
@@ -99,7 +100,8 @@
     "keyFeatures": "Double-acting hydraulic ram\nElectric pump with controls\nDegree markings\nHeavy-duty stand\nQuick-change tooling",
     "materials": "Mild Steel, Chromoly, Aluminum",
     "mandrel": "None",
-    "sBendCapability": "No"
+    "sBendCapability": "No",
+    "powerType": "Air / Hydraulic + Electric / Hydraulic"
   },
   "woodward-fab-wfb2": {
     "highlights": "Very affordable price point • CNC machined components • Engraved degree dial",
@@ -171,7 +173,7 @@
     "framePriceMin": "",
     "maxCapacity": "2.00",
     "country": "",
-    "powerType": "",
+    "powerType": "Air / Hydraulic",
     "bendAngle": "80",
     "wallThicknessCapacity": ".25",
     "mandrel": "None",
@@ -189,8 +191,8 @@
     "standPriceMax": "1499",
     "mandrel": "Available",
     "sBendCapability": "Yes",
-    "country": "",
-    "powerType": "Air / Hydraulic + Electric / Hydraulic",
+    "country": "FTC-unqualified \"Made in USA\"",
+    "powerType": "Electric / Hydraulic + Air / Hydraulic",
     "wallThicknessCapacity": ".156",
     "maxCapacity": "1.75",
     "bendAngle": "195",
@@ -273,7 +275,8 @@
     "clrRange": "2.5-6.0",
     "cycleTime": "13 sec",
     "weight": "255",
-    "diePrice150Mid": "249"
+    "diePrice150Mid": "249",
+    "image": "m601.jpg"
   },
   "roguefab-m605": {
     "highlights": "Mid expensive from this MFR, test data",
@@ -287,7 +290,9 @@
     "standPriceMax": "1499",
     "mandrel": "Available",
     "sBendCapability": "Yes",
-    "country": ""
+    "country": "",
+    "powerType": "Air / Hydraulic + Electric / Hydraulic",
+    "image": "m605.jpg"
   },
   "roguefab-m625": {
     "framePriceMin": "1285",
@@ -299,7 +304,7 @@
     "diePriceMax": "417",
     "maxCapacity": "2.375",
     "country": "USA",
-    "powerType": "Hydraulic",
+    "powerType": "Hydraulic + Air / Hydraulic + Electric / Hydraulic",
     "bendAngle": "210",
     "wallThicknessCapacity": ".875",
     "mandrel": "Available",
@@ -309,7 +314,7 @@
     "clrRange": "2.25-6.00",
     "cycleTime": "13 Seconds",
     "weight": "330",
-    "image": "",
+    "image": "m625.jpg",
     "powerTypeSource1": "www.RogueFab.com",
     "powerTypeSource2": "2025-11-28",
     "powerTypeNotes": "MFR web page, nav to model, specs on web page",

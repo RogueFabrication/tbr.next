@@ -41,22 +41,58 @@ function formatPriceRange(min: number | null, max: number | null): string {
   return lo ?? hi ?? "—";
 }
 
-function normalizePower(powerType?: string | null): "manual" | "hydraulic" | "other" | "unknown" {
+function powerFlags(powerType?: string | null) {
   const s = (powerType ?? "").toLowerCase();
-  if (!s) return "unknown";
-  if (s.includes("manual") && s.includes("hydraulic")) return "other";
-  if (s.includes("manual")) return "manual";
-  if (s.includes("hydraulic") || s.includes("electric") || s.includes("air")) return "hydraulic";
-  return "other";
+  const hasManual = /\bmanual\b/.test(s);
+  const hasAirHydro = s.includes("air") && s.includes("hydraulic");
+  const hasElecHydro = s.includes("electric") && s.includes("hydraulic");
+  const hasAnyHydraulic =
+    hasAirHydro ||
+    hasElecHydro ||
+    (s.includes("hydraulic") && !hasAirHydro && !hasElecHydro);
+  return { hasManual, hasAirHydro, hasElecHydro, hasAnyHydraulic };
 }
 
 function isMandrelOn(mandrel?: string | null): boolean {
-  const s = (mandrel ?? "").toLowerCase();
-  return s === "available" || s === "standard" || s === "yes";
+  const s = (mandrel ?? "").trim().toLowerCase();
+  // Data is now normalized to "Available"/"None" from admin.
+  return s === "available";
 }
 
 function isSBendOn(flag?: boolean | null): boolean {
-  return !!flag;
+  // We normalize S-bend to a boolean in app/page.tsx.
+  return flag === true;
+}
+
+function displayCountry(country?: string | null): string {
+  const raw = (country ?? "").trim();
+  if (!raw) return "—";
+  const lower = raw.toLowerCase();
+
+  if (lower.startsWith('ftc-unqualified "made in usa"') || lower.startsWith("ftc-unqualified 'made in usa'")) {
+    return "Made in USA";
+  }
+  if (lower.startsWith("assembled in usa")) {
+    return "Assembled in USA";
+  }
+  if (lower.startsWith("non-usa") || lower.includes("no usa claim")) {
+    return "Imported / mixed origin";
+  }
+
+  // Fallback: show whatever was stored, but without the FTC jargon customers won't understand.
+  return raw;
+}
+
+function formatMaxDiameter(value?: string | null): string {
+  const raw = (value ?? "").trim();
+  if (!raw) return "—";
+
+  // If there's already a quote or obvious unit text, leave it alone.
+  if (raw.includes('"') || /[a-z]/i.test(raw)) {
+    return raw;
+  }
+
+  return `${raw}"`;
 }
 
 function ScoreCircle({ score, href }: { score: number | null; href: string }) {
@@ -161,7 +197,9 @@ function Pill({ children, active }: { children: React.ReactNode; active: boolean
   return (
     <span
       className={[
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border",
+        // Standardized pill styling: consistent size, tight leading, supports 2-line labels.
+        "inline-flex items-center justify-center rounded-full border px-2.5 py-0.5",
+        "text-[0.7rem] leading-tight font-medium min-h-[1.75rem] whitespace-pre-line text-center",
         active
           ? "bg-emerald-50 border-emerald-400 text-emerald-700"
           : "bg-gray-50 border-gray-200 text-gray-500",
@@ -169,6 +207,49 @@ function Pill({ children, active }: { children: React.ReactNode; active: boolean
     >
       {children}
     </span>
+  );
+}
+
+function PowerPills({
+  powerType,
+}: {
+  powerType?: string | null;
+}) {
+  const { hasManual, hasAirHydro, hasElecHydro } = powerFlags(powerType);
+
+  return (
+    <div className="flex flex-col gap-[2px] text-[0.6rem] leading-[0.9]">
+      <span
+        className={[
+          "inline-flex items-center rounded-full px-2 py-[1px] text-[0.6rem] border",
+          hasManual
+            ? "bg-gray-200 border-gray-500 text-gray-900 font-semibold"
+            : "bg-white border-gray-200 text-gray-400",
+        ].join(" ")}
+      >
+        Manual
+      </span>
+      <span
+        className={[
+          "inline-flex items-center rounded-full px-2 py-[1px] text-[0.6rem] border",
+          hasAirHydro
+            ? "bg-gray-200 border-gray-500 text-gray-900 font-semibold"
+            : "bg-white border-gray-200 text-gray-400",
+        ].join(" ")}
+      >
+        Air / hydraulic
+      </span>
+      <span
+        className={[
+          "inline-flex items-center rounded-full px-2 py-[1px] text-[0.6rem] border",
+          hasElecHydro
+            ? "bg-gray-200 border-gray-500 text-gray-900 font-semibold"
+            : "bg-white border-gray-200 text-gray-400",
+        ].join(" ")}
+      >
+        Electric / hydraulic
+      </span>
+    </div>
   );
 }
 
@@ -189,9 +270,9 @@ export default function LandingCompareSection({ rows }: Props) {
     return list.filter((row) => {
       if (minScore > 0 && (row.score ?? 0) < minScore) return false;
 
-      const normPower = normalizePower(row.powerType);
-      if (power === "manual" && normPower !== "manual") return false;
-      if (power === "hydraulic" && normPower !== "hydraulic") return false;
+      const { hasManual, hasAnyHydraulic } = powerFlags(row.powerType);
+      if (power === "manual" && !hasManual) return false;
+      if (power === "hydraulic" && !hasAnyHydraulic) return false;
 
       const c = (row.country ?? "").toLowerCase();
       if (
@@ -322,7 +403,13 @@ export default function LandingCompareSection({ rows }: Props) {
             )}
             {filtered.map((row, index) => {
               const rank = index + 1;
-              const imgSrc = row.image || FALLBACK_IMG;
+              const rawImg = (row.image ?? "").trim();
+              const imgSrc =
+                rawImg.length === 0
+                  ? FALLBACK_IMG
+                  : rawImg.startsWith("/images/")
+                  ? rawImg
+                  : `/images/products/${rawImg.replace(/^\/+/, "")}`;
               const mandrelOn = isMandrelOn(row.mandrel);
               const sBendOn = isSBendOn(row.sBend);
               return (
@@ -369,22 +456,22 @@ export default function LandingCompareSection({ rows }: Props) {
                     {formatPriceRange(row.priceMin, row.priceMax)}
                   </td>
                   <td className="px-3 py-3 align-middle text-sm text-gray-800">
-                    {row.maxCapacity || "—"}
+                    {formatMaxDiameter(row.maxCapacity)}
+                  </td>
+                  <td className="px-3 py-3 align-middle">
+                    <PowerPills powerType={row.powerType} />
                   </td>
                   <td className="px-3 py-3 align-middle text-sm text-gray-800">
-                    {row.powerType || "—"}
-                  </td>
-                  <td className="px-3 py-3 align-middle text-sm text-gray-800">
-                    {row.country || "—"}
+                    {displayCountry(row.country)}
                   </td>
                   <td className="px-3 py-3 align-middle">
                     <Pill active={mandrelOn}>
-                      {mandrelOn ? "Available" : "No option"}
+                      {mandrelOn ? "Available" : "No Option"}
                     </Pill>
                   </td>
                   <td className="px-3 py-3 align-middle">
                     <Pill active={sBendOn}>
-                      {sBendOn ? "S-Bend Capable" : "No S-Bends"}
+                      {sBendOn ? "S-Bend Capable" : "No\nS-Bends"}
                     </Pill>
                   </td>
                   <td className="px-3 py-3 align-middle">
