@@ -329,8 +329,8 @@ export default function ProductsTab() {
     updateProduct(selectedProduct.id, "materials", serialized);
   };
 
-  return (
-    <div className="rounded-lg bg-white shadow">
+            return (
+    <div className="w-full rounded-lg bg-white shadow max-w-[1400px] mx-auto">
       {/* Header + product selector */}
       <div className="flex flex-col gap-3 border-b border-gray-200 px-6 py-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -369,195 +369,211 @@ export default function ProductsTab() {
       </div>
 
       {/* Per-field grid with row-level citation copy/paste */}
-      <section className="border-b border-gray-200 px-6 py-5">
-        <h3 className="text-base font-semibold text-gray-900">
-          Specs, scoring drivers &amp; citations
-        </h3>
-        <p className="mt-1 text-xs text-gray-500 max-w-4xl">
-          Work row by row. For each spec, record the value plus how you proved
-          it. Use the{" "}
-          <span className="font-semibold">Copy</span> /{" "}
-          <span className="font-semibold">Paste</span> buttons on the right to
-          reuse citation details and your{" "}
-          <span className="font-mono text-[0.7rem]">XXXNNNN</span> initials /
-          employee code across rows.
-        </p>
-
-        <div className="mt-4 overflow-x-auto">
-          <div className="min-w-[1800px] rounded-lg border border-gray-200">
-            <div className="grid grid-cols-[1.6fr_1fr_1.4fr_0.8fr_1.4fr_0.7fr_0.7fr] border-b border-gray-200 bg-gray-50 px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-wide text-gray-500">
-              <div className="border-r border-gray-200 pr-2">Field</div>
-              <div className="border-r border-gray-200 pr-2">Value</div>
-              <div className="border-r border-gray-200 pr-2">
-                Citation 1 (URL / doc ref)
-              </div>
-              <div className="border-r border-gray-200 pr-2">
-                Accessed (YYYY-MM-DD)
-              </div>
-              <div className="border-r border-gray-200 pr-2">
-                Notes / how we found it
-              </div>
-              <div className="border-r border-gray-200 pr-2">
-                Initials / Emp#
-              </div>
-              <div className="text-right pr-1">Row tools</div>
-            </div>
-
-            {specRows.map((row) => {
-              const valueRaw = selectedProduct[row.key];
-              const value =
-                valueRaw == null
-                  ? ""
-                  : typeof valueRaw === "number"
-                  ? String(valueRaw)
-                  : String(valueRaw);
-
-              const source1Key = `${row.key}Source1`;
-              const source2Key = `${row.key}Source2`;
-              const notesKey = `${row.key}Notes`;
-              const userKey = `${row.key}UserCode`;
-
-              const source1 = String(selectedProduct[source1Key] ?? "");
-              const source2 = String(selectedProduct[source2Key] ?? "");
-              const notes = String(selectedProduct[notesKey] ?? "");
-              const userCode = String(selectedProduct[userKey] ?? "");
-
-              return (
-                <div
-                  key={row.key}
-                  className="grid grid-cols-[1.6fr_1fr_1.4fr_0.8fr_1.4fr_0.7fr_0.7fr] border-t border-gray-100 px-3 py-2 text-xs"
-                >
-                  <div className="pr-3">
-                    <div className="font-medium text-gray-900">
-                      {row.label}
+      <section className="mt-8">
+        <div className="flex items-center justify-between gap-3 px-6">
+                  <div>
+            <h3 className="text-base font-semibold text-gray-900">
+              Specs, scoring drivers &amp; citations
+            </h3>
+            <p className="mt-1 text-xs text-gray-500 max-w-4xl">
+              Work row by row. For each spec, record the value plus how you proved
+              it. Use the{" "}
+              <span className="font-semibold">Copy</span> /{" "}
+              <span className="font-semibold">Paste</span> buttons on the right to
+              reuse citation details and your{" "}
+              <span className="font-mono text-[0.7rem]">XXXNNNN</span> initials /
+              employee code across rows.
+            </p>
                     </div>
-                    <div className="mt-0.5 text-[0.7rem] text-gray-500">
-                      {row.description}
                     </div>
-                  </div>
 
-                  <div className="pr-2">
-                    <EditableField
-                      value={value}
-                      onSave={(val) => updateProduct(selectedProduct.id, row.key, val)}
-                      options={row.options}
-                    />
+        {/* Full-width, scrollable specs grid */}
+        <div className="mt-4 -mx-6 px-6">
+          {/* One scroll container for both X and Y so scrollbars stay pinned */}
+          <div className="max-h-[640px] overflow-auto">
+            <div className="min-w-[1800px] rounded-lg border border-gray-300 bg-white">
+              {/* Sticky header inside scrollport */}
+              <div className="sticky top-0 z-10 border-b border-gray-400 bg-gray-50">
+                <div className="grid grid-cols-[1.6fr_1fr_1.4fr_0.8fr_1.4fr_0.7fr_0.7fr] px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-wide text-gray-700">
+                  <div className="border-r border-gray-400 pr-2">Field</div>
+                  <div className="border-r border-gray-400 pr-2">Value</div>
+                  <div className="border-r border-gray-400 pr-2">
+                    Citation 1 (URL / doc ref)
                   </div>
-
-                  <div className="pr-2">
-                    <input
-                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
-                      value={source1}
-                      onChange={(e) =>
-                        updateProduct(
-                          selectedProduct.id,
-                          source1Key,
-                          e.target.value,
-                        )
-                      }
-                      placeholder="Spec page, PDF, catalog ref, etc."
-                    />
+                  <div className="border-r border-gray-400 pr-2">
+                    Accessed (YYYY-MM-DD)
                   </div>
-
-                  <div className="pr-2">
-                    <input
-                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
-                      value={source2}
-                      onChange={(e) =>
-                        updateProduct(
-                          selectedProduct.id,
-                          source2Key,
-                          e.target.value,
-                        )
-                      }
-                      placeholder="2025-11-28"
-                    />
+                  <div className="border-r border-gray-400 pr-2">
+                    Notes / how we found it
                   </div>
-
-                  <div className="pr-2">
-                    <input
-                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
-                      value={notes}
-                      onChange={(e) =>
-                        updateProduct(
-                          selectedProduct.id,
-                          notesKey,
-                          e.target.value,
-                        )
-                      }
-                      placeholder="Search path, clarifications from support, etc."
-                    />
+                  <div className="border-r border-gray-400 pr-2">
+                    Initials / Emp#
                   </div>
-
-                  <div className="pr-2">
-                    <input
-                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs font-mono text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
-                      value={userCode}
-                      onChange={(e) =>
-                        updateProduct(
-                          selectedProduct.id,
-                          userKey,
-                          e.target.value.toUpperCase(),
-                        )
-                      }
-                      maxLength={8}
-                      placeholder="XXXNNNN"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      type="button"
-                      className="rounded border border-gray-300 px-2 py-0.5 text-[0.7rem] text-gray-700 hover:bg-gray-50"
-                      onClick={() =>
-                        setCitationClipboard({
-                          source1,
-                          source2,
-                          notes,
-                          userCode,
-                        })
-                      }
-                    >
-                      Copy
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!citationClipboard}
-                      className={`rounded border px-2 py-0.5 text-[0.7rem] ${
-                        citationClipboard
-                          ? "border-gray-300 text-gray-700 hover:bg-gray-50"
-                          : "cursor-not-allowed border-gray-200 text-gray-300"
-                      }`}
-                      onClick={() => {
-                        if (!citationClipboard) return;
-                        updateProduct(
-                          selectedProduct.id,
-                          source1Key,
-                          citationClipboard.source1,
-                        );
-                        updateProduct(
-                          selectedProduct.id,
-                          source2Key,
-                          citationClipboard.source2,
-                        );
-                        updateProduct(
-                          selectedProduct.id,
-                          notesKey,
-                          citationClipboard.notes,
-                        );
-                        updateProduct(
-                          selectedProduct.id,
-                          userKey,
-                          citationClipboard.userCode,
-                        );
-                      }}
-                    >
-                      Paste
-                    </button>
-                  </div>
+                  <div className="text-right pr-1">Row tools</div>
                 </div>
-              );
-            })}
+              </div>
+
+              <div className="divide-y divide-gray-300">
+                {specRows.map((row) => {
+                  const valueRaw = selectedProduct[row.key];
+                  const value =
+                    valueRaw == null
+                      ? ""
+                      : typeof valueRaw === "number"
+                      ? String(valueRaw)
+                      : String(valueRaw);
+
+                  const source1Key = `${row.key}Source1`;
+                  const source2Key = `${row.key}Source2`;
+                  const notesKey = `${row.key}Notes`;
+                  const userKey = `${row.key}UserCode`;
+
+                  const source1 = String(selectedProduct[source1Key] ?? "");
+                  const source2 = String(selectedProduct[source2Key] ?? "");
+                  const notes = String(selectedProduct[notesKey] ?? "");
+                  const userCode = String(selectedProduct[userKey] ?? "");
+
+                  return (
+                    <div
+                      key={row.key}
+                      className="grid grid-cols-[1.6fr_1fr_1.4fr_0.8fr_1.4fr_0.7fr_0.7fr] items-start bg-white px-3 py-2 text-[0.75rem]"
+                    >
+                      <div className="border-r border-gray-200 pr-2 text-[0.72rem] text-gray-600">
+                        <div className="font-semibold text-gray-900">
+                          {row.label}
+                        </div>
+                        {row.description && (
+                          <div className="mt-0.5 text-[0.68rem] text-gray-500">
+                            {row.description}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="border-r border-gray-200 pr-2">
+                        <EditableField
+                          value={value}
+                          onSave={(val) =>
+                            updateProduct(selectedProduct.id, row.key, val)
+                          }
+                          options={row.options}
+                        />
+                      </div>
+
+                      <div className="border-r border-gray-200 pr-2">
+                        <input
+                          className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-[0.75rem] text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                          value={source1}
+                          onChange={(e) =>
+                            updateProduct(
+                              selectedProduct.id,
+                              source1Key,
+                              e.target.value,
+                            )
+                          }
+                          placeholder="Spec page, PDF, catalog ref, etc."
+                        />
+                      </div>
+
+                      <div className="border-r border-gray-200 pr-2">
+                        <input
+                          className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-[0.75rem] text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                          value={source2}
+                          onChange={(e) =>
+                            updateProduct(
+                              selectedProduct.id,
+                              source2Key,
+                              e.target.value,
+                            )
+                          }
+                          placeholder="YYYY-MM-DD"
+                        />
+                      </div>
+
+                      <div className="border-r border-gray-200 pr-2">
+                        <input
+                          className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-[0.75rem] text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                          value={notes}
+                          onChange={(e) =>
+                            updateProduct(
+                              selectedProduct.id,
+                              notesKey,
+                              e.target.value,
+                            )
+                          }
+                          placeholder="How we found it, or cross-references"
+                        />
+                      </div>
+
+                      <div className="border-r border-gray-200 pr-2">
+                        <input
+                          className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-[0.75rem] text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                          value={userCode}
+                          onChange={(e) =>
+                            updateProduct(
+                              selectedProduct.id,
+                              userKey,
+                              e.target.value.toUpperCase(),
+                            )
+                          }
+                          placeholder="XXXNNNN"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          className="rounded border border-gray-400 px-2 py-0.5 text-[0.65rem] text-gray-800 hover:bg-gray-50"
+                          onClick={() =>
+                            setCitationClipboard({
+                              source1,
+                              source2,
+                              notes,
+                              userCode,
+                            })
+                          }
+                        >
+                          Copy
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!citationClipboard}
+                          className={`rounded border px-2 py-0.5 text-[0.65rem] ${
+                            citationClipboard
+                              ? "border-gray-400 text-gray-800 hover:bg-gray-50"
+                              : "cursor-not-allowed border-gray-200 text-gray-300"
+                          }`}
+                          onClick={() => {
+                            if (!citationClipboard) return;
+                            updateProduct(
+                              selectedProduct.id,
+                              source1Key,
+                              citationClipboard.source1,
+                            );
+                            updateProduct(
+                              selectedProduct.id,
+                              source2Key,
+                              citationClipboard.source2,
+                            );
+                            updateProduct(
+                              selectedProduct.id,
+                              notesKey,
+                              citationClipboard.notes,
+                            );
+                            updateProduct(
+                              selectedProduct.id,
+                              userKey,
+                              citationClipboard.userCode,
+                            );
+                          }}
+                        >
+                          Paste
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -581,23 +597,23 @@ export default function ProductsTab() {
         </p>
 
         <div className="mt-3 inline-flex gap-8 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-xs">
-          <div>
+                  <div>
             <div className="text-[0.7rem] uppercase tracking-wide text-gray-500">
               Min system total
-            </div>
+                      </div>
             <div className="text-sm font-semibold text-gray-900">
               {minTotal > 0 ? `$${minTotal.toFixed(0)}` : "—"}
-            </div>
-          </div>
+                      </div>
+                    </div>
                     <div>
             <div className="text-[0.7rem] uppercase tracking-wide text-gray-500">
               Max system total
-            </div>
+                  </div>
                       <div className="text-sm font-semibold text-gray-900">
               {maxTotal > 0 ? `$${maxTotal.toFixed(0)}` : "—"}
-            </div>
-          </div>
-                      </div>
+                </div>
+              </div>
+        </div>
       </section>
 
       {/* Raw citations blob for this model (optional, machine-readable) */}
@@ -645,7 +661,7 @@ export default function ProductsTab() {
         </p>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-gray-300 bg-white p-4 shadow-sm">
             <div className="mb-2 text-xs text-gray-500">
               {selectedProduct.brand || selectedProduct.model
                 ? [selectedProduct.brand, selectedProduct.model]
