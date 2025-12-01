@@ -95,7 +95,15 @@ export default function ScoringPage() {
               <article
                 key={cat.key}
                 className="rounded-xl border border-gray-200 bg-white px-5 py-5 shadow-sm"
-                id={cat.key === "valueForMoney" ? "value-for-money" : undefined}
+                id={
+                  cat.key === "valueForMoney"
+                    ? "value-for-money"
+                    : cat.key === "mandrelCompatibility"
+                    ? "mandrel-compatibility"
+                    : cat.key === "sBendCapability"
+                    ? "s-bend-capability"
+                    : undefined
+                }
               >
                 <header className="flex flex-col justify-between gap-2 sm:flex-row sm:items-baseline">
               <div>
@@ -306,13 +314,19 @@ export default function ScoringPage() {
                     {cat.key === "sBendCapability" && (
                       <>
                         <p>
-                          Binary category indicating whether the manufacturer
-                          documents S-bend capability with their tooling.
+                          Binary category indicating whether the machine can
+                          produce a <span className="font-semibold">true S-bend</span>
+                          : two bends in opposite directions with essentially no
+                          straight tangent between them.
                         </p>
                         <p>
-                          S-bends allow complex 3D geometries in a compact run
-                          and are validated through published specs or proven
-                          test pieces.
+                          For scoring, we use a hard engineering definition:
+                          the straight section between the end of the first bend
+                          and the start of the second bend must be at or below
+                          <span className="font-semibold"> 0.125&quot; of tangent</span>.
+                          Manufacturer marketing that shows several inches of
+                          straight tube between bends does not qualify as an
+                          S-bend here.
                         </p>
                       </>
                     )}

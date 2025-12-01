@@ -200,30 +200,30 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   // based on explicit manufacturer origin statements ("Made in USA",
   // "Assembled in USA", etc.) once the catalog/overlay model exposes those
   // origin claims in a structured way.
-  const countryOfOriginRaw = String(bender.countryOfOrigin ?? "");
-  const country = countryOfOriginRaw.toLowerCase();
+  const countryClaimRaw = String(bender.countryOfOrigin ?? "").trim();
   let usaScore = 0;
+  let usaReason: string;
 
-  // We only award "USA Manufacturing" points when the data entry explicitly
-  // indicates an FTC-unqualified "Made in USA" claim (all or virtually all
-  // content). Qualified or assembled-in-USA claims are treated as non-USA for
-  // this category today, to stay conservative.
-  if (
-    country === "usa" ||
-    (country.includes("ftc") && country.includes("unqualified") && country.includes("made in usa"))
-  ) {
+  if (!countryClaimRaw) {
+    usaReason = "Country of origin / FTC claim not specified";
+  } else if (countryClaimRaw === 'FTC-unqualified "Made in USA"') {
+    // Only unqualified FTC-compliant Made in USA claims receive points
     usaScore = 10;
+    usaReason = 'Origin/claim: FTC-unqualified "Made in USA"';
+  } else if (countryClaimRaw === "Assembled in USA / qualified USA claim") {
+    // Qualified / assembled-in-USA claims are surfaced but do not score here
+    usaReason =
+      "Origin/claim: Assembled in USA / qualified USA claim (no unqualified Made in USA score)";
   } else {
-    usaScore = 0;
+    // Everything else – including legacy raw country strings – is treated as non-scoring
+    usaReason = `Origin/claim: ${countryClaimRaw}`;
   }
 
   scoreBreakdown.push({
     criteria: "USA Manufacturing",
     points: usaScore,
     maxPoints: 10,
-    reasoning: countryOfOriginRaw
-      ? `Origin/claim: ${countryOfOriginRaw}`
-      : "Country of origin not specified",
+    reasoning: usaReason,
   });
   totalScore += usaScore;
 
@@ -334,15 +334,15 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
 
   // 10. Mandrel Availability (4 points)
   let mandrelScore = 0;
-  const mandrelBenderRaw = String(bender.mandrelBender ?? "");
-  const mandrelNorm = mandrelBenderRaw.trim().toLowerCase();
-  // Treat a few legacy labels as "available" so older data still scores correctly.
-  if (
-    mandrelNorm === "available" ||
-    mandrelNorm === "standard" ||
-    mandrelNorm === "yes" ||
-    mandrelNorm === "y"
-  ) {
+  const mandrelRaw = String(
+    // Prefer a dedicated "mandrel" field, but fall back to the legacy
+    // "mandrelBender" key for any older overlay data.
+    (bender as any).mandrel ?? (bender as any).mandrelBender ?? "",
+  )
+    .trim()
+    .toLowerCase();
+
+  if (mandrelRaw === "available") {
     mandrelScore = 4;
   }
 
@@ -352,21 +352,30 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
     maxPoints: 4,
     reasoning:
       mandrelScore === 4
-        ? "Mandrel bending capability available"
-        : "No mandrel capability",
+        ? "Mandrel bending capability documented by the manufacturer"
+        : "No documented mandrel capability",
   });
   totalScore += mandrelScore;
 
   // 11. S-Bend Capability (2 points)
   let sBendScore = 0;
-  const sBendCapability = bender.sBendCapability;
+  const rawSBend = (bender as any).sBendCapability;
+  const sBendCapability =
+    typeof rawSBend === "boolean"
+      ? rawSBend
+      : typeof rawSBend === "string"
+      ? ["yes", "true"].includes(rawSBend.trim().toLowerCase())
+      : false;
+
   if (sBendCapability === true) sBendScore = 2;
 
   scoreBreakdown.push({
     criteria: "S-Bend Capability",
     points: sBendScore,
     maxPoints: 2,
-    reasoning: sBendCapability ? "Documented S-bend capability" : "No S-bend capability",
+    reasoning: sBendCapability
+      ? "Meets TubeBenderReviews S-bend definition: two opposite-direction bends with ≤0.125\" straight (tangent) between them, verified via specs/photos."
+      : "No documented ability to form back-to-back opposite bends with ≤0.125\" tangent; marketing \"S-bend\" claims with several inches of straight between bends do not qualify.",
   });
   totalScore += sBendScore;
 

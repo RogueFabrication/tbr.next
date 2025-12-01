@@ -40,6 +40,8 @@ type Product = {
   framePriceMax?: string;
   diePriceMin?: string;
   diePriceMax?: string;
+  // Apples-to-apples 1.50" OD reference die (midpoint)
+  diePrice150Mid?: string;
   hydraulicPriceMin?: string;
   hydraulicPriceMax?: string;
   standPriceMin?: string;
@@ -180,13 +182,11 @@ export default function ProductsTab() {
       key: "powerType",
       label: "* Power Type",
       description:
-        "Manual / Hydraulic / Manual + Hydraulic / Electric / CNC. Affects Ease of Use & Setup score.",
+        "Check all that apply. For scoring, we treat any configuration that includes a hydraulic option as Hydraulic, and count Manual when a manual mode is available.",
       options: [
         "Manual",
-        "Hydraulic",
-        "Manual + Hydraulic",
-        "Electric / CNC",
-        "Other",
+        "Air / Hydraulic",
+        "Electric / Hydraulic",
       ],
     },
     {
@@ -212,7 +212,7 @@ export default function ProductsTab() {
       key: "sBendCapability",
       label: "* S-Bend capable (Yes/No)",
       description:
-        "Yes/No: documented ability to create S-bends with this machine/tooling. Must be supported by specs or published examples.",
+        "Yes/No: documented ability to create a true S-bend: two opposite-direction bends with effectively no straight between them. For scoring we require ≤0.125\" straight (tangent) between bends, proven by specs, photos, or repeatable test pieces. Marketing examples with several inches of straight between bends do NOT qualify.",
       options: ["", "Yes", "No"],
     },
     {
@@ -232,6 +232,12 @@ export default function ProductsTab() {
       label: "Die price – Min (180° complete)",
       description:
         "Lowest priced 180° complete die (ready to bend in the machine), if available. Excludes exotic options (polishing, billet spacers, alternate alloys, specialty pressure-die upgrades).",
+    },
+    {
+      key: "diePrice150Mid",
+      label: 'Die price – 1.50" reference (midpoint)',
+      description:
+        'Lowest priced 1.50" OD 180° complete die (ready to bend in the machine). If no 180° 1.50" die is sold, use the lowest priced 1.50" die that reaches the highest published bend angle for that size. Excludes exotic options such as polishing, billet spacers, alternate alloys, or specialty pressure-die upgrades.',
     },
     {
       key: "diePriceMax",
@@ -402,16 +408,16 @@ export default function ProductsTab() {
                   </div>
                   <div className="border-r border-gray-400 pr-2">
                     Accessed (YYYY-MM-DD)
-                  </div>
+                    </div>
                   <div className="border-r border-gray-400 pr-2">
                     Notes / how we found it
-                  </div>
+                    </div>
                   <div className="border-r border-gray-400 pr-2">
                     Initials / Emp#
-                  </div>
+                    </div>
                   <div className="text-right pr-1">Row tools</div>
-                </div>
-              </div>
+                    </div>
+                  </div>
 
               <div className="divide-y divide-gray-300">
                 {specRows.map((row) => {
@@ -447,16 +453,25 @@ export default function ProductsTab() {
                             {row.description}
                           </div>
                         )}
-                      </div>
+                </div>
 
                       <div className="border-r border-gray-200 pr-2">
-                        <EditableField
-                          value={value}
-                          onSave={(val) =>
-                            updateProduct(selectedProduct.id, row.key, val)
-                          }
-                          options={row.options}
-                        />
+                        {row.key === "powerType" ? (
+                          <PowerTypeMultiSelect
+                            value={value}
+                            onChange={(val) =>
+                              updateProduct(selectedProduct.id, "powerType", val)
+                            }
+                          />
+                        ) : (
+                          <EditableField
+                            value={value}
+                            onSave={(val) =>
+                              updateProduct(selectedProduct.id, row.key, val)
+                            }
+                            options={row.options}
+                          />
+                        )}
                       </div>
 
                       <div className="border-r border-gray-200 pr-2">
@@ -472,7 +487,7 @@ export default function ProductsTab() {
                           }
                           placeholder="Spec page, PDF, catalog ref, etc."
                         />
-                      </div>
+                  </div>
 
                       <div className="border-r border-gray-200 pr-2">
                         <input
@@ -502,7 +517,7 @@ export default function ProductsTab() {
                           }
                           placeholder="How we found it, or cross-references"
                         />
-                      </div>
+                  </div>
 
                       <div className="border-r border-gray-200 pr-2">
                         <input
@@ -573,9 +588,9 @@ export default function ProductsTab() {
                   );
                 })}
               </div>
-            </div>
-          </div>
-        </div>
+                      </div>
+                    </div>
+                  </div>
 
         <p className="mt-3 text-[0.7rem] text-gray-500 max-w-4xl">
           The last cell of every row is your{" "}
@@ -893,6 +908,60 @@ function EditableField({
       className="cursor-pointer hover:bg-gray-50 px-2 py-1 rounded text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
     >
       {value || '-'}
+    </div>
+  );
+}
+
+function PowerTypeMultiSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const OPTIONS = ["Manual", "Air / Hydraulic", "Electric / Hydraulic"] as const;
+
+  const normalizeToken = (s: string) =>
+    s.replace(/\s+/g, " ").trim();
+
+  const selected = new Set(
+    String(value ?? "")
+      .split(/[,+]/)
+      .map(normalizeToken)
+      .filter(Boolean),
+  );
+
+  const toggle = (opt: string) => {
+    const next = new Set(selected);
+    if (next.has(opt)) {
+      next.delete(opt);
+    } else {
+      next.add(opt);
+    }
+    const serialized = Array.from(next).join(" + ");
+    onChange(serialized);
+  };
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {OPTIONS.map((opt) => {
+        const active = selected.has(opt);
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => toggle(opt)}
+            className={[
+              "rounded-full border px-2.5 py-0.5 text-[0.7rem]",
+              active
+                ? "border-emerald-500 bg-emerald-50 text-emerald-800"
+                : "border-gray-300 bg-gray-50 text-gray-700",
+            ].join(" ")}
+          >
+            {opt}
+          </button>
+        );
+      })}
     </div>
   );
 }

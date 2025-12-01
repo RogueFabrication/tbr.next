@@ -284,8 +284,28 @@ export default function LandingCompareSection({ rows }: Props) {
               <th className="px-3 py-2 text-left">Max Diameter</th>
               <th className="px-3 py-2 text-left">Power</th>
               <th className="px-3 py-2 text-left">Made in</th>
-              <th className="px-3 py-2 text-left">Mandrel</th>
-              <th className="px-3 py-2 text-left">S-bend</th>
+              <th className="px-3 py-2 text-left">
+                Mandrel
+                <div className="mt-0.5 text-[0.65rem] font-normal normal-case">
+                  <Link
+                    href="/scoring#mandrel-compatibility"
+                    className="text-blue-600 underline hover:text-blue-700"
+                  >
+                    What is this?
+                  </Link>
+                </div>
+              </th>
+              <th className="px-3 py-2 text-left">
+                S-Bend
+                <div className="mt-0.5 text-[0.65rem] font-normal normal-case">
+                  <Link
+                    href="/scoring#s-bend-capability"
+                    className="text-blue-600 underline hover:text-blue-700"
+                  >
+                    What is this?
+                  </Link>
+                </div>
+              </th>
               <th className="px-3 py-2 text-left">Actions</th>
             </tr>
           </thead>
@@ -303,6 +323,8 @@ export default function LandingCompareSection({ rows }: Props) {
             {filtered.map((row, index) => {
               const rank = index + 1;
               const imgSrc = row.image || FALLBACK_IMG;
+              const mandrelOn = isMandrelOn(row.mandrel);
+              const sBendOn = isSBendOn(row.sBend);
               return (
                 <tr
                   key={row.id}
@@ -356,10 +378,14 @@ export default function LandingCompareSection({ rows }: Props) {
                     {row.country || "—"}
                   </td>
                   <td className="px-3 py-3 align-middle">
-                    <Pill active={isMandrelOn(row.mandrel)}>Mandrel</Pill>
+                    <Pill active={mandrelOn}>
+                      {mandrelOn ? "Available" : "No option"}
+                    </Pill>
                   </td>
                   <td className="px-3 py-3 align-middle">
-                    <Pill active={isSBendOn(row.sBend)}>S-bend</Pill>
+                    <Pill active={sBendOn}>
+                      {sBendOn ? "S-Bend Capable" : "No S-Bends"}
+                    </Pill>
                   </td>
                   <td className="px-3 py-3 align-middle">
                     <Link

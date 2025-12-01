@@ -118,7 +118,8 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     name: "S-Bend Capability",
     maxPoints: 3,
     method: "binary",
-    tagline: "Binary scoring based on documented S-bend capability.",
+    tagline:
+      "Binary scoring for true back-to-back S-bends (≤0.125\" straight between bends).",
   },
 ];
 
