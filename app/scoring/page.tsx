@@ -136,9 +136,23 @@ export default function ScoringPage() {
 
                 {cat.key === "valueForMoney" && (
                   <p className="mb-2 text-xs text-muted-foreground">
-                    For each machine we build a conservative minimum safe operating system cost from the lowest documented price of four components:{" "}
-                    <span className="font-medium">frame, a ready-to-bend 180° die in a common size (typically 1.50&quot; tube), hydraulics (if required), and stand/mount when the machine cannot be safely operated without one</span>. Optional carts or premium stands that are not required for safe use are excluded from this calculation. When we cannot verify a component price, we either omit it
-                    (for hydraulics/stands that are truly optional) or assign a conservative baseline so that incomplete data never inflates a score.
+                    For each machine we build a conservative{" "}
+                    <span className="font-medium">
+                      minimum safe operating system cost
+                    </span>{" "}
+                    from the lowest documented price (in normal catalog
+                    configurations) of four components:{" "}
+                    <span className="font-medium">
+                      frame, a ready-to-bend 180° die in a common size
+                      (typically 1.50&quot; tube), hydraulics or power unit
+                      (when required), and a stand/mount only when the machine
+                      cannot be safely operated without one.
+                    </span>{" "}
+                    Optional carts, premium stands, and cosmetic upgrades are
+                    excluded from this calculation. When we cannot verify a
+                    component price, we either omit it (for hydraulics/stands
+                    that are truly optional) or assign a conservative baseline
+                    so that incomplete data never inflates a score.
                   </p>
                 )}
 
@@ -151,26 +165,74 @@ export default function ScoringPage() {
                       <>
                         <p>
                           Compares complete setup pricing – including base
-                          machine, a middle-of-the-road 180° die, and hydraulic or power
-                          options where required – against the rest of each
-                          machine&apos;s objective feature score.
+                          machine, a middle-of-the-road 180° die, and hydraulic
+                          or power options where required – against the rest of
+                          each machine&apos;s objective feature score.
                         </p>
                         <p>
-                          We first total up the non-price categories (capacity, bend angle, wall thickness, mandrel/S-bend capability, die ecosystem,
-                          etc.) to get a single &quot;feature score&quot; out of 80 possible feature points for each machine. That feature score is then divided by the
-                          minimum safe operating system cost and scaled into a 0–20 point range. Machines with unusually strong features-per-dollar ratios approach 20/20; weaker
-                          ratios receive proportionally fewer points.
+                          We first total up the non-price categories (capacity,
+                          bend angle, wall thickness, mandrel/S-bend capability,
+                          die ecosystem, etc.) to get a single
+                          &quot;feature score&quot; (out of a fixed pool of
+                          feature points) for each machine. That feature score is
+                          then divided by the minimum safe operating system cost
+                          and scaled into a 0–20 point range. Machines with
+                          unusually strong features-per-dollar ratios approach
+                          20/20; weaker ratios receive proportionally fewer
+                          points.
                         </p>
                         <p>
-                          When we do not have enough data to compute a fair features-per-dollar comparison (for example missing pricing or key
-                          specs), the Value for Money category is left at 0/20 with a note explaining that it is not scored for that machine rather
-                          than guessing.
+                          When we do not have enough data to compute a fair
+                          features-per-dollar comparison (for example missing
+                          pricing or key specs), the Value for Money category is
+                          left at 0/20 with a note explaining that it is{" "}
+                          <span className="font-semibold">not scored</span> for
+                          that machine rather than guessing.
                         </p>
                         <p>
-                          For die pricing we standardise on a single, ready-to-bend 180° die in a common size (typically 1.50&quot; tube) rather than
-                          chasing the absolute cheapest small or low-degree die that might technically fit. For hydraulics, we use the lowest
-                          manufacturer-endorsed power option rather than unsupported third-party jacks. For stands and carts, we only include
-                          the lowest-cost option required for safe, stable operation; optional carts are treated as accessories, not mandatory system cost.
+                          For die pricing we standardise on{" "}
+                          <span className="font-semibold">
+                            180° complete dies only
+                          </span>
+                          :
+                        </p>
+                        <ul className="ml-4 list-disc space-y-1">
+                          <li>
+                            <span className="font-semibold">Die Min</span> – the
+                            lowest priced 180° complete die (ready to bend in
+                            the machine) in a common size, typically a
+                            ~1.50&quot; OD tube die. We do{" "}
+                            <span className="font-semibold">
+                              not use tiny, niche, or partial-degree dies
+                            </span>{" "}
+                            just to reduce the apparent cost.
+                          </li>
+                          <li>
+                            <span className="font-semibold">Die Max</span> – the
+                            lowest priced 180° complete die that either:
+                            (a) is a 1.50&quot; OD die that can reach the
+                            machine&apos;s published maximum bend angle, or, if
+                            that doesn&apos;t exist, (b) is the die that best
+                            matches the published max OD or max CLR for the
+                            machine (whichever is the limiting capability).
+                          </li>
+                        </ul>
+                        <p className="mt-2">
+                          For hydraulics, we use the{" "}
+                          <span className="font-semibold">
+                            lowest price manufacturer-endorsed power option
+                          </span>{" "}
+                          (including third-party units only when the
+                          manufacturer explicitly supports them), rather than
+                          unsupported DIY or bargain jacks. For stands and
+                          carts, we{" "}
+                          <span className="font-semibold">
+                            only include the lowest-cost stand/cart when it is
+                            required for safe, stable operation
+                          </span>
+                          . Optional carts on machines with built-in stable
+                          bases are treated as accessories, not mandatory system
+                          cost.
                         </p>
                       </>
                     )}
@@ -204,18 +266,25 @@ export default function ScoringPage() {
                       <>
                         <p>
                           Binary score based on whether the machine qualifies
-                          for an FTC-unqualified &quot;Made in USA&quot; claim –
-                          meaning all or virtually all significant parts and
-                          processing are of U.S. origin – as documented by the
-                          manufacturer.
+                          for a{" "}
+                          <span className="font-semibold">
+                            full, FTC-unqualified Made in USA–level origin
+                            claim
+                          </span>{" "}
+                          (all or virtually all significant parts and processing
+                          of U.S. origin), as documented by the manufacturer.
                         </p>
                         <p>
-                          Machines that are assembled in the USA from mixed
-                          components, or that only make qualified origin
-                          claims, are treated as non-USA for scoring in this
-                          category to stay conservative. This category reflects
-                          customer preference for domestic manufacturing,
-                          support, and parts availability.
+                          Machines that are only{" "}
+                          <span className="font-semibold">
+                            assembled in the USA from mixed-origin components
+                          </span>
+                          , or that make qualified origin claims (for example,
+                          &quot;Made in USA with imported components&quot;), are
+                          treated as non-USA for scoring in this category to
+                          stay conservative. This category is labeled in plain
+                          language on comparison tables so customers understand
+                          the origin groupings without needing FTC jargon.
                         </p>
                       </>
                     )}
@@ -302,12 +371,31 @@ export default function ScoringPage() {
                       <>
                         <p>
                           Looks at whether the platform supports mandrel
-                          bending out of the box or via documented upgrades.
+                          bending out of the box or via{" "}
+                          <span className="font-semibold">
+                            manufacturer-documented, supported upgrades
+                          </span>
+                          .
                         </p>
                         <p>
                           Mandrel capability is crucial for thin-wall,
                           high-finish work in motorsport, aerospace, and
                           production environments.
+                        </p>
+                        <p>
+                          For scoring and for the &quot;Mandrel&quot; pills you
+                          see on comparison tables,{" "}
+                          <span className="font-semibold">
+                            &quot;Available&quot; only applies when the
+                            manufacturer publishes or explicitly supports a
+                            mandrel option for that model
+                          </span>
+                          . Third-party or DIY mandrel kits with no factory
+                          backing are treated as{" "}
+                          <span className="font-semibold">
+                            no mandrel option
+                          </span>{" "}
+                          even if they physically exist in the market.
                         </p>
                       </>
                     )}
@@ -315,18 +403,26 @@ export default function ScoringPage() {
                       <>
                         <p>
                           Binary category indicating whether the machine can
-                          produce a <span className="font-semibold">true S-bend</span>
-                          : two bends in opposite directions with essentially no
+                          produce a{" "}
+                          <span className="font-semibold">true S-bend</span>: two
+                          bends in opposite directions with essentially no
                           straight tangent between them.
                         </p>
                         <p>
-                          For scoring, we use a hard engineering definition:
+                          For scoring, we use a strict engineering definition:
                           the straight section between the end of the first bend
-                          and the start of the second bend must be at or below
-                          <span className="font-semibold"> 0.125&quot; of tangent</span>.
-                          Manufacturer marketing that shows several inches of
-                          straight tube between bends does not qualify as an
-                          S-bend here.
+                          and the start of the second bend must be{" "}
+                          <span className="font-semibold">
+                            at or below 0.125&quot; (1/8&quot;) of tangent
+                          </span>
+                          . Any configuration that leaves several inches of
+                          straight tube between bends – even if marketed as an
+                          &quot;S-bend&quot; –{" "}
+                          <span className="font-semibold">
+                            does not qualify
+                          </span>{" "}
+                          for S-bend capability in this system and will be shown
+                          as &quot;No S-Bends&quot; in the UI.
                         </p>
                       </>
                     )}

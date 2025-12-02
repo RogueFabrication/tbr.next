@@ -41,6 +41,56 @@ function formatPriceRange(min: number | null, max: number | null): string {
   return lo ?? hi ?? "—";
 }
 
+/**
+ * Map internal FTC origin buckets to consumer-facing labels.
+ *
+ * Admin buckets (stored in `country`):
+ * - FTC-unqualified "Made in USA"
+ * - Assembled in USA / qualified USA claim
+ * - Non-USA or no USA claim
+ *
+ * Public display (front end):
+ * - "Made in USA (full-origin claim)"
+ * - "USA-assembled / Mixed origin"
+ * - "Imported / International origin"
+ */
+function displayOriginLabel(country?: string | null): string {
+  const raw = (country ?? "").trim();
+  if (!raw) return "Origin not specified";
+
+  const lower = raw.toLowerCase();
+
+  if (lower.includes("ftc-unqualified") && lower.includes("made in usa")) {
+    return "Made in USA (full-origin claim)";
+  }
+
+  if (
+    lower.includes("assembled in usa") ||
+    lower.includes("qualified usa claim")
+  ) {
+    return "USA-assembled / Mixed origin";
+  }
+
+  // Catch-all for clearly non-USA or unspecified origin.
+  return "Imported / International origin";
+}
+
+/** Add " marks to max diameter when it's a bare number, leave alone if already annotated. */
+function formatMaxDiameter(value?: string | null): string {
+  if (!value) return "—";
+  const v = String(value).trim();
+  if (!v) return "—";
+
+  const lower = v.toLowerCase();
+  // If it already looks like it has units / quotes, don't touch it.
+  if (v.includes('"') || lower.includes("mm") || lower.includes(" od") || lower.includes("in")) {
+    return v;
+  }
+
+  // Default: treat as inches and append quote.
+  return `${v}"`;
+}
+
 function powerFlags(powerType?: string | null) {
   const s = (powerType ?? "").toLowerCase();
   const hasManual = /\bmanual\b/.test(s);
@@ -54,9 +104,8 @@ function powerFlags(powerType?: string | null) {
 }
 
 function isMandrelOn(mandrel?: string | null): boolean {
-  const s = (mandrel ?? "").trim().toLowerCase();
-  // Data is now normalized to "Available"/"None" from admin.
-  return s === "available";
+  const s = (mandrel ?? "").toLowerCase();
+  return s === "available" || s === "standard" || s === "yes";
 }
 
 function isSBendOn(flag?: boolean | null): boolean {
@@ -64,36 +113,6 @@ function isSBendOn(flag?: boolean | null): boolean {
   return flag === true;
 }
 
-function displayCountry(country?: string | null): string {
-  const raw = (country ?? "").trim();
-  if (!raw) return "—";
-  const lower = raw.toLowerCase();
-
-  if (lower.startsWith('ftc-unqualified "made in usa"') || lower.startsWith("ftc-unqualified 'made in usa'")) {
-    return "Made in USA";
-  }
-  if (lower.startsWith("assembled in usa")) {
-    return "Assembled in USA";
-  }
-  if (lower.startsWith("non-usa") || lower.includes("no usa claim")) {
-    return "Imported / mixed origin";
-  }
-
-  // Fallback: show whatever was stored, but without the FTC jargon customers won't understand.
-  return raw;
-}
-
-function formatMaxDiameter(value?: string | null): string {
-  const raw = (value ?? "").trim();
-  if (!raw) return "—";
-
-  // If there's already a quote or obvious unit text, leave it alone.
-  if (raw.includes('"') || /[a-z]/i.test(raw)) {
-    return raw;
-  }
-
-  return `${raw}"`;
-}
 
 function ScoreCircle({ score, href }: { score: number | null; href: string }) {
   const clamped =
@@ -274,15 +293,14 @@ export default function LandingCompareSection({ rows }: Props) {
       if (power === "manual" && !hasManual) return false;
       if (power === "hydraulic" && !hasAnyHydraulic) return false;
 
-      const c = (row.country ?? "").toLowerCase();
-      if (
-        origin === "usaOnly" &&
-        c &&
-        c !== "usa" &&
-        c !== "united states" &&
-        c !== "united states of america"
-      ) {
-        return false;
+      // USA-only filter: only include machines that are in the
+      // strict FTC-unqualified "Made in USA" bucket.
+      if (origin === "usaOnly") {
+        const bucket = (row.country ?? "").toLowerCase();
+        const isFullUsa =
+          bucket.includes("ftc-unqualified") &&
+          bucket.includes("made in usa");
+        if (!isFullUsa) return false;
       }
 
       if (mandrelOnly && !isMandrelOn(row.mandrel)) return false;
@@ -366,24 +384,24 @@ export default function LandingCompareSection({ rows }: Props) {
               <th className="px-3 py-2 text-left">Power</th>
               <th className="px-3 py-2 text-left">Made in</th>
               <th className="px-3 py-2 text-left">
-                Mandrel
-                <div className="mt-0.5 text-[0.65rem] font-normal normal-case">
+                <div className="flex flex-col gap-0.5">
+                  <span>Mandrel</span>
                   <Link
                     href="/scoring#mandrel-compatibility"
-                    className="text-blue-600 underline hover:text-blue-700"
+                    className="text-[0.65rem] font-normal lowercase text-blue-600 underline hover:text-blue-700"
                   >
-                    What is this?
+                    what is this?
                   </Link>
                 </div>
               </th>
               <th className="px-3 py-2 text-left">
-                S-Bend
-                <div className="mt-0.5 text-[0.65rem] font-normal normal-case">
+                <div className="flex flex-col gap-0.5">
+                  <span>S-bend</span>
                   <Link
                     href="/scoring#s-bend-capability"
-                    className="text-blue-600 underline hover:text-blue-700"
+                    className="text-[0.65rem] font-normal lowercase text-blue-600 underline hover:text-blue-700"
                   >
-                    What is this?
+                    what is this?
                   </Link>
                 </div>
               </th>
@@ -462,17 +480,35 @@ export default function LandingCompareSection({ rows }: Props) {
                     <PowerPills powerType={row.powerType} />
                   </td>
                   <td className="px-3 py-3 align-middle text-sm text-gray-800">
-                    {displayCountry(row.country)}
+                    {displayOriginLabel(row.country)}
                   </td>
                   <td className="px-3 py-3 align-middle">
-                    <Pill active={mandrelOn}>
-                      {mandrelOn ? "Available" : "No Option"}
-                    </Pill>
+                    {(() => {
+                      const on = isMandrelOn(row.mandrel);
+                      return (
+                        <Pill active={on}>
+                          {on ? "Available" : "No Option"}
+                        </Pill>
+                      );
+                    })()}
                   </td>
                   <td className="px-3 py-3 align-middle">
-                    <Pill active={sBendOn}>
-                      {sBendOn ? "S-Bend Capable" : "No\nS-Bends"}
-                    </Pill>
+                    {(() => {
+                      const on = isSBendOn(row.sBend);
+                      return (
+                        <Pill active={on}>
+                          {on ? (
+                            "S-Bend Capable"
+                          ) : (
+                            <>
+                              No
+                              <br />
+                              S-Bends
+                            </>
+                          )}
+                        </Pill>
+                      );
+                    })()}
                   </td>
                   <td className="px-3 py-3 align-middle">
                     <Link
