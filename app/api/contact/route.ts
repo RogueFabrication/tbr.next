@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createContactToken } from "../../../lib/contactToken";
-import { sendContactVerificationEmail } from "../../../lib/email";
+import { sendContactVerificationEmail } from "../../../lib/email-smtp";
 
 type ContactPayload = {
   name?: string;
