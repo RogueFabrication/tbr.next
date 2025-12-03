@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-type ContactVerificationEmailParams = {
+type ContactVerificationPayload = {
   to: string;
   name: string;
   subject: string;
@@ -9,199 +9,143 @@ type ContactVerificationEmailParams = {
   verifyUrl: string;
 };
 
-type ContactForwardPayload = {
+type ForwardPayload = {
   name: string;
   email: string;
   subject: string;
   messageType: string;
   message: string;
-  createdAt?: number;
+  createdAt: number;
 };
 
-/**
- * Build a reusable Nodemailer transporter using env-configured SMTP settings.
- * Throws if required env vars are missing.
- */
-function createTransporter() {
-  const host = process.env.TBR_SMTP_HOST;
-  const portRaw = process.env.TBR_SMTP_PORT || "465";
-  const user = process.env.TBR_SMTP_USER;
-  const pass = process.env.TBR_SMTP_PASS;
+const {
+  TBR_SMTP_HOST,
+  TBR_SMTP_PORT,
+  TBR_SMTP_USER,
+  TBR_SMTP_PASS,
+  TBR_CONTACT_FROM,
+  TBR_CONTACT_TO,
+} = process.env;
 
-  if (!host || !user || !pass) {
+if (!TBR_SMTP_HOST || !TBR_SMTP_USER || !TBR_SMTP_PASS) {
+  // Fail fast at module load on the server – better than mysterious runtime failures
+  console.warn(
+    "[email-smtp] Missing SMTP configuration. Ensure TBR_SMTP_HOST, TBR_SMTP_USER, and TBR_SMTP_PASS are set."
+  );
+}
+
+function getTransport() {
+  if (!TBR_SMTP_HOST || !TBR_SMTP_USER || !TBR_SMTP_PASS) {
     throw new Error(
       "Missing SMTP configuration. Ensure TBR_SMTP_HOST, TBR_SMTP_USER, and TBR_SMTP_PASS are set."
     );
   }
 
-  const port = Number.parseInt(portRaw, 10);
+  const port = Number(TBR_SMTP_PORT || 587);
 
-  return nodemailer.createTransport({
-    host,
+  const transporter = nodemailer.createTransport({
+    host: TBR_SMTP_HOST,
     port,
-    secure: port === 465, // true for Gmail SSL; falls back if you change port
+    secure: port === 465,
     auth: {
-      user,
-      pass,
+      user: TBR_SMTP_USER,
+      pass: TBR_SMTP_PASS,
     },
+  });
+
+  return transporter;
+}
+
+const DEFAULT_FROM =
+  TBR_CONTACT_FROM || 'TubeBenderReviews <tbradmin@tubebenderreviews.com>';
+const DEFAULT_TO =
+  TBR_CONTACT_TO || "tbradmin@tubebenderreviews.com";
+
+export async function sendContactVerificationEmail(
+  payload: ContactVerificationPayload
+) {
+  const transporter = getTransport();
+
+  const subject = "Please confirm your TubeBenderReviews message";
+
+  const text = [
+    `Hi ${payload.name || "there"},`,
+    "",
+    "We received a contact request on TubeBenderReviews using your e-mail address.",
+    "",
+    `Subject: ${payload.subject || "(no subject)"}`,
+    `Topic: ${payload.messageType || "General"}`,
+    "",
+    "To confirm that this message is really from you and not an automated bot, please click the link below:",
+    "",
+    payload.verifyUrl,
+    "",
+    "After you click the link, your message will be forwarded to the review team at RogueFab / TubeBenderReviews.",
+    "",
+    "If you did not try to contact us, you can safely ignore this e-mail.",
+    "",
+    "— TubeBenderReviews",
+  ].join("\n");
+
+  const html = text
+    .split("\n")
+    .map((line) =>
+      line === payload.verifyUrl
+        ? `<p><a href="${payload.verifyUrl}">${payload.verifyUrl}</a></p>`
+        : `<p>${line || "&nbsp;"}</p>`
+    )
+    .join("\n");
+
+  await transporter.sendMail({
+    from: DEFAULT_FROM,
+    to: payload.to,
+    subject,
+    text,
+    html,
   });
 }
 
-/**
- * Send the initial contact verification email to the user.
- * The message includes their original content and a verification link.
- */
-export async function sendContactVerificationEmail(
-  params: ContactVerificationEmailParams
-) {
-  const { to, name, subject, messageType, message, verifyUrl } = params;
+export async function sendContactForwardEmail(payload: ForwardPayload) {
+  const transporter = getTransport();
 
-  const transporter = createTransporter();
+  const subject = `[TubeBenderReviews] New contact from ${payload.name} – ${payload.subject}`;
 
-  const from =
-    process.env.TBR_SMTP_FROM ||
-    "TubeBenderReviews <no-reply@tubebenderreviews.com>";
+  const created = new Date(payload.createdAt || Date.now());
+  const createdIso = created.toISOString();
 
-  const replyTo = process.env.TBR_SMTP_REPLY_TO || undefined;
-
-  const safeName = (name || "").trim() || "there";
-
-  const mailSubject = `[TubeBenderReviews] Confirm your message: ${subject}`;
-
-  const textBody = [
-    `Hi ${safeName},`,
-    "",
-    "We received a contact request on TubeBenderReviews.com with the details below.",
-    "",
-    `Type: ${messageType}`,
-    `Subject: ${subject}`,
-    "",
-    "Message:",
-    message,
-    "",
-    "To confirm you're a real person and actually send this message to our team, please click the link below:",
-    verifyUrl,
-    "",
-    "If you did not submit this request, you can safely ignore this email.",
-    "",
-    "- TubeBenderReviews",
-  ].join("\n");
-
-  const htmlBody = `
-    <p>Hi ${safeName},</p>
-    <p>We received a contact request on <strong>TubeBenderReviews.com</strong> with the details below.</p>
-    <p>
-      <strong>Type:</strong> ${messageType}<br />
-      <strong>Subject:</strong> ${subject}
-    </p>
-    <p>
-      <strong>Message:</strong><br />
-      <pre style="white-space: pre-wrap; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
-${message.replace(/</g, "&lt;")}
-      </pre>
-    </p>
-    <p>
-      To confirm you're a real person and actually send this message to our team, please click the button below:
-    </p>
-    <p>
-      <a href="${verifyUrl}"
-         style="display:inline-block;padding:10px 16px;border-radius:4px;background-color:#111827;color:#ffffff;text-decoration:none;font-weight:600;">
-        Confirm &amp; Send Message
-      </a>
-    </p>
-    <p>If you did not submit this request, you can safely ignore this email.</p>
-    <p>- TubeBenderReviews</p>
-  `;
-
-  try {
-    await transporter.sendMail({
-      from,
-      to: params.to,  // force send to the USER's email
-      subject: mailSubject,
-      replyTo,
-      text: textBody,
-      html: htmlBody,
-    });
-  } catch (err) {
-    console.error("[email-smtp] Failed to send contact verification email:", err);
-    // Re-throw so the API route can surface a 500 to the client.
-    throw err;
-  }
-}
-
-/**
- * Forward a verified contact message to the admin inbox.
- * This is called by the /api/contact/verify route after the user clicks the link.
- */
-export async function sendContactForwardEmail(
-  payload: ContactForwardPayload
-) {
-  const transporter = createTransporter();
-
-  // Where the admin copy should go. Prefer explicit envs but fall back to a sane default.
-  const adminTo =
-    process.env.CONTACT_TO_EMAIL ||
-    process.env.TBR_SMTP_TO ||
-    process.env.TBR_SMTP_FROM ||
-    process.env.TBR_SMTP_USER;
-
-  if (!adminTo) {
-    throw new Error(
-      "No admin recipient configured. Set CONTACT_TO_EMAIL or TBR_SMTP_TO."
-    );
-  }
-
-  const from =
-    process.env.TBR_SMTP_FROM ||
-    "TubeBenderReviews <no-reply@tubebenderreviews.com>";
-
-  const subject = `[TubeBenderReviews] New contact: ${payload.subject}`;
-
-  const createdAt = payload.createdAt
-    ? new Date(payload.createdAt)
-    : new Date();
-
-  const textBody = [
-    `New verified contact submission from TubeBenderReviews.com`,
+  const text = [
+    "New contact form submission from TubeBenderReviews:",
     "",
     `Name: ${payload.name}`,
     `Email: ${payload.email}`,
-    `Type: ${payload.messageType}`,
-    `Received: ${createdAt.toISOString()}`,
+    `Topic: ${payload.messageType}`,
+    `Submitted at: ${createdIso}`,
     "",
     "Message:",
     payload.message,
     "",
-    "You are receiving this because the sender clicked the verification link.",
+    "You can reply directly to this e-mail to respond to the user.",
   ].join("\n");
 
-  const htmlBody = `
-    <p><strong>New verified contact submission from TubeBenderReviews.com</strong></p>
-    <p>
-      <strong>Name:</strong> ${payload.name}<br />
-      <strong>Email:</strong> ${payload.email}<br />
-      <strong>Type:</strong> ${payload.messageType}<br />
-      <strong>Received:</strong> ${createdAt.toISOString()}
-    </p>
-    <p><strong>Message:</strong></p>
-    <pre style="white-space: pre-wrap; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
-${payload.message.replace(/</g, "&lt;")}
-    </pre>
-    <p>You are receiving this because the sender clicked the verification link in their email.</p>
-  `;
+  const html = [
+    "<p>New contact form submission from <strong>TubeBenderReviews</strong>:</p>",
+    "<ul>",
+    `<li><strong>Name:</strong> ${payload.name}</li>`,
+    `<li><strong>Email:</strong> ${payload.email}</li>`,
+    `<li><strong>Topic:</strong> ${payload.messageType}</li>`,
+    `<li><strong>Submitted at:</strong> ${createdIso}</li>`,
+    "</ul>",
+    "<p><strong>Message:</strong></p>",
+    `<p>${payload.message.replace(/\n/g, "<br />")}</p>`,
+    "<p>You can reply directly to this e-mail to respond to the user.</p>",
+  ].join("\n");
 
-  try {
-    await transporter.sendMail({
-      from,
-      to: adminTo,
-      replyTo: payload.email,
-      subject,
-      text: textBody,
-      html: htmlBody,
-    });
-  } catch (err) {
-    console.error("[email-smtp] Failed to forward contact message:", err);
-    throw err;
-  }
+  await transporter.sendMail({
+    from: DEFAULT_FROM,
+    to: DEFAULT_TO,
+    replyTo: payload.email,
+    subject,
+    text,
+    html,
+  });
 }
-

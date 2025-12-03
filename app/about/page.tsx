@@ -7,9 +7,35 @@ export const metadata = {
     "Who runs TubeBenderReviews, how the scoring works, and how RogueFab fits into the picture.",
 };
 
-export default function AboutPage() {
+type AboutPageProps = {
+  searchParams?: {
+    [key: string]: string | string[] | undefined;
+  };
+};
+
+export default function AboutPage({ searchParams }: AboutPageProps) {
+  const sentParam = searchParams?.sent;
+  const sent =
+    typeof sentParam === "string"
+      ? sentParam === "1"
+      : Array.isArray(sentParam)
+        ? sentParam.includes("1")
+        : false;
+
   return (
     <main className="container mx-auto px-4 py-10 max-w-4xl">
+      {/* Success banner after email verification */}
+      {sent && (
+        <div className="mb-6 rounded-md border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
+          <p className="font-semibold">✓ Message sent successfully!</p>
+          <p className="mt-1">
+            Your message has been forwarded to the TubeBenderReviews team.
+            We&apos;ll review it and get back to you at the email address you
+            provided.
+          </p>
+        </div>
+      )}
+
       {/* Contact Form - Primary CTA */}
       <ContactForm />
 
