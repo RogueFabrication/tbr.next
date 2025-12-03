@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyContactToken } from "../../../../lib/contactToken";
-import { sendContactForwardEmail } from "../../../../lib/email";
+import { sendContactForwardEmail } from "../../../../lib/email-smtp";
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,10 +26,17 @@ export async function GET(req: NextRequest) {
     await sendContactForwardEmail(payload);
 
     const redirectTarget =
-      process.env.NEXT_PUBLIC_CONTACT_THANKYOU_URL ||
-      "/about?sent=1";
+      process.env.NEXT_PUBLIC_CONTACT_THANKYOU_URL || "/about?sent=1";
 
-    return NextResponse.redirect(redirectTarget);
+    // Build an absolute URL for the redirect. If the env is a full URL, use it as-is;
+    // if it's a path (e.g. "/about?sent=1"), resolve it against the current origin.
+    const redirectUrl =
+      redirectTarget.startsWith("http://") ||
+      redirectTarget.startsWith("https://")
+        ? redirectTarget
+        : new URL(redirectTarget, url.origin).toString();
+
+    return NextResponse.redirect(redirectUrl);
   } catch (err) {
     console.error("[contact-verify] Error verifying contact token:", err);
     return NextResponse.json(
