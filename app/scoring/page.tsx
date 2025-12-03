@@ -22,10 +22,12 @@ export default function ScoringPage() {
             Tube Bender Scoring Methodology
             </h1>
           <p className="mt-3 max-w-3xl text-sm sm:text-base text-gray-600">
-            Complete transparency in how we calculate objective scores for tube
-            bender comparisons. All scoring is based on published specs,
-            documented capabilities, and verifiable data sources — not
-            subjective opinions.
+            Complete transparency in how we calculate scores for tube bender
+            comparisons. Most categories are driven by published specs and
+            documented capabilities; a few are brand-weighted for things like
+            ecosystem depth and long-term support. In all cases we stay
+            conservative and base scoring on verifiable information, not
+            hand-wavy marketing claims.
           </p>
         </div>
       </div>
@@ -38,7 +40,11 @@ export default function ScoringPage() {
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             Our 11-category scoring system evaluates tube benders across
-            measurable, objective criteria.
+            primarily measurable, spec-based criteria, plus a small number of
+            brand-weighted categories for support history and ecosystem depth.
+            Where data is incomplete or ambiguous, we mark it as &quot;Not
+            Published&quot; and apply conservative defaults rather than
+            stretching the numbers.
           </p>
           <div className="mt-4 grid gap-6 md:grid-cols-3">
             <div>
@@ -78,6 +84,9 @@ export default function ScoringPage() {
                 </span>
                 <span className="inline-flex items-center rounded-full border border-gray-200 px-2.5 py-1 text-gray-700">
                   Tier-based scoring
+                </span>
+                <span className="inline-flex items-center rounded-full border border-gray-200 px-2.5 py-1 text-gray-700">
+                  Brand-based scoring
                 </span>
               </div>
             </div>
@@ -187,7 +196,12 @@ export default function ScoringPage() {
                           pricing or key specs), the Value for Money category is
                           left at 0/20 with a note explaining that it is{" "}
                           <span className="font-semibold">not scored</span> for
-                          that machine rather than guessing.
+                          that machine rather than guessing. Whenever we have to
+                          omit a component price or fall back to a conservative
+                          baseline, we call that out in that machine&apos;s
+                          detailed score breakdown so it&apos;s obvious what we
+                          were missing and how we handled it, instead of quietly
+                          smoothing over gaps in the data.
                         </p>
                         <p>
                           For die pricing we standardise on{" "}
@@ -314,15 +328,26 @@ export default function ScoringPage() {
                         <p>
                           Standardises all machines to a 1.75&quot; OD reference
                           size and scores based on the thickest published wall
-                          they can bend.
+                          they can bend, plus which materials the manufacturer
+                          explicitly documents as compatible.
                         </p>
                         <p>
                           Machines with published wall data are tiered by
                           thickness: heavier-wall capacity earns more points,
-                          while lighter-wall capacity earns fewer points. When
-                          no wall thickness is published, we apply a conservative
-                          baseline score and clearly label the data as "Not
-                          Published" rather than guessing.
+                          while lighter-wall capacity earns fewer points. On top
+                          of that, we add a small score for documented material
+                          coverage — mild steel, 4130 chromoly, stainless,
+                          aluminum, titanium, and copper/brass/bronze — based
+                          only on what the manufacturer actually lists in specs
+                          or documentation.
+                        </p>
+                        <p>
+                          When no wall thickness is published, we apply a small
+                          conservative baseline instead of guessing and say so
+                          directly in that machine&apos;s score breakdown. When
+                          no material list is published, the materials portion
+                          of this category is left at zero rather than assuming
+                          it can bend everything.
                         </p>
                       </>
                     )}
@@ -356,14 +381,20 @@ export default function ScoringPage() {
                     {cat.key === "upgradePathModularity" && (
                       <>
                         <p>
-                          Evaluates how far the machine can grow with the shop:
-                          power upgrades, automation, software, and accessory
-                          ecosystem.
+                          Evaluates how far the machine can grow with the shop
+                          based on documented upgrade and modularity options:
+                          power upgrades, shared die families, mandrel
+                          upgrades, automation, modular clamping, and related
+                          add-ons.
                         </p>
                         <p>
-                          Systems that accept bolt-on upgrades or modular
-                          tooling without replacing the base machine score
-                          higher.
+                          Scoring is a simple checklist: each documented,
+                          manufacturer-supported upgrade flag (for example a
+                          published power upgrade path or mandrel kit) adds to
+                          this category, up to the point cap. Machines with no
+                          published upgrade or modular options beyond the base
+                          configuration receive zero points here and are
+                          treated as &quot;fixed capability&quot; platforms.
                         </p>
                       </>
                     )}
@@ -483,6 +514,122 @@ export default function ScoringPage() {
                   breakdowns so you can inspect each score.
                 </li>
                 </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* Factors we don't score */}
+        <section className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Important Factors We Don&apos;t Score (And How to Test Them Yourself)
+          </h2>
+          <p className="mt-2 text-sm text-gray-700">
+            Some things matter a lot in real shops but can&apos;t be scored
+            fairly or safely by any comparison site, including this one. Two of
+            the biggest are lead times and service quality.
+          </p>
+          <div className="mt-4 grid gap-6 md:grid-cols-2 text-xs text-gray-800">
+            <div>
+              <p className="font-medium text-gray-900 mb-1">Lead times</p>
+              <p className="mb-2">
+                Lead times move constantly and are rarely published in a way
+                that stays accurate. Instead of pretending to have a single
+                number, we recommend you call the top 2–3 manufacturers you&apos;re
+                considering and ask:
+              </p>
+              <ul className="space-y-1 list-disc pl-4">
+                <li>&quot;If I ordered today, what is the lead time on the machine?&quot;</li>
+                <li>&quot;What&apos;s the lead time on your most popular die sizes?&quot;</li>
+              </ul>
+              <p className="mt-2">
+                Some machines and dies ship same day or in a couple business
+                days. Others have multi-month die lead times. You&apos;ll get the
+                real answer in under a minute, and it will be more current than
+                anything we could publish here.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 mb-1">
+                Service quality
+              </p>
+              <p className="mb-2">
+                Service quality is not published in specs and can&apos;t be
+                captured honestly in a single score. But you can learn a lot
+                from one phone call:
+              </p>
+              <ul className="space-y-1 list-disc pl-4">
+                <li>How quickly they answer the phone</li>
+                <li>Whether you reach someone who actually knows the product</li>
+                <li>Whether they&apos;re rushed and defensive, or patient and helpful</li>
+                <li>
+                  How transparent they are about stock, backorders, and
+                  realistic ship dates
+                </li>
+              </ul>
+              <p className="mt-2">
+                We don&apos;t turn these into points. Instead, we give you almost
+                everything that can be scored objectively and then tell you
+                exactly how to pressure-test the last few items directly with
+                the manufacturers you&apos;re considering.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Factors we don't score */}
+        <section className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Important Factors We Don&apos;t Score (And How to Test Them Yourself)
+          </h2>
+          <p className="mt-2 text-sm text-gray-700">
+            Some things matter a lot in real shops but can&apos;t be scored
+            fairly or safely by any comparison site, including this one. Two of
+            the biggest are lead times and service quality.
+          </p>
+          <div className="mt-4 grid gap-6 md:grid-cols-2 text-xs text-gray-800">
+            <div>
+              <p className="font-medium text-gray-900 mb-1">Lead times</p>
+              <p className="mb-2">
+                Lead times move constantly and are rarely published in a way
+                that stays accurate. Instead of pretending to have a single
+                number, we recommend you call the top 2–3 manufacturers you&apos;re
+                considering and ask:
+              </p>
+              <ul className="space-y-1 list-disc pl-4">
+                <li>&quot;If I ordered today, what is the lead time on the machine?&quot;</li>
+                <li>&quot;What&apos;s the lead time on your most popular die sizes?&quot;</li>
+              </ul>
+              <p className="mt-2">
+                Some machines and dies ship same day or in a couple business
+                days. Others have multi-month die lead times. You&apos;ll get the
+                real answer in under a minute, and it will be more current than
+                anything we could publish here.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 mb-1">
+                Service quality
+              </p>
+              <p className="mb-2">
+                Service quality is not published in specs and can&apos;t be
+                captured honestly in a single score. But you can learn a lot
+                from one phone call:
+              </p>
+              <ul className="space-y-1 list-disc pl-4">
+                <li>How quickly they answer the phone</li>
+                <li>Whether you reach someone who actually knows the product</li>
+                <li>Whether they&apos;re rushed and defensive, or patient and helpful</li>
+                <li>
+                  How transparent they are about stock, backorders, and
+                  realistic ship dates
+                </li>
+              </ul>
+              <p className="mt-2">
+                We don&apos;t turn these into points. Instead, we give you almost
+                everything that can be scored objectively and then tell you
+                exactly how to pressure-test the last few items directly with
+                the manufacturers you&apos;re considering.
+              </p>
             </div>
           </div>
         </section>

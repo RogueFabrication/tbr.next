@@ -69,15 +69,15 @@ export const SCORING_CRITERIA: ScoringCriteria[] = [
     weight: 0.07,
   },
   {
-    name: "Modular Clamping System",
+    name: "Upgrade Path & Modularity",
     maxPoints: 6,
-    description: "Advanced modular clamping system for versatile workpiece orientation",
+    description: "Upgrade ecosystem, modular clamping options, and how far the platform can grow with the shop",
     weight: 0.06,
   },
   {
-    name: "Mandrel Availability",
+    name: "Mandrel Compatibility",
     maxPoints: 4,
-    description: "Mandrel bending capability - 4 points if available, 0 if not",
+    description: "Mandrel bending capability – 4 points if a factory-supported option exists, 0 if not",
     weight: 0.04,
   },
   {
@@ -111,6 +111,8 @@ export interface ScoringInput {
   wallThicknessCapacity?: string | number;
   features?: string[];
   materials?: string[];
+  dieShapes?: string[];
+  upgradeFlags?: string[];
   mandrelBender?: string;
   sBendCapability?: boolean;
   [key: string]: unknown;
@@ -246,49 +248,219 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   totalScore += angleScore;
 
   // 6. Wall Thickness Capability (9 points)
-  let wallScore = 0;
+  //
+  // This now combines two pieces:
+  // - Thickness: 0–6 points based on the thickest published 1.75" OD DOM wall.
+  // - Materials: 0–3 points based on documented material compatibility.
+  //
+  // We do not guess. Missing data gets conservative baseline handling and a
+  // clear explanation in the reasoning string.
+  let thicknessScore = 0;
   const wallRaw = bender.wallThicknessCapacity;
+  let wallReasonPart: string;
+
   if (wallRaw !== undefined && wallRaw !== null && wallRaw !== "") {
     const thickness = parseFloat(String(wallRaw));
     if (Number.isFinite(thickness)) {
-      if (thickness >= 0.156) wallScore = 9;
-      else if (thickness >= 0.120) wallScore = 7;
-      else if (thickness >= 0.095) wallScore = 5;
-      else wallScore = 3;
+      if (thickness >= 0.156) thicknessScore = 6;
+      else if (thickness >= 0.120) thicknessScore = 5;
+      else if (thickness >= 0.095) thicknessScore = 4;
+      else if (thickness > 0) thicknessScore = 3;
+      wallReasonPart = `${wallRaw}" wall capacity for 1.75" OD DOM`;
+    } else {
+      thicknessScore = 0;
+      wallReasonPart = `Unparseable wall thickness value: ${String(wallRaw)}`;
     }
   } else {
-    wallScore = 3; // Default for no published data
+    // No published wall data: we assign a very small baseline and say so.
+    thicknessScore = 2;
+    wallReasonPart =
+      "No published wall thickness data; assigned a small conservative baseline instead of guessing.";
   }
+
+  // Materials scoring (0–3 points)
+  const rawMaterials = Array.isArray(bender.materials)
+    ? (bender.materials as unknown[])
+    : [];
+
+  const materialSlugs = rawMaterials
+    .map((m) => String(m || "").trim().toLowerCase())
+    .filter(Boolean);
+
+  let hasMild = false;
+  let has4130 = false;
+  let hasStainless = false;
+  let hasAluminum = false;
+  let hasTitanium = false;
+  let hasCopperBrass = false;
+  let hasOtherMat = false;
+
+  for (const label of materialSlugs) {
+    if (label.includes("mild")) hasMild = true;
+    if (label.includes("4130") || label.includes("chromoly")) has4130 = true;
+    if (
+      label.includes("stainless") ||
+      label.includes("304") ||
+      label.includes("316")
+    )
+      hasStainless = true;
+    if (label.includes("alum")) hasAluminum = true;
+    if (label.includes("titanium") || label === "ti") hasTitanium = true;
+    if (
+      label.includes("copper") ||
+      label.includes("brass") ||
+      label.includes("bronze")
+    )
+      hasCopperBrass = true;
+    if (
+      !label.includes("mild") &&
+      !label.includes("4130") &&
+      !label.includes("chromoly") &&
+      !label.includes("stainless") &&
+      !label.includes("304") &&
+      !label.includes("316") &&
+      !label.includes("alum") &&
+      !label.includes("titanium") &&
+      label !== "ti" &&
+      !label.includes("copper") &&
+      !label.includes("brass") &&
+      !label.includes("bronze")
+    ) {
+      hasOtherMat = true;
+    }
+  }
+
+  let rawMaterialWeight = 0;
+  if (hasMild) rawMaterialWeight += 2;
+  if (has4130) rawMaterialWeight += 2;
+  if (hasStainless) rawMaterialWeight += 1.5;
+  if (hasAluminum) rawMaterialWeight += 1.5;
+  if (hasTitanium) rawMaterialWeight += 1;
+  if (hasCopperBrass) rawMaterialWeight += 1;
+  if (hasOtherMat) rawMaterialWeight += 1;
+
+  let materialScore = 0;
+  let materialReasonPart: string;
+
+  if (rawMaterials.length === 0) {
+    materialScore = 0;
+    materialReasonPart =
+      "No published material compatibility list; material coverage not scored.";
+  } else {
+    const maxRawMaterialWeight = 2 + 2 + 1.5 + 1.5 + 1 + 1 + 1; // 10
+    const normalised =
+      maxRawMaterialWeight > 0
+        ? (3 * rawMaterialWeight) / maxRawMaterialWeight
+        : 0;
+    materialScore = Math.round(
+      Math.max(0, Math.min(3, normalised)),
+    );
+
+    const matLabels: string[] = [];
+    if (hasMild) matLabels.push("mild steel");
+    if (has4130) matLabels.push("4130 chromoly");
+    if (hasStainless) matLabels.push("stainless (304/316)");
+    if (hasAluminum) matLabels.push("aluminum");
+    if (hasTitanium) matLabels.push("titanium");
+    if (hasCopperBrass) matLabels.push("copper/brass/bronze");
+    if (hasOtherMat) matLabels.push("other documented alloys");
+
+    materialReasonPart =
+      matLabels.length > 0
+        ? `Documented material coverage includes: ${matLabels.join(", ")}.`
+        : "Materials list provided but could not be mapped to known categories.";
+  }
+
+  const wallScore = Math.max(
+    0,
+    Math.min(9, thicknessScore + materialScore),
+  );
 
   scoreBreakdown.push({
     criteria: "Wall Thickness Capability",
     points: wallScore,
     maxPoints: 9,
-    reasoning: wallRaw
-      ? `${wallRaw}" wall capacity for 1.75" OD DOM`
-      : "No published wall thickness data",
+    reasoning: `${wallReasonPart} ${materialReasonPart}`.trim(),
   });
   totalScore += wallScore;
 
   // 7. Die Selection & Shapes (8 points)
+  const rawDieShapes = Array.isArray((bender as any).dieShapes)
+    ? ((bender as any).dieShapes as unknown[])
+    : [];
+
+  // Normalise to lower-case slugs like "round", "square", "emt", etc.
+  const dieShapeSlugs = rawDieShapes
+    .map((s) => String(s || "").trim().toLowerCase())
+    .filter(Boolean);
+
+  // We intentionally omit solid-only coverage: if a machine can run round tube,
+  // solids will generally fit; we do not double-count that.
+  const DIE_SHAPE_WEIGHTS: Record<string, number> = {
+    round: 3, // round tube
+    pipe: 1.5, // NPS pipe
+    emt: 1, // EMT
+    "metric-round": 1, // metric round tube
+    square: 1.5,
+    "metric-square": 1, // metric square/rect tube
+    rectangular: 1.5,
+    "flat-bar": 0.5,
+    hex: 0.5,
+    other: 0.5, // documented specialty shapes not otherwise listed
+    "plastic-pressure": 1, // plastic pressure dies for protecting soft alloys
+  };
+
+  const DIE_SHAPE_LABELS: Record<string, string> = {
+    round: "round tube",
+    pipe: "pipe (NPS)",
+    emt: "EMT",
+    "metric-round": "metric round tube",
+    square: "square tube",
+    "metric-square": "metric square/rect tube",
+    rectangular: "rectangular tube",
+    "flat-bar": "flat bar",
+    hex: "hex",
+    other: "other documented shapes",
+    "plastic-pressure": "plastic pressure dies",
+  };
+
+  const uniqueShapeSlugs = Array.from(new Set(dieShapeSlugs)).filter(
+    (slug) => slug in DIE_SHAPE_WEIGHTS,
+  );
+
   let dieScore = 0;
-  if (brand === "Hossfeld") dieScore = 8;
-  else if (brand === "RogueFab") dieScore = 7;
-  else if (brand === "Pro-Tools") dieScore = 6;
-  else if (brand === "JD2") dieScore = 5;
-  else if (brand === "SWAG Off Road") dieScore = 4;
-  else dieScore = 3;
+  let dieReason: string;
+
+  if (uniqueShapeSlugs.length === 0) {
+    // No documented die coverage; we do not guess here.
+    dieReason =
+      "No published die shape/standard coverage; die ecosystem not scored in this category.";
+  } else {
+    const rawWeight = uniqueShapeSlugs.reduce(
+      (sum, slug) => sum + (DIE_SHAPE_WEIGHTS[slug] ?? 0),
+      0,
+    );
+    const maxRawWeight = Object.values(DIE_SHAPE_WEIGHTS).reduce(
+      (sum, w) => sum + w,
+      0,
+    );
+
+    const normalised =
+      maxRawWeight > 0 ? (8 * rawWeight) / maxRawWeight : 0;
+    dieScore = Math.round(Math.max(0, Math.min(8, normalised)));
+
+    const labelList = uniqueShapeSlugs
+      .map((slug) => DIE_SHAPE_LABELS[slug] ?? slug)
+      .join(", ");
+
+    dieReason = `Documented die coverage includes: ${labelList}. Scored via a weighted checklist of shapes and standards (round, square/rectangular, EMT, metric tube, pipe, flat bar, hex, and plastic pressure dies).`;
+  }
 
   scoreBreakdown.push({
     criteria: "Die Selection & Shapes",
     points: dieScore,
     maxPoints: 8,
-    reasoning:
-      brand === "Hossfeld"
-        ? "Extensive universal tooling system"
-        : dieScore >= 6
-        ? "Good variety of die shapes available"
-        : "Basic die selection",
+    reasoning: dieReason,
   });
   totalScore += dieScore;
 
@@ -314,23 +486,54 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   });
   totalScore += businessScore;
 
-  // 9. Modular Clamping System (6 points)
-  let clampingScore = 0;
-  const model = String(bender.model ?? "");
-  if (brand === "RogueFab" && model.includes("M6")) {
-    clampingScore = 6;
+  // 9. Upgrade Path & Modularity (6 points)
+  const rawUpgradeFlags = Array.isArray((bender as any).upgradeFlags)
+    ? ((bender as any).upgradeFlags as unknown[])
+    : [];
+
+  const upgradeFlagSlugs = rawUpgradeFlags
+    .map((f) => String(f || "").trim().toLowerCase())
+    .filter(Boolean);
+
+  const ALLOWED_UPGRADE_FLAGS: Record<string, string> = {
+    "power-upgrade": "power upgrade (manual to hydraulic/electric)",
+    "shared-die-family": "shared die family with other current models",
+    "mandrel-upgrade": "mandrel upgrade kit",
+    "cnc-automation": "CNC/automation package",
+    "angle-programmer": "angle-programmer / digital indexing add-on",
+    "modular-clamp": "modular clamping/fixturing system",
+    "premium-stand-cart": "premium stand/cart that adds functionality",
+    "other-upgrade": "other documented upgrade path",
+  };
+
+  const uniqueUpgradeFlags = Array.from(new Set(upgradeFlagSlugs)).filter(
+    (slug) => slug in ALLOWED_UPGRADE_FLAGS,
+  );
+
+  let upgradeScore = 0;
+  let upgradeReason: string;
+
+  if (uniqueUpgradeFlags.length === 0) {
+    upgradeReason =
+      "No documented upgrade or modular options beyond the base machine.";
+  } else {
+    const rawCount = Math.min(uniqueUpgradeFlags.length, 6);
+    upgradeScore = rawCount; // 0–6 directly, capped at 6
+
+    const labels = uniqueUpgradeFlags
+      .map((slug) => ALLOWED_UPGRADE_FLAGS[slug] ?? slug)
+      .join(", ");
+
+    upgradeReason = `Documented upgrade/modularity options include: ${labels}. Scored via a checklist of manufacturer-supported upgrades rather than brand assumptions.`;
   }
 
   scoreBreakdown.push({
-    criteria: "Modular Clamping System",
-    points: clampingScore,
+    criteria: "Upgrade Path & Modularity",
+    points: upgradeScore,
     maxPoints: 6,
-    reasoning:
-      clampingScore === 6
-        ? "Advanced modular clamping system for versatile workpiece orientation"
-        : "Standard clamping system",
+    reasoning: upgradeReason,
   });
-  totalScore += clampingScore;
+  totalScore += upgradeScore;
 
   // 10. Mandrel Availability (4 points)
   let mandrelScore = 0;
@@ -347,7 +550,7 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   }
 
   scoreBreakdown.push({
-    criteria: "Mandrel Availability",
+    criteria: "Mandrel Compatibility",
     points: mandrelScore,
     maxPoints: 4,
     reasoning:

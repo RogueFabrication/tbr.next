@@ -35,9 +35,9 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     key: "valueForMoney",
     name: "Value for Money",
     maxPoints: 20,
-    method: "tier",
+    method: "scaled",
     tagline:
-      "Legacy tier-based scoring by complete setup price range (v1; being rebuilt around features-per-dollar).",
+      "Scaled features-per-dollar scoring based on a minimum safe operating system cost (frame, die, hydraulics, and required stand).",
   },
   {
     index: 2,
@@ -62,7 +62,7 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     maxPoints: 10,
     method: "binary",
     tagline:
-      "Binary scoring based on catalog origin listed as USA (v1; moving to FTC-style tiers).",
+      "Binary scoring using a strict, FTC-style Made in USA standard: only machines documented as all or virtually all US-made receive points.",
   },
   {
     index: 5,
@@ -100,7 +100,7 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     index: 9,
     key: "upgradePathModularity",
     name: "Upgrade Path & Modularity",
-    maxPoints: 5,
+    maxPoints: 6,
     method: "brand",
     tagline: "Brand-based scoring on upgrades, modularity, and growth path.",
   },
@@ -116,7 +116,7 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     index: 11,
     key: "sBendCapability",
     name: "S-Bend Capability",
-    maxPoints: 3,
+    maxPoints: 2,
     method: "binary",
     tagline:
       "Binary scoring for true back-to-back S-bends (≤0.125\" straight between bends).",
@@ -232,6 +232,15 @@ export function getProductScore(
     wallThicknessCapacity: p.wallThicknessCapacity ?? p.maxWall,
     features: Array.isArray(p.features) ? p.features : [],
     materials: Array.isArray(p.materials) ? p.materials : [],
+    // Die ecosystem coverage: admin should configure this as a
+    // "select all that apply" checklist in the product overlay, using
+    // slugs like "round", "pipe", "emt", "metric-round", "square",
+    // "metric-square", "rectangular", "flat-bar", "hex", "other",
+    // and "plastic-pressure".
+    dieShapes: Array.isArray((p as any).dieShapes)
+      ? (p as any).dieShapes
+      : [],
+
     // Mandrel availability in the new admin grid is stored as "mandrel" with
     // values like "Available" / "None". We let this override any legacy
     // "mandrelBender" field so admin edits always win.

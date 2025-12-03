@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getAllTubeBendersWithOverlay, findTubeBenderWithOverlay } from "../../../lib/catalogOverlay";
 import { slugOf, titleOf, slugForProduct } from "../../../lib/ids";
 import { getProductScore, TOTAL_POINTS } from "../../../lib/scoring";
+import ReviewAuditPanel from "../../../components/ReviewAuditPanel";
 
 const fallbackImg = "/images/products/placeholder.png";
 type Product = {
@@ -470,6 +471,9 @@ export default function ReviewPage({ params }: PageProps) {
           </aside>
         </div>
       </section>
+      {/* Audit trail & citations */}
+      {product && <ReviewAuditPanel product={product as any} />}
+
       <div className="mt-6 text-sm text-muted-foreground">
         <Link className="underline" href="/reviews">Back to all reviews</Link>
       </div>
