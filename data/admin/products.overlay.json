@@ -317,7 +317,12 @@
     "wiperDieSupportSource1": "www.RogueFab.com Specs",
     "wiperDieSupportSource2": "2025-12-01",
     "wiperDieSupportNotes": "MFR Catalog online",
-    "wiperDieSupportUserCode": "JRG1001"
+    "wiperDieSupportUserCode": "JRG1001",
+    "dieShapes": "Round tube, Square tube, EMT, Metric round / square, Plastic / urethane pressure dies, Other, Pipe",
+    "dieShapesSource1": "Other = hexagon, www.RogueFab.com Specs",
+    "dieShapesSource2": "2025-12-01",
+    "dieShapesNotes": "MFR Catalog online",
+    "dieShapesUserCode": "JRG1001"
   },
   "roguefab-m605": {
     "highlights": "Mid expensive from this MFR, test data",
@@ -333,7 +338,24 @@
     "sBendCapability": "Yes",
     "country": "",
     "powerType": "Air / Hydraulic + Electric / Hydraulic",
-    "image": "m605.jpg"
+    "image": "m605.jpg",
+    "maxCapacity": "2.00",
+    "bendAngle": "195",
+    "wallThicknessCapacity": ".875",
+    "dieShapes": "Round tube, Pipe, Square tube, EMT, Metric round / square, Plastic / urethane pressure dies, Other",
+    "dieShapesSource1": "other = hexagon",
+    "hasPowerUpgradePath": "Yes",
+    "lengthStop": "Yes",
+    "rotationIndexing": "Yes",
+    "angleMeasurement": "Yes",
+    "autoStop": "Yes",
+    "thickWallUpgrade": "Yes",
+    "thinWallUpgrade": "Yes",
+    "wiperDieSupport": "No",
+    "clrRange": "2.5-6.0",
+    "cycleTime": "13 sec",
+    "weight": "395",
+    "materials": "Mild steel, Stainless steel, 4130 chromoly, Brass, Copper, Titanium, Aluminum"
   },
   "roguefab-m625": {
     "framePriceMin": "1285",

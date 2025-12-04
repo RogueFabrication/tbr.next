@@ -233,20 +233,24 @@ export function getProductScore(
     wallThicknessCapacity: p.wallThicknessCapacity ?? p.maxWall,
     features: Array.isArray(p.features) ? p.features : [],
     materials: Array.isArray(p.materials) ? p.materials : [],
-    // Die ecosystem coverage: admin should configure this as a
-    // "select all that apply" checklist in the product overlay, using
-    // slugs like "round", "pipe", "emt", "metric-round", "square",
-    // "metric-square", "rectangular", "flat-bar", "hex", "other",
-    // and "plastic-pressure".
-    dieShapes: Array.isArray((p as any).dieShapes)
-      ? (p as any).dieShapes
-      : [],
+    // Die shapes used for "Die Selection & Shapes" scoring (comma-separated)
+    dieShapes: (p as any).dieShapes,
 
     // Mandrel availability in the new admin grid is stored as "mandrel" with
     // values like "Available" / "None". We let this override any legacy
     // "mandrelBender" field so admin edits always win.
     mandrelBender: p.mandrel ?? p.mandrelBender,
     sBendCapability,
+
+    // Upgrade path & modularity flags (YES/NO in admin, normalized in engine)
+    hasPowerUpgradePath: (p as any).hasPowerUpgradePath,
+    lengthStop: (p as any).lengthStop,
+    rotationIndexing: (p as any).rotationIndexing,
+    angleMeasurement: (p as any).angleMeasurement,
+    autoStop: (p as any).autoStop,
+    thickWallUpgrade: (p as any).thickWallUpgrade,
+    thinWallUpgrade: (p as any).thinWallUpgrade,
+    wiperDieSupport: (p as any).wiperDieSupport,
   };
 
   try {

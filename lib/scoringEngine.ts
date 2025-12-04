@@ -59,7 +59,8 @@ export const SCORING_CRITERIA: ScoringCriteria[] = [
   {
     name: "Die Selection & Shapes",
     maxPoints: 8,
-    description: "Available die shapes: round, square, rectangle, EMT, flat bar, hexagon, combination dies",
+    description:
+      "Available die coverage for round tube, pipe, square/rectangular tube, EMT, metric tube, plus optional plastic/urethane pressure dies",
     weight: 0.08,
   },
   {
@@ -114,6 +115,15 @@ export interface ScoringInput {
   materials?: string[];
   dieShapes?: string[];
   upgradeFlags?: string[];
+  // Upgrade path & modularity flags (YES/NO in admin; normalized in engine)
+  hasPowerUpgradePath?: string | boolean;
+  lengthStop?: string | boolean;
+  rotationIndexing?: string | boolean;
+  angleMeasurement?: string | boolean;
+  autoStop?: string | boolean;
+  thickWallUpgrade?: string | boolean;
+  thinWallUpgrade?: string | boolean;
+  wiperDieSupport?: string | boolean;
   mandrelBender?: string;
   sBendCapability?: boolean;
   [key: string]: unknown;
@@ -386,82 +396,74 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   totalScore += wallScore;
 
   // 7. Die Selection & Shapes (8 points)
-  const rawDieShapes = Array.isArray((bender as any).dieShapes)
-    ? ((bender as any).dieShapes as unknown[])
-    : [];
+  //
+  // Uses explicit, manufacturer-documented die shape coverage from `dieShapes`.
+  // Admin stores this as a comma-separated list of labels. We score ONLY tube/pipe
+  // families and EMT/metric/plastic pressure dies. Solid shapes (flat bar, hex, etc.)
+  // are effectively assumed when round tube exists and are NOT part of this score.
+  //
+  // Shape weights (max 8 pts total):
+  // - Round tube: 3 pts
+  // - Square tube: 1 pt
+  // - Rectangular tube: 1 pt
+  // - EMT: 1 pt
+  // - Metric round / square: 1 pt
+  // - Plastic / urethane pressure dies: 1 pt
+  //
+  // "Other" is allowed in admin for documentation but does not add points.
 
-  // Normalise to lower-case slugs like "round", "square", "emt", etc.
-  const dieShapeSlugs = rawDieShapes
-    .map((s) => String(s || "").trim().toLowerCase())
-    .filter(Boolean);
+  const rawDieShapes = (bender as any).dieShapes;
+  let dieTokens: string[] = [];
 
-  // We intentionally omit solid-only coverage: if a machine can run round tube,
-  // solids will generally fit; we do not double-count that.
-  const DIE_SHAPE_WEIGHTS: Record<string, number> = {
-    round: 3, // round tube
-    pipe: 1.5, // NPS pipe
-    emt: 1, // EMT
-    "metric-round": 1, // metric round tube
-    square: 1.5,
-    "metric-square": 1, // metric square/rect tube
-    rectangular: 1.5,
-    "flat-bar": 0.5,
-    hex: 0.5,
-    other: 0.5, // documented specialty shapes not otherwise listed
-    "plastic-pressure": 1, // plastic pressure dies for protecting soft alloys
-  };
+  if (Array.isArray(rawDieShapes)) {
+    dieTokens = rawDieShapes
+      .map((s: unknown) => String(s ?? "").trim())
+      .filter(Boolean);
+  } else if (typeof rawDieShapes === "string") {
+    dieTokens = rawDieShapes
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
 
-  const DIE_SHAPE_LABELS: Record<string, string> = {
-    round: "round tube",
-    pipe: "pipe (NPS)",
-    emt: "EMT",
-    "metric-round": "metric round tube",
-    square: "square tube",
-    "metric-square": "metric square/rect tube",
-    rectangular: "rectangular tube",
-    "flat-bar": "flat bar",
-    hex: "hex",
-    other: "other documented shapes",
-    "plastic-pressure": "plastic pressure dies",
-  };
+  const dieSet = new Set(dieTokens);
 
-  const uniqueShapeSlugs = Array.from(new Set(dieShapeSlugs)).filter(
-    (slug) => slug in DIE_SHAPE_WEIGHTS,
-  );
+  const hasRound = dieSet.has("Round tube");
+  const hasPipe = dieSet.has("Pipe");
+  const hasSquare = dieSet.has("Square tube");
+  const hasRectangular = dieSet.has("Rectangular tube");
+  const hasEmt = dieSet.has("EMT");
+  const hasMetric = dieSet.has("Metric round / square");
+  const hasPlastic = dieSet.has("Plastic / urethane pressure dies");
 
   let dieScore = 0;
-  let dieReason: string;
+  if (hasRound) dieScore += 3;
+  if (hasPipe) dieScore += 1;
+  if (hasSquare) dieScore += 1;
+  if (hasRectangular) dieScore += 1;
+  if (hasEmt) dieScore += 1;
+  if (hasMetric) dieScore += 1;
+  if (hasPlastic) dieScore += 1;
 
-  if (uniqueShapeSlugs.length === 0) {
-    // No documented die coverage; we do not guess here.
-    dieReason =
-      "No published die shape/standard coverage; die ecosystem not scored in this category.";
-  } else {
-    const rawWeight = uniqueShapeSlugs.reduce(
-      (sum, slug) => sum + (DIE_SHAPE_WEIGHTS[slug] ?? 0),
-      0,
-    );
-    const maxRawWeight = Object.values(DIE_SHAPE_WEIGHTS).reduce(
-      (sum, w) => sum + w,
-      0,
-    );
+  if (dieScore > 8) dieScore = 8;
 
-    const normalised =
-      maxRawWeight > 0 ? (8 * rawWeight) / maxRawWeight : 0;
-    dieScore = Math.round(Math.max(0, Math.min(8, normalised)));
-
-    const labelList = uniqueShapeSlugs
-      .map((slug) => DIE_SHAPE_LABELS[slug] ?? slug)
-      .join(", ");
-
-    dieReason = `Documented die coverage includes: ${labelList}. Scored via a weighted checklist of shapes and standards (round, square/rectangular, EMT, metric tube, pipe, flat bar, hex, and plastic pressure dies).`;
-  }
+  const coveredShapes: string[] = [];
+  if (hasRound) coveredShapes.push("round tube");
+  if (hasPipe) coveredShapes.push("pipe");
+  if (hasSquare) coveredShapes.push("square tube");
+  if (hasRectangular) coveredShapes.push("rectangular tube");
+  if (hasEmt) coveredShapes.push("EMT");
+  if (hasMetric) coveredShapes.push("metric round/square");
+  if (hasPlastic) coveredShapes.push("plastic/urethane pressure dies");
 
   scoreBreakdown.push({
     criteria: "Die Selection & Shapes",
     points: dieScore,
     maxPoints: 8,
-    reasoning: dieReason,
+    reasoning:
+      coveredShapes.length === 0
+        ? "No documented tube/pipe die families beyond basic or unspecified coverage."
+        : `Documented die coverage for: ${coveredShapes.join(", ")}.`,
   });
   totalScore += dieScore;
 

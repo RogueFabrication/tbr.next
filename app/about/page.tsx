@@ -87,18 +87,16 @@ export default function AboutPage({ searchParams }: AboutPageProps) {
           vague vibes. Each product is evaluated on things like:
         </p>
         <ul className="list-disc pl-6 text-sm text-muted-foreground space-y-1">
-          <li>
-            Value for money (features-per-dollar using a conservative{" "}
-            <span className="font-medium">minimum safe operating system cost</span>:
-            frame, starter die, required hydraulics, and required stand)
-          </li>
+          <li>Value for money based on a minimum safe system cost (frame, starter die, hydraulics, and any required stand)</li>
+          <li>Ease of use &amp; setup (power options, ergonomics, documented setup complexity)</li>
           <li>Max tube diameter and bend radius capability</li>
-          <li>Country of origin and manufacturing</li>
+          <li>Country of origin and manufacturing (using an FTC-style Made in USA standard)</li>
           <li>Maximum bend angle</li>
-          <li>Wall thickness capability (for 1.75&quot; DOM)</li>
-          <li>Die selection and shapes</li>
+          <li>Wall thickness capability for 1.75&quot; DOM</li>
+          <li>Die selection and shapes (round tube, pipe, square/rectangular, EMT, metric, plastic/urethane pressure dies)</li>
           <li>Years in business and track record</li>
-          <li>Upgrade path, modularity, and supported mandrel options</li>
+          <li>Upgrade path &amp; modularity (power upgrades, LRA control, and bend-quality tooling)</li>
+          <li>Mandrel compatibility</li>
           <li>S-bend capability and real-world flexibility</li>
         </ul>
         <p className="text-sm text-muted-foreground">
@@ -108,6 +106,51 @@ export default function AboutPage({ searchParams }: AboutPageProps) {
           </Link>{" "}
           page. The short version: there is one scoring model, it&apos;s
           transparent, and it applies to everyone.
+        </p>
+      </section>
+
+      <section className="mb-8 space-y-3">
+        <h2 className="text-xl font-semibold">What we don&apos;t score (yet) &amp; how to check it yourself</h2>
+        <p className="text-sm text-muted-foreground">
+          There are two things most buyers care about that we do <span className="font-semibold">not</span> turn into points:
+          lead times and day-to-day service quality. Those matter a lot, but they are hard to measure fairly across brands because
+          they change over time and usually aren&apos;t published in a consistent way.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Instead of guessing, we do two things:
+        </p>
+        <ul className="list-disc pl-6 text-sm text-muted-foreground space-y-1">
+          <li>
+            On the home page comparison table we show each manufacturer&apos;s{" "}
+            <span className="font-semibold">Google rating and review count</span> (little star icons). That data is
+            pulled from their Google Business listing and is{" "}
+            <span className="font-semibold">not part of the 100-point score</span>; it&apos;s context only.
+          </li>
+          <li>
+            We tell you exactly how to test lead times and service for yourself before you commit to a machine.
+          </li>
+        </ul>
+        <p className="text-sm text-muted-foreground">
+          Once you&apos;ve narrowed things down to a short list, call the top manufacturers you&apos;re considering and ask:
+        </p>
+        <ul className="list-disc pl-6 text-sm text-muted-foreground space-y-1">
+          <li>
+            <span className="font-semibold">Current lead time for the machine</span> you&apos;re looking at.
+          </li>
+          <li>
+            <span className="font-semibold">Lead time for the dies you&apos;ll actually use</span> (for example, 1.50&quot; or 1.75&quot; roll cage sizes,
+            plus any oddball sizes you know you&apos;ll need).
+          </li>
+          <li>
+            Whether those lead times are for <span className="font-semibold">in-stock items or built-to-order</span>, and how often they slip.
+          </li>
+          <li>
+            How they handle <span className="font-semibold">tech support, wrong parts, and warranty issues</span> if something goes wrong.
+          </li>
+        </ul>
+        <p className="text-sm text-muted-foreground">
+          Pay attention to the whole interaction: how quickly they answer, how specific the answers are, and whether they seem rushed or annoyed.
+          That&apos;s usually the same experience you&apos;ll get when you&apos;re down a die and a project is on the line.
         </p>
       </section>
 

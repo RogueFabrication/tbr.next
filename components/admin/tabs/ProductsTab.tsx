@@ -27,6 +27,7 @@ type Product = {
   warranty?: string;
   image?: string;
   highlights?: string; // stored comma-separated for simple admin editing
+  dieShapes?: string; // comma-separated list of die shape families
 
   // Review content fields (all optional; stored in overlay)
   pros?: string;
@@ -230,6 +231,12 @@ export default function ProductsTab() {
         'Max wall for 1.75" DOM used for wall thickness scoring. Use the thickest published spec.',
     },
     {
+      key: "dieShapes",
+      label: "* Die shapes (select all that apply)",
+      description:
+        "Check every tube/pipe family this machine has a real, supported die line for. Use 'Other' only when a major shape type isn't covered by the options.",
+    },
+    {
       key: "mandrel",
       label: "* Mandrel option",
       description:
@@ -390,6 +397,18 @@ export default function ProductsTab() {
     parseMoney(selectedProduct.hydraulicPriceMax) +
     parseMoney(selectedProduct.standPriceMax);
 
+              const DIE_SHAPE_OPTIONS = [
+                "Round tube (OD)",
+                "Pipe sizes (NPS)",
+                "Square tube",
+                "Rectangular tube",
+                "EMT",
+                "Metric round",
+                "Metric square / rectangular",
+                "Plastic / urethane pressure dies",
+                "Other",
+              ] as const;
+
               const MATERIAL_OPTIONS = [
                 "Mild steel",
                 "Stainless steel",
@@ -399,6 +418,14 @@ export default function ProductsTab() {
                 "Copper",
                 "Brass",
               ] as const;
+
+  const dieShapesRaw = selectedProduct.dieShapes ?? "";
+  const selectedDieShapes = new Set(
+    String(dieShapesRaw)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
 
   const materialsRaw = selectedProduct.materials ?? "";
               const selectedMaterials = new Set(
@@ -417,6 +444,17 @@ export default function ProductsTab() {
                 }
                 const serialized = Array.from(next).join(", ");
     updateProduct(selectedProduct.id, "materials", serialized);
+  };
+
+  const toggleDieShape = (label: string) => {
+    const next = new Set(selectedDieShapes);
+    if (next.has(label)) {
+      next.delete(label);
+    } else {
+      next.add(label);
+    }
+    const serialized = Array.from(next).join(", ");
+    updateProduct(selectedProduct.id, "dieShapes", serialized);
   };
 
             return (
@@ -552,8 +590,15 @@ export default function ProductsTab() {
                               updateProduct(selectedProduct.id, "powerType", val)
                             }
                           />
+                        ) : row.key === "dieShapes" ? (
+                          <DieShapesMultiSelect
+                            value={value}
+                            onChange={(val) =>
+                              updateProduct(selectedProduct.id, "dieShapes", val)
+                            }
+                          />
                         ) : (
-                        <EditableField
+                          <EditableField
                             value={value}
                             onSave={(val) =>
                               updateProduct(selectedProduct.id, row.key, val)
@@ -882,6 +927,37 @@ export default function ProductsTab() {
                           );
                         })}
                       </div>
+
+                      <div className="mt-4">
+                        <div className="mb-1 font-semibold text-gray-800">
+                          Die shapes supported
+                        </div>
+                        <p className="mb-2 text-[0.7rem] text-gray-500">
+                          Check all die shapes this machine supports with rotary-draw tooling.
+                          This drives the Die Selection &amp; Shapes scoring category
+                          (including Pipe vs tube, EMT, metric, and plastic/urethane pressure dies).
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {DIE_SHAPE_OPTIONS.map((label) => {
+                            const active = selectedDieShapes.has(label);
+                            return (
+                              <button
+                                key={label}
+                                type="button"
+                                onClick={() => toggleDieShape(label)}
+                                className={[
+                                  "rounded-full border px-2.5 py-0.5 text-[0.7rem]",
+                                  active
+                                    ? "border-sky-500 bg-sky-50 text-sky-800"
+                                    : "border-gray-300 bg-gray-50 text-gray-700",
+                                ].join(" ")}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1004,6 +1080,67 @@ function EditableField({
       className="cursor-pointer hover:bg-gray-50 px-2 py-1 rounded text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
     >
       {value || '-'}
+    </div>
+  );
+}
+
+function DieShapesMultiSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  // Canonical labels; scoring will depend on these exact strings.
+  const SHAPES = [
+    "Round tube",
+    "Pipe",
+    "Square tube",
+    "Rectangular tube",
+    "EMT",
+    "Metric round / square",
+    "Plastic / urethane pressure dies",
+    "Other",
+  ] as const;
+
+  const selected = new Set(
+    String(value ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
+
+  const toggle = (label: string) => {
+    const next = new Set(selected);
+    if (next.has(label)) {
+      next.delete(label);
+    } else {
+      next.add(label);
+    }
+    const serialized = Array.from(next).join(", ");
+    onChange(serialized);
+  };
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {SHAPES.map((label) => {
+        const active = selected.has(label);
+        return (
+          <button
+            key={label}
+            type="button"
+            onClick={() => toggle(label)}
+            className={[
+              "rounded-full border px-2.5 py-0.5 text-[0.7rem]",
+              active
+                ? "border-emerald-500 bg-emerald-50 text-emerald-800"
+                : "border-gray-300 bg-gray-50 text-gray-700",
+            ].join(" ")}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
