@@ -70,9 +70,10 @@ export const SCORING_CRITERIA: ScoringCriteria[] = [
   },
   {
     name: "Upgrade Path & Modularity",
-    maxPoints: 6,
-    description: "Upgrade ecosystem, modular clamping options, and how far the platform can grow with the shop",
-    weight: 0.06,
+    maxPoints: 8,
+    description:
+      "Documented upgrade path for power, LRA control (length, rotation, angle), and bend-quality tooling (thin/thick wall, wipers).",
+    weight: 0.08,
   },
   {
     name: "Mandrel Compatibility",
@@ -486,52 +487,97 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   });
   totalScore += businessScore;
 
-  // 9. Upgrade Path & Modularity (6 points)
-  const rawUpgradeFlags = Array.isArray((bender as any).upgradeFlags)
-    ? ((bender as any).upgradeFlags as unknown[])
-    : [];
-
-  const upgradeFlagSlugs = rawUpgradeFlags
-    .map((f) => String(f || "").trim().toLowerCase())
-    .filter(Boolean);
-
-  const ALLOWED_UPGRADE_FLAGS: Record<string, string> = {
-    "power-upgrade": "power upgrade (manual to hydraulic/electric)",
-    "shared-die-family": "shared die family with other current models",
-    "mandrel-upgrade": "mandrel upgrade kit",
-    "cnc-automation": "CNC/automation package",
-    "angle-programmer": "angle-programmer / digital indexing add-on",
-    "modular-clamp": "modular clamping/fixturing system",
-    "premium-stand-cart": "premium stand/cart that adds functionality",
-    "other-upgrade": "other documented upgrade path",
+  // 9. Upgrade Path & Modularity (8 points)
+  //
+  // This category is driven by explicit yes/no style fields coming from the
+  // catalog/overlay, not brand names. Each documented upgrade earns 1 point:
+  //
+  //   A. Power upgrade path (1)
+  //      hasPowerUpgradePath
+  //
+  //   B. LRA control path (3)
+  //      hasLengthStop
+  //      hasRotationIndexing
+  //      hasAngleMeasurement (+1)
+  //      hasAutoStop (+1)
+  //
+  //   C. Bend-quality tooling upgrades (3)
+  //      hasThickWallUpgrade
+  //      hasThinWallUpgrade
+  //      hasWiperDieSupport
+  //
+  // Total possible: 8 points.
+  const normalizeFlag = (v: unknown): boolean => {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "string") {
+      const s = v.trim().toLowerCase();
+      return s === "yes" || s === "y" || s === "true" || s === "1";
+    }
+    return false;
   };
 
-  const uniqueUpgradeFlags = Array.from(new Set(upgradeFlagSlugs)).filter(
-    (slug) => slug in ALLOWED_UPGRADE_FLAGS,
+  const hasPowerUpgradePath = normalizeFlag(
+    (bender as any).hasPowerUpgradePath ?? (bender as any).powerUpgradePath,
+  );
+  const hasLengthStop = normalizeFlag(
+    (bender as any).hasLengthStop ?? (bender as any).lengthStop,
+  );
+  const hasRotationIndexing = normalizeFlag(
+    (bender as any).hasRotationIndexing ?? (bender as any).rotationIndexing,
+  );
+  const hasAngleMeasurement = normalizeFlag(
+    (bender as any).hasAngleMeasurement ?? (bender as any).angleMeasurement,
+  );
+  const hasAutoStop = normalizeFlag(
+    (bender as any).hasAutoStop ?? (bender as any).autoStop,
+  );
+  const hasThickWallUpgrade = normalizeFlag(
+    (bender as any).hasThickWallUpgrade ?? (bender as any).thickWallUpgrade,
+  );
+  const hasThinWallUpgrade = normalizeFlag(
+    (bender as any).hasThinWallUpgrade ?? (bender as any).thinWallUpgrade,
+  );
+  const hasWiperDieSupport = normalizeFlag(
+    (bender as any).hasWiperDieSupport ?? (bender as any).wiperDieSupport,
   );
 
   let upgradeScore = 0;
-  let upgradeReason: string;
 
-  if (uniqueUpgradeFlags.length === 0) {
-    upgradeReason =
-      "No documented upgrade or modular options beyond the base machine.";
-  } else {
-    const rawCount = Math.min(uniqueUpgradeFlags.length, 6);
-    upgradeScore = rawCount; // 0–6 directly, capped at 6
+  // A. Power upgrade path (1)
+  if (hasPowerUpgradePath) upgradeScore += 1;
 
-    const labels = uniqueUpgradeFlags
-      .map((slug) => ALLOWED_UPGRADE_FLAGS[slug] ?? slug)
-      .join(", ");
+  // B. LRA control path (3)
+  if (hasLengthStop) upgradeScore += 1;
+  if (hasRotationIndexing) upgradeScore += 1;
+  if (hasAngleMeasurement) upgradeScore += 1;
+  if (hasAutoStop) upgradeScore += 1;
 
-    upgradeReason = `Documented upgrade/modularity options include: ${labels}. Scored via a checklist of manufacturer-supported upgrades rather than brand assumptions.`;
-  }
+  // C. Bend-quality tooling upgrades (3)
+  if (hasThickWallUpgrade) upgradeScore += 1;
+  if (hasThinWallUpgrade) upgradeScore += 1;
+  if (hasWiperDieSupport) upgradeScore += 1;
+
+  // Hard clamp to 8 in case multiple legacy fields overlap.
+  if (upgradeScore > 8) upgradeScore = 8;
+
+  const upgradePieces: string[] = [];
+  if (hasPowerUpgradePath) upgradePieces.push("power upgrade path");
+  if (hasLengthStop) upgradePieces.push("length backstop / stop system");
+  if (hasRotationIndexing) upgradePieces.push("rotation indexing for bend-to-bend alignment");
+  if (hasAngleMeasurement) upgradePieces.push("built-in or machine-mounted angle readout");
+  if (hasAutoStop) upgradePieces.push("auto-stop for bend angle");
+  if (hasThickWallUpgrade) upgradePieces.push("thick-wall specific tooling or capacity upgrades");
+  if (hasThinWallUpgrade) upgradePieces.push("thin-wall / AL / stainless bend-quality upgrades");
+  if (hasWiperDieSupport) upgradePieces.push("support for wiper dies");
 
   scoreBreakdown.push({
     criteria: "Upgrade Path & Modularity",
     points: upgradeScore,
-    maxPoints: 6,
-    reasoning: upgradeReason,
+    maxPoints: 8,
+    reasoning:
+      upgradePieces.length === 0
+        ? "No documented upgrade path beyond the base configuration for power, LRA control, or bend-quality tooling."
+        : `Documented upgrade path covering: ${upgradePieces.join(", ")}.`,
   });
   totalScore += upgradeScore;
 

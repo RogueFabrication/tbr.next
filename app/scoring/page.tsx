@@ -381,20 +381,140 @@ export default function ScoringPage() {
                     {cat.key === "upgradePathModularity" && (
                       <>
                         <p>
-                          Evaluates how far the machine can grow with the shop
-                          based on documented upgrade and modularity options:
-                          power upgrades, shared die families, mandrel
-                          upgrades, automation, modular clamping, and related
-                          add-ons.
+                          Points for documented power upgrades, LRA control
+                          (length, rotation, angle, auto-stop), and
+                          bend-quality tooling (thin/thick wall, wipers).
+                        </p>
+                        <p className="font-medium text-gray-900">
+                          What this measures
                         </p>
                         <p>
-                          Scoring is a simple checklist: each documented,
-                          manufacturer-supported upgrade flag (for example a
-                          published power upgrade path or mandrel kit) adds to
-                          this category, up to the point cap. Machines with no
-                          published upgrade or modular options beyond the base
-                          configuration receive zero points here and are
+                          This category answers: &quot;If I buy the base
+                          machine, how far can it grow with me?&quot;
+                        </p>
+                        <p>
+                          We only award points for upgrades the manufacturer
+                          actually documents for that frame:
+                        </p>
+                        <ul className="ml-4 list-disc space-y-1">
+                          <li>
+                            <span className="font-semibold">
+                              Power upgrade path (1 pt)
+                            </span>{" "}
+                            – Documented upgrades from manual to hydraulic,
+                            higher-output power units, or similar
+                            factory-supported power options.
+                          </li>
+                          <li>
+                            <span className="font-semibold">
+                              LRA control path – length, rotation, angle (up to
+                              4 pts)
+                            </span>
+                            <ul className="ml-4 mt-1 list-disc space-y-0.5">
+                              <li>
+                                <span className="font-medium">Length:</span>{" "}
+                                backstops or length-stop systems for repeatable
+                                bend locations.
+                              </li>
+                              <li>
+                                <span className="font-medium">Rotation:</span>{" "}
+                                indexing fixtures or systems for repeatable
+                                bend-to-bend rotation.
+                              </li>
+                              <li>
+                                <span className="font-medium">
+                                  Angle readout:
+                                </span>{" "}
+                                built-in or securely machine-mounted angle
+                                measurement (beyond &quot;hold a loose angle
+                                cube on the tube&quot;).
+                              </li>
+                              <li>
+                                <span className="font-medium">
+                                  Auto-stop for bend angle:
+                                </span>{" "}
+                                where the machine can be set to stop at a target
+                                angle. This behaves like a light version of CNC
+                                on angle only and is rare but extremely valuable
+                                in real shops.
+                              </li>
+                            </ul>
+                          </li>
+                          <li>
+                            <span className="font-semibold">
+                              Bend-quality tooling upgrades (up to 3 pts)
+                            </span>
+                            <ul className="ml-4 mt-1 list-disc space-y-0.5">
+                              <li>
+                                <span className="font-medium">
+                                  Thick-wall upgrades:
+                                </span>{" "}
+                                tooling or options specifically aimed at heavier
+                                wall / high-load work (longer or reinforced
+                                pressure dies, torque/pressure upgrades, etc.).
+                              </li>
+                              <li>
+                                <span className="font-medium">
+                                  Thin-wall upgrades:
+                                </span>{" "}
+                                tooling or options aimed at improving bend
+                                quality on thin wall, aluminum, stainless, or
+                                similar (for example translating/rolling pressure
+                                dies or other manufacturer-claimed thin-wall
+                                improvements).
+                              </li>
+                              <li>
+                                <span className="font-medium">
+                                  Wiper die support:
+                                </span>{" "}
+                                documented support for wiper dies on that frame.
+                              </li>
+                            </ul>
+                          </li>
+                        </ul>
+                        <p className="mt-2">
+                          <span className="font-semibold">
+                            Mandrel compatibility is not scored here.
+                          </span>{" "}
+                          Mandrel systems are important enough that they live in
+                          their own category. This upgrade section only measures
+                          add-ons that sit around the core machine (power, LRA
+                          control, and thin/thick-wall tooling), so we
+                          don&apos;t double-count mandrel.
+                        </p>
+                        <p className="mt-2 font-medium text-gray-900">
+                          Scoring
+                        </p>
+                        <p>
+                          Each documented, manufacturer-supported upgrade flag
+                          adds points up to a hard cap of 8.
+                        </p>
+                        <p>
+                          Machines with no published upgrade or modular options
+                          beyond the base configuration receive 0/8 here and are
                           treated as &quot;fixed capability&quot; platforms.
+                        </p>
+                        <p className="mt-2 font-medium text-gray-900">
+                          Data sources &amp; verification
+                        </p>
+                        <ul className="ml-4 list-disc space-y-1">
+                          <li>
+                            Manufacturer product pages and technical spec
+                            sections
+                          </li>
+                          <li>
+                            Official manuals and installation/upgrade guides
+                          </li>
+                          <li>
+                            Manufacturer documentation of upgrade kits,
+                            thin/thick-wall packages, and wiper die options
+                          </li>
+                        </ul>
+                        <p className="mt-2">
+                          When an upgrade is not documented, we mark it as
+                          &quot;Not published&quot; in the admin and do not
+                          assume it exists. We would rather under-score than
+                          guess.
                         </p>
                       </>
                     )}

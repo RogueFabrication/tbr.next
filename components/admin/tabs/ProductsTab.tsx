@@ -47,6 +47,16 @@ type Product = {
   standPriceMin?: string;
   standPriceMax?: string;
 
+  // Upgrade path & modularity flags (YES/NO in admin; normalized to booleans in scoring)
+  hasPowerUpgradePath?: string | boolean;
+  lengthStop?: string | boolean;
+  rotationIndexing?: string | boolean;
+  angleMeasurement?: string | boolean;
+  autoStop?: string | boolean;
+  thickWallUpgrade?: string | boolean;
+  thinWallUpgrade?: string | boolean;
+  wiperDieSupport?: string | boolean;
+
   // Raw citations field (line-based, parsed into structured citations server-side)
   citationsRaw?: string;
 
@@ -231,6 +241,62 @@ export default function ProductsTab() {
       label: "* S-Bend capable (Yes/No)",
       description:
         "Yes/No: documented ability to create a true S-bend: two opposite-direction bends with effectively no straight between them. For scoring we require ≤0.125\" straight (tangent) between bends, proven by specs, photos, or repeatable test pieces. Marketing examples with several inches of straight between bends do NOT qualify.",
+      options: ["", "Yes", "No"],
+    },
+    {
+      key: "hasPowerUpgradePath",
+      label: "* Power upgrade path (Yes/No)",
+      description:
+        "Does the manufacturer document a supported power upgrade path on this frame (e.g. manual → hydraulic kit, higher-output power unit, or similar factory-supported power option)? Only mark Yes when it is clearly documented for this model.",
+      options: ["", "Yes", "No"],
+    },
+    {
+      key: "lengthStop",
+      label: "* Length stop / backstop (Yes/No)",
+      description:
+        "Documented length stop or backstop system for repeatable bend locations along the tube. Only mark Yes when the manufacturer sells or documents it as a supported accessory or configuration for this model.",
+      options: ["", "Yes", "No"],
+    },
+    {
+      key: "rotationIndexing",
+      label: "* Rotation indexing (Yes/No)",
+      description:
+        "Documented rotation indexing or fixture that helps the user repeat bend-to-bend rotation (LRA 'R'). This can be a chuck-style indexer, pinned index plate, or similar system sold for this machine.",
+      options: ["", "Yes", "No"],
+    },
+    {
+      key: "angleMeasurement",
+      label: "* Built-in angle measurement (Yes/No)",
+      description:
+        "Built-in or securely machine-mounted angle measurement for bend angle (LRA 'A'). Loose angle cubes or protractors that simply sit on the tube do not count; the indicator must be part of, or lock solidly to, the machine.",
+      options: ["", "Yes", "No"],
+    },
+    {
+      key: "autoStop",
+      label: "* Auto stop for bend angle (Yes/No)",
+      description:
+        "Auto-stop or similar feature that lets the user set a target bend angle and have the machine stop itself at that angle. Behaves like a light version of CNC on angle only. Rare but extremely valuable; only mark Yes when this is clearly documented.",
+      options: ["", "Yes", "No"],
+    },
+    {
+      key: "thickWallUpgrade",
+      label: "* Thick-wall upgrade tooling (Yes/No)",
+      description:
+        "Any manufacturer-documented upgrade specifically aimed at improving performance on heavier wall / high-load work (for example longer or reinforced pressure dies, torque or pressure upgrades, or heavy-duty thick-wall packages for this frame).",
+      options: ["", "Yes", "No"],
+    },
+    {
+      key: "thinWallUpgrade",
+      label: "* Thin-wall / quality upgrade tooling (Yes/No)",
+      description:
+        "Any manufacturer-documented upgrade specifically aimed at improving bend quality on thin wall, aluminum, stainless, or similar (for example translating or rolling pressure dies, or other thin-wall focused upgrades claimed to reduce wrinkling / distortion).",
+      options: ["", "Yes", "No"],
+    },
+    {
+      key: "wiperDieSupport",
+      label: "* Wiper die support (Yes/No)",
+      description:
+        "Documented ability to use wiper dies on this frame. Important for thin-wall and high-precision work. We still keep mandrel in its own scoring category; this flag only covers the presence of wiper die support as an additional bend-quality lever.",
       options: ["", "Yes", "No"],
     },
     {

@@ -100,9 +100,10 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     index: 9,
     key: "upgradePathModularity",
     name: "Upgrade Path & Modularity",
-    maxPoints: 6,
-    method: "brand",
-    tagline: "Brand-based scoring on upgrades, modularity, and growth path.",
+    maxPoints: 8,
+    method: "tier",
+    tagline:
+      "Points for documented power upgrades, LRA control (length stops, rotation indexing, angle readout, auto-stop), and bend-quality tooling (thin/thick wall, wipers).",
   },
   {
     index: 10,
