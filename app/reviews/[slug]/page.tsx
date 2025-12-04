@@ -6,6 +6,33 @@ import { getProductScore, TOTAL_POINTS } from "../../../lib/scoring";
 import ReviewAuditPanel from "../../../components/ReviewAuditPanel";
 
 const fallbackImg = "/images/products/placeholder.png";
+
+/**
+ * Derive a filesystem-safe image path from a product slug or id.
+ *
+ * Rules:
+ * - Lowercase
+ * - Only allow [a–z0–9-]
+ * - Replace all other characters with "-"
+ * - Collapse repeated "-" and trim from ends
+ * - Final path: /images/products/{safe-slug}.jpg
+ *
+ * If everything sanitizes to an empty string, fall back to a shared placeholder.
+ */
+function imagePathForSlug(slugOrId: string | null | undefined): string {
+  const raw = (slugOrId ?? "").toLowerCase().trim();
+  if (!raw) return fallbackImg;
+
+  const safe = raw
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  if (!safe) return fallbackImg;
+
+  return `/images/products/${safe}.jpg`;
+}
+
 type Product = {
   id: string;
   slug?: string;
@@ -107,7 +134,7 @@ export default function ReviewPage({ params }: PageProps) {
 
   const title = titleOf(product);
   const compareHref = `/compare?ids=${encodeURIComponent(product.id)}`;
-  const img = product.image || fallbackImg;
+  const img = imagePathForSlug(product.slug ?? product.id);
   const { total: score, breakdown } = getProductScore(product as any);
   
   // Parse review content fields

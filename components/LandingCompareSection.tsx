@@ -6,6 +6,29 @@ import { TOTAL_POINTS } from "../lib/scoring";
 
 const FALLBACK_IMG = "/images/products/placeholder.png";
 
+/**
+ * Derive a filesystem-safe image path from a product slug.
+ *
+ * Rules:
+ * - Lowercase
+ * - Only allow [a–z0–9-]
+ * - Replace all other characters with "-"
+ * - Collapse repeated "-" and trim from ends
+ * - Final path: /images/products/{safe-slug}.jpg
+ *
+ * If the slug is missing or sanitizes to an empty string, we fall back to
+ * the shared placeholder image so nothing breaks.
+ */
+function imagePathForSlug(slug: string | null | undefined): string {
+  const raw = (slug ?? "").toLowerCase().trim();
+  if (!raw) return FALLBACK_IMG;
+
+  const safe = raw.replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  if (!safe) return FALLBACK_IMG;
+
+  return `/images/products/${safe}.jpg`;
+}
+
 export type LandingCompareRow = {
   id: string;
   slug: string;
@@ -22,6 +45,11 @@ export type LandingCompareRow = {
   sBend?: boolean | null;
   /** Optional product image; falls back if missing */
   image?: string | null;
+  /** Optional brand-level Google rating data (read-only, not part of the score) */
+  brandGoogleRating?: number | null;
+  brandGoogleReviewCount?: number | null;
+  brandGoogleReviewsUrl?: string | null;
+  brandGoogleRatingCheckedAt?: string | null;
 };
 
 type Props = {
@@ -421,13 +449,7 @@ export default function LandingCompareSection({ rows }: Props) {
             )}
             {filtered.map((row, index) => {
               const rank = index + 1;
-              const rawImg = (row.image ?? "").trim();
-              const imgSrc =
-                rawImg.length === 0
-                  ? FALLBACK_IMG
-                  : rawImg.startsWith("/images/")
-                  ? rawImg
-                  : `/images/products/${rawImg.replace(/^\/+/, "")}`;
+              const imgSrc = imagePathForSlug(row.slug);
               const mandrelOn = isMandrelOn(row.mandrel);
               const sBendOn = isSBendOn(row.sBend);
               return (
@@ -459,6 +481,51 @@ export default function LandingCompareSection({ rows }: Props) {
                         {(row.brand || row.model) && (
                           <div className="text-xs text-gray-500">
                             {[row.brand, row.model].filter(Boolean).join(" ")}
+                          </div>
+                        )}
+
+                        {row.brandGoogleRating != null && row.brandGoogleReviewCount != null && row.brandGoogleReviewCount > 0 && (
+                          <div className="mt-1 flex items-center gap-1 text-[0.65rem] text-gray-600">
+                            {/* Stars */}
+                            <div className="flex items-center" aria-hidden="true">
+                              {Array.from({ length: 5 }).map((_, i) => {
+                                const filled = i < Math.round(row.brandGoogleRating ?? 0);
+                                return (
+                                  <svg
+                                    key={i}
+                                    className={`h-3.5 w-3.5 ${
+                                      filled ? "text-amber-500" : "text-gray-300"
+                                    }`}
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.955a1 1 0 00.95.69h4.162c.967 0 1.371 1.24.588 1.81l-3.37 2.449a1 1 0 00-.364 1.118l1.286 3.955c.3.922-.755 1.688-1.54 1.118l-3.37-2.45a1 1 0 00-1.175 0l-3.37 2.45c-.785.57-1.84-.196-1.54-1.118l1.286-3.955a1 1 0 00-.364-1.118L2.014 9.382c-.783-.57-.379-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.955z" />
+                                  </svg>
+                                );
+                              })}
+                            </div>
+
+                            {/* Rating number */}
+                            <span className="font-medium">
+                              {row.brandGoogleRating.toFixed(2)}
+                            </span>
+
+                            {/* Review count (linked if we have a URL) */}
+                            {row.brandGoogleReviewsUrl ? (
+                              <a
+                                href={row.brandGoogleReviewsUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[0.6rem] text-gray-500 underline-offset-2 hover:underline"
+                                title="View Google reviews (opens in a new tab)"
+                              >
+                                ({row.brandGoogleReviewCount.toLocaleString()} reviews)
+                              </a>
+                            ) : (
+                              <span className="text-[0.6rem] text-gray-500">
+                                ({row.brandGoogleReviewCount.toLocaleString()} reviews)
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -524,6 +591,13 @@ export default function LandingCompareSection({ rows }: Props) {
           </tbody>
         </table>
       </div>
+
+      <p className="mt-2 text-[0.7rem] text-gray-500">
+        Star icons under each brand come from that manufacturer&apos;s Google Business
+        listing (rating and review count). They are{" "}
+        <span className="font-semibold">not part of the TubeBenderReviews score</span>;
+        they&apos;re shown for context only.
+      </p>
     </section>
   );
 }

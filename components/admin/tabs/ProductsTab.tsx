@@ -156,6 +156,24 @@ export default function ProductsTab() {
     );
   }
 
+  // Derive a filesystem-safe slug for the image filename.
+  // - Lowercase
+  // - Only allow [a-z0-9-]
+  // - Replace everything else with "-"
+  // - Collapse repeated "-" and trim from ends
+  // If we somehow end up empty, fall back to "missing-slug" so the path is still stable.
+  const rawSlug = String(
+    (selectedProduct as any).slug ?? selectedProduct.id ?? ""
+  )
+    .toLowerCase()
+    .trim();
+
+  const safeSlug =
+    rawSlug
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "missing-slug";
+
   const specRows: {
     key: string;
     label: string;
@@ -346,11 +364,16 @@ export default function ProductsTab() {
             <span className="font-semibold">*</span> directly influence scoring.
           </p>
           <p className="mt-1 text-xs text-gray-400">
-            Image path expects a file under{" "}
+            Product photos are automatic. Each model loads{" "}
+            <code className="font-mono text-[0.7rem]">
+              /images/products/&lt;slug-or-id&gt;.jpg
+            </code>{" "}
+            from{" "}
             <code className="font-mono text-[0.7rem]">
               /public/images/products/
             </code>
-            . Changing the path without a matching file will break the photo.
+            . The filename is derived from the slug or id using only lowercase
+            letters, numbers, and dashes.
           </p>
         </div>
         <div className="flex flex-col gap-1 text-sm md:items-end">
@@ -464,7 +487,7 @@ export default function ProductsTab() {
                             }
                           />
                         ) : (
-                          <EditableField
+                        <EditableField
                             value={value}
                             onSave={(val) =>
                               updateProduct(selectedProduct.id, row.key, val)
@@ -472,7 +495,7 @@ export default function ProductsTab() {
                             options={row.options}
                           />
                         )}
-                      </div>
+                  </div>
 
                       <div className="border-r border-gray-200 pr-2">
                         <input
@@ -487,7 +510,7 @@ export default function ProductsTab() {
                           }
                           placeholder="Spec page, PDF, catalog ref, etc."
                         />
-                  </div>
+                      </div>
 
                       <div className="border-r border-gray-200 pr-2">
                         <input
@@ -502,7 +525,7 @@ export default function ProductsTab() {
                           }
                           placeholder="YYYY-MM-DD"
                         />
-                      </div>
+                  </div>
 
                       <div className="border-r border-gray-200 pr-2">
                         <input
@@ -517,7 +540,7 @@ export default function ProductsTab() {
                           }
                           placeholder="How we found it, or cross-references"
                         />
-                  </div>
+                      </div>
 
                       <div className="border-r border-gray-200 pr-2">
                         <input
@@ -799,14 +822,21 @@ export default function ProductsTab() {
             <div className="mt-3 grid gap-3 text-xs md:grid-cols-2">
               <div>
                 <div className="mb-1 font-semibold text-gray-800">
-                  Image path
+                  Image file (read-only)
                 </div>
-                <EditableField
-                  value={selectedProduct.image ?? ""}
-                  onSave={(val) =>
-                    updateProduct(selectedProduct.id, "image", val)
-                  }
-                />
+                <p className="text-[0.7rem] text-gray-500">
+                  Place this model&apos;s primary photo at:
+                </p>
+                <code className="mt-1 block rounded bg-gray-50 px-2 py-1 font-mono text-[0.7rem] text-gray-800">
+                  /public/images/products/{safeSlug}.jpg
+                </code>
+                <p className="mt-1 text-[0.65rem] text-gray-500">
+                  It will be served on the site as{" "}
+                  <code className="font-mono text-[0.7rem]">
+                    /images/products/{safeSlug}.jpg
+                  </code>
+                  .
+                </p>
               </div>
               <div>
                 <div className="mb-1 font-semibold text-gray-800">

@@ -37,7 +37,9 @@ export default function AboutPage({ searchParams }: AboutPageProps) {
       )}
 
       {/* Contact Form - Primary CTA */}
-      <ContactForm />
+      <section id="contact">
+        <ContactForm />
+      </section>
 
       <div className="mt-12 space-y-8">
         <h1 className="text-3xl font-semibold mb-6">About & Disclosures</h1>
@@ -85,14 +87,18 @@ export default function AboutPage({ searchParams }: AboutPageProps) {
           vague vibes. Each product is evaluated on things like:
         </p>
         <ul className="list-disc pl-6 text-sm text-muted-foreground space-y-1">
-          <li>Value for money (complete setup price bands)</li>
+          <li>
+            Value for money (features-per-dollar using a conservative{" "}
+            <span className="font-medium">minimum safe operating system cost</span>:
+            frame, starter die, required hydraulics, and required stand)
+          </li>
           <li>Max tube diameter and bend radius capability</li>
           <li>Country of origin and manufacturing</li>
           <li>Maximum bend angle</li>
           <li>Wall thickness capability (for 1.75&quot; DOM)</li>
           <li>Die selection and shapes</li>
           <li>Years in business and track record</li>
-          <li>Upgrade path, modular clamping, and mandrel options</li>
+          <li>Upgrade path, modularity, and supported mandrel options</li>
           <li>S-bend capability and real-world flexibility</li>
         </ul>
         <p className="text-sm text-muted-foreground">
@@ -129,6 +135,63 @@ export default function AboutPage({ searchParams }: AboutPageProps) {
           some outbound links may be affiliate links, which means the site could
           earn a small commission if you buy through them. If/when that happens,
           those links will be labeled clearly.
+        </p>
+      </section>
+
+      <section className="mb-8 space-y-3" id="external-reviews">
+        <h2 className="text-xl font-semibold">External reviews &amp; Google ratings</h2>
+        <p className="text-sm text-muted-foreground">
+          On some pages you&apos;ll see a small line of star icons under a brand name,
+          showing that manufacturer&apos;s{" "}
+          <span className="font-medium">Google rating and review count</span>. This
+          data is pulled from the public Google Business listing for that brand,
+          sampled periodically.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Those Google ratings are there for context only. They are{" "}
+          <span className="font-semibold">not part of the TubeBenderReviews score</span>{" "}
+          and do not affect the 100-point scoring system. We don&apos;t adjust or
+          curate those reviews, and we can&apos;t guarantee that the rating you see on
+          this site is always the very latest number shown inside Google at the exact
+          moment you visit.
+        </p>
+      </section>
+
+      <section className="mb-8 space-y-3">
+        <h2 className="text-xl font-semibold">What we don&apos;t score (yet)</h2>
+        <p className="text-sm text-muted-foreground">
+          There are a few things most buyers care deeply about that we{" "}
+          <span className="font-semibold">do not convert into points</span>, because
+          they&apos;re hard to verify consistently from public data:
+        </p>
+        <ul className="list-disc pl-6 text-sm text-muted-foreground space-y-1">
+          <li>Real-world lead times for machines and dies</li>
+          <li>Day-to-day customer service quality and responsiveness</li>
+        </ul>
+        <p className="text-sm text-muted-foreground">
+          These can change quickly and are rarely documented in a way that would
+          survive a legal or engineering-level audit. Rather than guessing or
+          relying on rumors, we keep them out of the score entirely.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Instead, we recommend you{" "}
+          <span className="font-semibold">test these yourself</span> with the
+          short-list of manufacturers you&apos;re considering:
+        </p>
+        <ul className="list-disc pl-6 text-sm text-muted-foreground space-y-1">
+          <li>
+            Call or email and ask specifically about{" "}
+            <span className="font-medium">current lead times for machines and dies</span>.
+          </li>
+          <li>
+            Pay attention to how quickly they respond, how clearly they answer, and
+            whether they&apos;re transparent about delays or backorders.
+          </li>
+        </ul>
+        <p className="text-sm text-muted-foreground">
+          You&apos;ll learn more from a 5–10 minute conversation with each brand
+          than any website can reliably quantify, and you can combine that with the
+          objective specs and scoring here.
         </p>
       </section>
 
