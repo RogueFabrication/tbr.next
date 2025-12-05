@@ -393,6 +393,16 @@
     "bendAngleSource1": "www.RogueFab.com",
     "bendAngleNotes": "MFR web page, nav to model, specs on web page",
     "bendAngleSource2": "2025-11-28",
-    "bendAngleUserCode": "JRG1001"
+    "bendAngleUserCode": "JRG1001",
+    "hasPowerUpgradePath": "Yes",
+    "lengthStop": "Yes",
+    "rotationIndexing": "Yes",
+    "angleMeasurement": "Yes",
+    "autoStop": "Yes",
+    "thickWallUpgrade": "Yes",
+    "thinWallUpgrade": "Yes",
+    "wiperDieSupport": "No",
+    "dieShapes": "Round tube, Pipe, Square tube, EMT, Metric round / square, Plastic / urethane pressure dies, Other",
+    "dieShapesSource1": "other = hexagon"
   }
 }

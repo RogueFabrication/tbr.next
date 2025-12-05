@@ -598,7 +598,7 @@ export default function ProductsTab() {
                             }
                           />
                         ) : (
-                          <EditableField
+                        <EditableField
                             value={value}
                             onSave={(val) =>
                               updateProduct(selectedProduct.id, row.key, val)
@@ -926,37 +926,6 @@ export default function ProductsTab() {
                             </button>
                           );
                         })}
-                      </div>
-
-                      <div className="mt-4">
-                        <div className="mb-1 font-semibold text-gray-800">
-                          Die shapes supported
-                        </div>
-                        <p className="mb-2 text-[0.7rem] text-gray-500">
-                          Check all die shapes this machine supports with rotary-draw tooling.
-                          This drives the Die Selection &amp; Shapes scoring category
-                          (including Pipe vs tube, EMT, metric, and plastic/urethane pressure dies).
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {DIE_SHAPE_OPTIONS.map((label) => {
-                            const active = selectedDieShapes.has(label);
-                            return (
-                              <button
-                                key={label}
-                                type="button"
-                                onClick={() => toggleDieShape(label)}
-                                className={[
-                                  "rounded-full border px-2.5 py-0.5 text-[0.7rem]",
-                                  active
-                                    ? "border-sky-500 bg-sky-50 text-sky-800"
-                                    : "border-gray-300 bg-gray-50 text-gray-700",
-                                ].join(" ")}
-                              >
-                                {label}
-                              </button>
-                            );
-                          })}
-                        </div>
                       </div>
                     </div>
                   </div>
