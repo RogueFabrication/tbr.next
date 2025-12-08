@@ -44,9 +44,9 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     key: "easeOfUseSetup",
     name: "Ease of Use & Setup",
     maxPoints: 12,
-    method: "scaled",
+    method: "tier",
     tagline:
-      "Deterministic scoring from documented power configuration and portability (fixed/portable/rolling) using a published 0–12 point formula.",
+      "12-point category combining a base ergonomics/operation score with explicit portability tiers (fixed vs portable vs rolling).",
   },
   {
     index: 3,
@@ -226,6 +226,10 @@ export function getProductScore(
     // categories and entryPrice.
     priceRange: undefined,
     powerType: p.powerType,
+    // Portability is a structured admin field used to award 0–3 pts inside
+    // the Ease of Use & Setup category. We pass the raw label through and let
+    // the scoring engine normalise it.
+    portability: (p as any).portability,
     // Capacity: prefer a dedicated maxCapacity field, then capacity.
     maxCapacity: p.maxCapacity ?? p.capacity,
     // Country of origin often appears as country/countryOfOrigin/madeIn.
@@ -235,7 +239,17 @@ export function getProductScore(
     // best-effort proxy when that is how the catalog stores it.
     wallThicknessCapacity: p.wallThicknessCapacity ?? p.maxWall,
     features: Array.isArray(p.features) ? p.features : [],
-    materials: Array.isArray(p.materials) ? p.materials : [],
+    // Materials may be stored as an array or as a comma-separated string in
+    // the overlay. We normalise to a string[] so the engine can score
+    // coverage reliably.
+    materials: Array.isArray(p.materials)
+      ? p.materials
+      : typeof p.materials === "string"
+      ? p.materials
+          .split(",")
+          .map((s: string) => s.trim())
+          .filter(Boolean)
+      : [],
     // Die shapes used for "Die Selection & Shapes" scoring (comma-separated)
     dieShapes: (p as any).dieShapes,
 

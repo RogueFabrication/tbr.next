@@ -253,94 +253,73 @@ export default function ScoringPage() {
                     {cat.key === "easeOfUseSetup" && (
                       <>
                         <p>
-                          Scores how straightforward the machine is to set up
-                          and run day to day using two inputs from the spec
-                          table: its power configuration and how it actually
-                          lives in your shop (fixed, portable, or rolling).
+                          Evaluates setup complexity, ergonomics, and how much
+                          effort it takes to go from crate to first accurate
+                          bend, plus how easy the machine is to move around
+                          your shop.
                         </p>
                         <p>
-                          The scoring is fully deterministic and can be
-                          reproduced by anyone with the same published specs:
+                          This category is scored out of 12 points in two
+                          pieces:
                         </p>
                         <ul className="ml-4 list-disc space-y-1">
                           <li>
-                            <span className="font-semibold">
-                              Step 1 – Power configuration (0–5 raw points)
-                            </span>
-                            <ul className="ml-4 mt-1 list-disc space-y-0.5">
-                              <li>Unknown / blank power type: 1 point</li>
-                              <li>Manual only: 2 points</li>
-                              <li>
-                                Manual + documented hydraulic option (both
-                                manual and hydraulic listed in specs): 4 points
-                              </li>
-                              <li>
-                                Hydraulic-only system: 4 points
-                              </li>
-                              <li>
-                                Electric / hydraulic power pack (electric +
-                                hydraulic): 5 points
-                              </li>
-                            </ul>
+                            <span className="font-medium">
+                              Base ergonomics &amp; operation (up to 9 pts)
+                            </span>{" "}
+                            – a legacy, brand/power-type heuristic that
+                            reflects how refined the controls and layout are in
+                            real use (for example vertical, foot-operated
+                            designs vs. more basic, low-slung hand-crank
+                            layouts). This will eventually be replaced with a
+                            purely spec-driven formula, but for now it is
+                            applied consistently across all machines and
+                            surfaced in each product&apos;s score breakdown.
                           </li>
                           <li>
-                            <span className="font-semibold">
-                              Step 2 – Portability (0–3 raw points)
-                            </span>
+                            <span className="font-medium">
+                              Portability tier (0–3 pts)
+                            </span>{" "}
+                            – a simple, explicit mapping based on the
+                            admin-entered portability field:
                             <ul className="ml-4 mt-1 list-disc space-y-0.5">
                               <li>
-                                <code className="font-mono text-[0.7rem]">
-                                  fixed
-                                </code>{" "}
-                                – must be anchored or otherwise fixed in place:
-                                0 points
+                                <span className="font-semibold">0 pts</span> –
+                                fixed base that must be mounted to the floor or
+                                a bench to use.
                               </li>
                               <li>
-                                <code className="font-mono text-[0.7rem]">
-                                  portable
-                                </code>{" "}
-                                – can be moved but no rolling cart/stand is
-                                documented: 1 point
+                                <span className="font-semibold">1 pt</span> –
+                                portable base (can be moved between locations)
+                                but with no factory rolling option.
                               </li>
                               <li>
-                                <code className="font-mono text-[0.7rem]">
-                                  portable_with_rolling_option
-                                </code>{" "}
-                                – portable base plus a documented rolling
-                                cart/stand option: 2 points
+                                <span className="font-semibold">2 pts</span> –
+                                portable base with an{" "}
+                                <span className="font-semibold">
+                                  optional rolling cart or rolling base
+                                </span>{" "}
+                                documented for that machine.
                               </li>
                               <li>
-                                <code className="font-mono text-[0.7rem]">
-                                  rolling_standard
-                                </code>{" "}
-                                – rolling stand or cart is part of the standard
-                                configuration: 3 points
+                                <span className="font-semibold">3 pts</span> –
+                                rolling base as a{" "}
+                                <span className="font-semibold">
+                                  standard feature
+                                </span>{" "}
+                                (ships on wheels, ready to roll around the
+                                shop).
                               </li>
                             </ul>
-                          </li>
-                          <li>
-                            <span className="font-semibold">
-                              Step 3 – Combine and scale
-                            </span>
-                            <div className="ml-4 mt-1 space-y-0.5">
-                              <p>
-                                Add the power and portability raw points
-                                (0–8). That raw value is then scaled to this
-                                category&apos;s 0–12 point cap:
-                              </p>
-                              <p className="font-mono text-[0.7rem]">
-                                Ease of Use score = round((raw / 8) × 12)
-                              </p>
-                              <p>
-                                Because the inputs come directly from the same
-                                fields shown in the admin and, eventually, on
-                                public spec tables, any two people using the
-                                same data will arrive at the same Ease of Use
-                                &amp; Setup score.
-                              </p>
-                            </div>
                           </li>
                         </ul>
+                        <p className="mt-2">
+                          The final Ease of Use &amp; Setup score is the sum of
+                          the base ergonomics/operation score and the
+                          portability tier, clamped to a maximum of 12/12. The
+                          per-machine breakdown on each review page shows the
+                          exact points awarded and the portability tier used.
+                        </p>
                       </>
                     )}
                     {cat.key === "maxDiameterRadius" && (

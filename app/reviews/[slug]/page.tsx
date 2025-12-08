@@ -111,8 +111,12 @@ function labelFor(k: keyof Product): string {
   return map[k] ?? String(k);
 }
 
-type PageProps = { params: { slug: string } };
-export default function ReviewPage({ params }: PageProps) {
+type PageProps = {
+  params: { slug: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
+};
+
+export default function ReviewPage({ params, searchParams }: PageProps) {
   // Read from the merged catalog so admin overlay edits are reflected.
   const all = getAllTubeBendersWithOverlay() as Product[];
   const lookup = buildLookup(all);
@@ -136,6 +140,16 @@ export default function ReviewPage({ params }: PageProps) {
   const compareHref = `/compare?ids=${encodeURIComponent(product.id)}`;
   const img = imagePathForSlug(product.slug ?? product.id);
   const { total: score, breakdown } = getProductScore(product as any);
+
+  // Allow the score breakdown panel to auto-open when navigated via
+  // .../reviews/[slug]?score=details (used by the "pt details" links).
+  const scoreParam = searchParams?.score;
+  const scoreDetailsOpen =
+    typeof scoreParam === "string"
+      ? scoreParam === "details"
+      : Array.isArray(scoreParam)
+      ? scoreParam.includes("details")
+      : false;
   
   // Parse review content fields
   const splitLines = (raw?: string | null): string[] =>
@@ -426,7 +440,10 @@ export default function ReviewPage({ params }: PageProps) {
               )}
 
               {Array.isArray(breakdown) && breakdown.length > 0 && (
-                <details className="mb-3 text-xs md:text-sm">
+                <details
+                  className="mb-3 text-xs md:text-sm"
+                  open={scoreDetailsOpen}
+                >
                   <summary className="cursor-pointer select-none font-medium">
                     Score breakdown
                   </summary>
