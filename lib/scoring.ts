@@ -44,8 +44,9 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     key: "easeOfUseSetup",
     name: "Ease of Use & Setup",
     maxPoints: 12,
-    method: "brand",
-    tagline: "Feature-based scoring on documented setup and usability.",
+    method: "scaled",
+    tagline:
+      "Deterministic scoring from documented power configuration and portability (fixed/portable/rolling) using a published 0–12 point formula.",
   },
   {
     index: 3,
@@ -78,15 +79,17 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     name: "Wall Thickness Capability",
     maxPoints: 9,
     method: "scaled",
-    tagline: "Scaled scoring based on thickest published 1.75\" OD wall capacity.",
+    tagline:
+      "Scaled scoring based on thickest published 1.75\" OD wall capacity plus a small bonus for documented material coverage (mild, 4130, stainless, aluminum, etc.).",
   },
   {
     index: 7,
     key: "dieSelectionShapes",
     name: "Die Selection & Shapes",
     maxPoints: 8,
-    method: "brand",
-    tagline: "Brand-based scoring for die variety, shapes, and availability.",
+    method: "tier",
+    tagline:
+      "Tier-based scoring on documented tube/pipe die families (round tube, pipe, square, rectangular, EMT, metric, plastic/urethane).",
   },
   {
     index: 8,

@@ -135,6 +135,14 @@ export default function ProductsTab() {
     }
   };
 
+  // Local-only update helper so we can keep inputs responsive while typing
+  // without refetching the entire product list on every keystroke.
+  const updateProductLocalField = (id: string, field: string, value: string) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
+    );
+  };
+
   // Default to first product once loaded
   useEffect(() => {
     if (!selectedId && products.length > 0) {
@@ -216,6 +224,20 @@ export default function ProductsTab() {
         "Manual",
         "Air / Hydraulic",
         "Electric / Hydraulic",
+      ],
+    },
+    {
+      key: "portability",
+      label: "* Portability / base configuration",
+      description:
+        "How the machine lives in the shop. This directly feeds the Ease of Use & Setup score: fixed, portable, portable with rolling option, or rolling as standard.",
+      // These values are normalized tokens consumed by the scoring engine.
+      // They are intentionally plain to keep scoring deterministic.
+      options: [
+        "fixed",
+        "portable",
+        "portable_with_rolling_option",
+        "rolling_standard",
       ],
     },
     {
@@ -612,7 +634,14 @@ export default function ProductsTab() {
                         <input
                           className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-[0.75rem] text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
                           value={source1}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            updateProductLocalField(
+                              selectedProduct.id,
+                              source1Key,
+                              e.target.value,
+                            );
+                          }}
+                          onBlur={(e) =>
                             updateProduct(
                               selectedProduct.id,
                               source1Key,
@@ -627,7 +656,14 @@ export default function ProductsTab() {
                         <input
                           className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-[0.75rem] text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
                           value={source2}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            updateProductLocalField(
+                              selectedProduct.id,
+                              source2Key,
+                              e.target.value,
+                            );
+                          }}
+                          onBlur={(e) =>
                             updateProduct(
                               selectedProduct.id,
                               source2Key,
@@ -642,7 +678,14 @@ export default function ProductsTab() {
                         <input
                           className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-[0.75rem] text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
                           value={notes}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            updateProductLocalField(
+                              selectedProduct.id,
+                              notesKey,
+                              e.target.value,
+                            );
+                          }}
+                          onBlur={(e) =>
                             updateProduct(
                               selectedProduct.id,
                               notesKey,
@@ -657,7 +700,14 @@ export default function ProductsTab() {
                         <input
                           className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-[0.75rem] text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
                           value={userCode}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            updateProductLocalField(
+                              selectedProduct.id,
+                              userKey,
+                              e.target.value.toUpperCase(),
+                            );
+                          }}
+                          onBlur={(e) =>
                             updateProduct(
                               selectedProduct.id,
                               userKey,

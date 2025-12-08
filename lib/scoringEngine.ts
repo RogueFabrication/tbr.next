@@ -107,6 +107,18 @@ export interface ScoringInput {
   model?: string;
   priceRange?: string;
   powerType?: string;
+  /**
+   * Portability / how the machine lives in the shop.
+   *
+   * Expected normalized values:
+   * - "fixed"                        → 0  (must be anchored / immovable for use)
+   * - "portable"                     → 1  (self-contained & movable, no rolling option)
+   * - "portable_with_rolling_option" → 2  (portable, with a documented cart / rolling upgrade)
+   * - "rolling" or "rolling_standard"→ 3  (ships on wheels / designed to roll around the shop)
+   *
+   * Anything else is treated conservatively as 0 until the admin overlay is wired up.
+   */
+  portability?: string;
   maxCapacity?: string;
   countryOfOrigin?: string;
   bendAngle?: number;
@@ -169,23 +181,92 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   totalScore += valueScore;
 
   // 2. Ease of Use & Setup (12 points)
+  //
+  // NEW: this is fully data-driven from power configuration + portability,
+  // not brand names. All inputs come from the catalog / admin:
+  //
+  //   - powerType (string from admin, e.g. "Manual", "Manual + Air / Hydraulic")
+  //   - portability (one of: fixed, portable, portable_with_rolling_option, rolling_standard)
+  //
+  // Power configuration raw points (0–5):
+  //   - Unknown / blank                         → 1
+  //   - Manual only                             → 2
+  //   - Manual + Hydraulic (upgrade path)       → 4
+  //   - Hydraulic only                          → 4
+  //   - Electric / Hydraulic                    → 5
+  //
+  // Portability raw points (0–3):
+  //   - fixed                                   → 0
+  //   - portable                                → 1
+  //   - portable_with_rolling_option            → 2
+  //   - rolling_standard                        → 3
+  //
+  // Raw total: 0–8, rescaled linearly to 0–12 points.
   let easeScore = 0;
   const brand = String(bender.brand ?? "");
   const powerType = String(bender.powerType ?? "");
-  if (brand === "RogueFab") easeScore = 11;
-  else if (brand === "SWAG Off Road") easeScore = 10;
-  else if (brand === "JD2") easeScore = 9;
-  else if (powerType.includes("Manual")) easeScore = 8;
-  else if (powerType.includes("Hydraulic")) easeScore = 9;
-  else easeScore = 7;
+
+  const powerLower = powerType.toLowerCase();
+  const hasManual = powerLower.includes("manual");
+  const hasHydraulic = powerLower.includes("hydraulic");
+  const hasElectricHydraulic =
+    powerLower.includes("electric / hydraulic") ||
+    (powerLower.includes("electric") && powerLower.includes("hydraulic"));
+
+  let powerTier = 0;
+  if (!powerType) {
+    powerTier = 1; // unknown / unpublished – conservative baseline
+  } else if (hasManual && !hasHydraulic) {
+    powerTier = 2; // manual only
+  } else if (hasManual && hasHydraulic) {
+    powerTier = 4; // documented manual + hydraulic path
+  } else if (!hasManual && hasHydraulic && !hasElectricHydraulic) {
+    powerTier = 4; // hydraulic-only system
+  } else if (hasElectricHydraulic) {
+    powerTier = 5; // electric / hydraulic pack
+  } else {
+    powerTier = 2; // fallback, behaves like manual-only
+  }
+
+  const portabilityRaw = String((bender as any).portability ?? "")
+    .trim()
+    .toLowerCase();
+
+  let portabilityTier = 0;
+  let portabilityLabel = "fixed base, must be anchored or mounted";
+
+  switch (portabilityRaw) {
+    case "portable":
+      portabilityTier = 1;
+      portabilityLabel =
+        "portable base; can be moved but no rolling stand documented";
+      break;
+    case "portable_with_rolling_option":
+      portabilityTier = 2;
+      portabilityLabel =
+        "portable base with a documented rolling cart/stand option";
+      break;
+    case "rolling_standard":
+      portabilityTier = 3;
+      portabilityLabel =
+        "rolling stand or cart as a standard configuration";
+      break;
+    default:
+      portabilityTier = 0;
+      // keep the fixed-base label
+      break;
+  }
+
+  const easeRaw = Math.max(0, Math.min(8, powerTier + portabilityTier));
+  easeScore = Math.round((easeRaw / 8) * 12);
 
   scoreBreakdown.push({
     criteria: "Ease of Use & Setup",
     points: easeScore,
     maxPoints: 12,
-    reasoning: `${powerType || "Unknown power type"} operation with ${
-      brand === "RogueFab" ? "vertical space-saving design" : "standard setup"
-    }`,
+    reasoning: `${
+      powerType || "Unknown power configuration"
+    }; portability: ${portabilityLabel}.`,
   });
   totalScore += easeScore;
 

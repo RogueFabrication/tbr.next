@@ -253,15 +253,94 @@ export default function ScoringPage() {
                     {cat.key === "easeOfUseSetup" && (
                       <>
                         <p>
-                          Evaluates setup complexity, documentation quality,
-                          and how much effort it takes to go from crate to
-                          first accurate bend.
+                          Scores how straightforward the machine is to set up
+                          and run day to day using two inputs from the spec
+                          table: its power configuration and how it actually
+                          lives in your shop (fixed, portable, or rolling).
                         </p>
                         <p>
-                          Factors include pre-assembly, clear instructions,
-                          ergonomics, and how forgiving the machine is for
-                          newer operators.
+                          The scoring is fully deterministic and can be
+                          reproduced by anyone with the same published specs:
                         </p>
+                        <ul className="ml-4 list-disc space-y-1">
+                          <li>
+                            <span className="font-semibold">
+                              Step 1 – Power configuration (0–5 raw points)
+                            </span>
+                            <ul className="ml-4 mt-1 list-disc space-y-0.5">
+                              <li>Unknown / blank power type: 1 point</li>
+                              <li>Manual only: 2 points</li>
+                              <li>
+                                Manual + documented hydraulic option (both
+                                manual and hydraulic listed in specs): 4 points
+                              </li>
+                              <li>
+                                Hydraulic-only system: 4 points
+                              </li>
+                              <li>
+                                Electric / hydraulic power pack (electric +
+                                hydraulic): 5 points
+                              </li>
+                            </ul>
+                          </li>
+                          <li>
+                            <span className="font-semibold">
+                              Step 2 – Portability (0–3 raw points)
+                            </span>
+                            <ul className="ml-4 mt-1 list-disc space-y-0.5">
+                              <li>
+                                <code className="font-mono text-[0.7rem]">
+                                  fixed
+                                </code>{" "}
+                                – must be anchored or otherwise fixed in place:
+                                0 points
+                              </li>
+                              <li>
+                                <code className="font-mono text-[0.7rem]">
+                                  portable
+                                </code>{" "}
+                                – can be moved but no rolling cart/stand is
+                                documented: 1 point
+                              </li>
+                              <li>
+                                <code className="font-mono text-[0.7rem]">
+                                  portable_with_rolling_option
+                                </code>{" "}
+                                – portable base plus a documented rolling
+                                cart/stand option: 2 points
+                              </li>
+                              <li>
+                                <code className="font-mono text-[0.7rem]">
+                                  rolling_standard
+                                </code>{" "}
+                                – rolling stand or cart is part of the standard
+                                configuration: 3 points
+                              </li>
+                            </ul>
+                          </li>
+                          <li>
+                            <span className="font-semibold">
+                              Step 3 – Combine and scale
+                            </span>
+                            <div className="ml-4 mt-1 space-y-0.5">
+                              <p>
+                                Add the power and portability raw points
+                                (0–8). That raw value is then scaled to this
+                                category&apos;s 0–12 point cap:
+                              </p>
+                              <p className="font-mono text-[0.7rem]">
+                                Ease of Use score = round((raw / 8) × 12)
+                              </p>
+                              <p>
+                                Because the inputs come directly from the same
+                                fields shown in the admin and, eventually, on
+                                public spec tables, any two people using the
+                                same data will arrive at the same Ease of Use
+                                &amp; Setup score.
+                              </p>
+                            </div>
+                          </li>
+                        </ul>
                       </>
                     )}
                     {cat.key === "maxDiameterRadius" && (
@@ -354,13 +433,78 @@ export default function ScoringPage() {
                     {cat.key === "dieSelectionShapes" && (
                       <>
                         <p>
-                          Scores the die ecosystem by variety of diameters,
-                          radii, and shapes (round tube, square, rectangle,
-                          EMT, flat bar, etc.).
+                          Scores each machine&apos;s die ecosystem based on{" "}
+                          <span className="font-semibold">
+                            how many real-world shapes and standards it supports
+                          </span>{" "}
+                          — not just one or two common tube sizes.
                         </p>
                         <p>
-                          More coverage and better availability equal higher
-                          scores, especially for specialty applications.
+                          We only count shapes and standards that the
+                          manufacturer actually documents for that frame. The
+                          core of this category is{" "}
+                          <span className="font-semibold">round tube</span> dies
+                          across a meaningful range of diameters and CLRs.
+                          From there, we award additional points for documented
+                          support of:
+                        </p>
+                        <ul className="ml-4 list-disc space-y-1">
+                          <li>
+                            <span className="font-medium">Pipe sizes</span>{" "}
+                            (NPS/pipe dies distinct from tube dies – this
+                            matters for handrail, structural, and industrial
+                            work).
+                          </li>
+                          <li>
+                            <span className="font-medium">
+                              Square and rectangular tube
+                            </span>{" "}
+                            dies that are marketed for this machine.
+                          </li>
+                          <li>
+                            <span className="font-medium">
+                              EMT and metric tube/pipe
+                            </span>{" "}
+                            (round or square) where the manufacturer calls out
+                            those standards explicitly.
+                          </li>
+                          <li>
+                            <span className="font-medium">Flat bar</span>,{" "}
+                            <span className="font-medium">angle</span>,{" "}
+                            <span className="font-medium">channel</span>, or
+                            similar profile dies that are clearly intended for
+                            bending on this frame.
+                          </li>
+                          <li>
+                            <span className="font-medium">
+                              Plastic / urethane / low-marring pressure dies
+                            </span>{" "}
+                            marketed for aluminum or thin-wall work (these are
+                            counted separately from the thin-wall upgrade flags
+                            in the Upgrade Path category to avoid double
+                            counting).
+                          </li>
+                        </ul>
+                        <p className="mt-2">
+                          <span className="font-semibold">
+                            Solid bar is not treated as a separate shape for
+                            extra points
+                          </span>{" "}
+                          — any machine that can bend round tube with a given
+                          die family will generally support solid round in the
+                          same sizes, so we assume that coverage whenever round
+                          tube is documented.
+                        </p>
+                        <p className="mt-2">
+                          Scoring is tier-based: machines with only a small,
+                          basic round-tube die range receive baseline points.
+                          As documented coverage expands to pipe standards,
+                          square/rectangular tube, EMT/metric, and profile
+                          shapes with practical CLR coverage, the machine earns
+                          more of this category&apos;s points, up to a fixed
+                          cap. We do not give extra credit for ultra-niche or
+                          special-order dies that are not part of the normal
+                          catalog.
                         </p>
                       </>
                     )}
@@ -634,64 +778,6 @@ export default function ScoringPage() {
                   breakdowns so you can inspect each score.
                 </li>
                 </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* Factors we don't score */}
-        <section className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Important Factors We Don&apos;t Score (And How to Test Them Yourself)
-          </h2>
-          <p className="mt-2 text-sm text-gray-700">
-            Some things matter a lot in real shops but can&apos;t be scored
-            fairly or safely by any comparison site, including this one. Two of
-            the biggest are lead times and service quality.
-          </p>
-          <div className="mt-4 grid gap-6 md:grid-cols-2 text-xs text-gray-800">
-            <div>
-              <p className="font-medium text-gray-900 mb-1">Lead times</p>
-              <p className="mb-2">
-                Lead times move constantly and are rarely published in a way
-                that stays accurate. Instead of pretending to have a single
-                number, we recommend you call the top 2–3 manufacturers you&apos;re
-                considering and ask:
-              </p>
-              <ul className="space-y-1 list-disc pl-4">
-                <li>&quot;If I ordered today, what is the lead time on the machine?&quot;</li>
-                <li>&quot;What&apos;s the lead time on your most popular die sizes?&quot;</li>
-              </ul>
-              <p className="mt-2">
-                Some machines and dies ship same day or in a couple business
-                days. Others have multi-month die lead times. You&apos;ll get the
-                real answer in under a minute, and it will be more current than
-                anything we could publish here.
-              </p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-900 mb-1">
-                Service quality
-              </p>
-              <p className="mb-2">
-                Service quality is not published in specs and can&apos;t be
-                captured honestly in a single score. But you can learn a lot
-                from one phone call:
-              </p>
-              <ul className="space-y-1 list-disc pl-4">
-                <li>How quickly they answer the phone</li>
-                <li>Whether you reach someone who actually knows the product</li>
-                <li>Whether they&apos;re rushed and defensive, or patient and helpful</li>
-                <li>
-                  How transparent they are about stock, backorders, and
-                  realistic ship dates
-                </li>
-              </ul>
-              <p className="mt-2">
-                We don&apos;t turn these into points. Instead, we give you almost
-                everything that can be scored objectively and then tell you
-                exactly how to pressure-test the last few items directly with
-                the manufacturers you&apos;re considering.
-              </p>
             </div>
           </div>
         </section>

@@ -322,7 +322,12 @@
     "dieShapesSource1": "Other = hexagon, www.RogueFab.com Specs",
     "dieShapesSource2": "2025-12-01",
     "dieShapesNotes": "MFR Catalog online",
-    "dieShapesUserCode": "JRG1001"
+    "dieShapesUserCode": "JRG1001",
+    "portability": "portable_with_rolling_option",
+    "portabilitySource1": "Built in base, rolling cart optional (made by MFR) www.roguefab.com",
+    "portabilitySource2": "2025-12-01",
+    "portabilityNotes": "MFR Catalog online",
+    "portabilityUserCode": "JRG1001"
   },
   "roguefab-m605": {
     "highlights": "Mid expensive from this MFR, test data",
