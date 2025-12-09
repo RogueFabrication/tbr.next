@@ -492,12 +492,42 @@ export default function ReviewPage({ params, searchParams }: PageProps) {
                 <p className="text-xs text-muted-foreground">No specs available yet.</p>
               ) : (
                 <dl className="text-sm">
-                  {specs.map(([k, v]) => (
-                    <div key={String(k)} className="flex justify-between gap-3 py-1 border-b last:border-b-0">
-                      <dt className="text-muted-foreground">{labelFor(k)}</dt>
-                      <dd className="font-medium">{String(v)}</dd>
-                    </div>
-                  ))}
+                  {specs.map(([k, v]) => {
+                    const valueStr = String(v);
+
+                    // Show a short, conservative explanation for FTC "unqualified" Made in USA claims.
+                    const showFtcNote =
+                      k === "country" &&
+                      valueStr.toLowerCase().includes("ftc-unqualified");
+
+                    return (
+                      <div
+                        key={String(k)}
+                        className="flex flex-col gap-0.5 py-1 border-b last:border-b-0"
+                      >
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-muted-foreground">
+                            {labelFor(k)}
+                          </dt>
+                          <dd className="font-medium text-right">
+                            {valueStr}
+                          </dd>
+                        </div>
+
+                        {showFtcNote && (
+                          <p className="text-[0.7rem] text-muted-foreground">
+                            Here, &ldquo;unqualified&rdquo; means the manufacturer is
+                            claiming <span className="italic">Made in USA</span> without
+                            fine-print qualifiers. Whether critical parts are outsourced
+                            to other U.S. makers or not, buying a complete system from
+                            multiple sources adds hassle and can complicate warranty
+                            coverage across manufacturers. We repeat their claim; we do
+                            not independently certify country of origin.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </dl>
               )}
             </div>

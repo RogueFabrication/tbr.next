@@ -358,26 +358,55 @@ export default function ScoringPage() {
                           language on comparison tables so customers understand
                           the origin groupings without needing FTC jargon.
                         </p>
+                        <p>
+                          Separately, we look at{" "}
+                          <span className="font-semibold">
+                            whether you can buy a complete, working system from a{" "}
+                            single stocking source
+                          </span>
+                          : frame, die (including clamp and pressure dies),
+                          hydraulics or manual power source, and any stand/cart
+                          required for safe operation. When a manufacturer
+                          pushes critical pieces of that system out to other
+                          suppliers, even if those suppliers are also in the
+                          USA, it introduces hassle and compromises for the
+                          customer and increases the risk of finger-pointing on
+                          warranty coverage across multiple companies.
+                        </p>
                       </>
                     )}
                     {cat.key === "bendAngleCapability" && (
                       <>
                         <p>
-                          Evaluates the maximum single-pass bend angle the
-                          machine can reach with standard tooling.
+                          Evaluates the{" "}
+                          <span className="font-semibold">
+                            maximum bend angle the machine is rated for
+                          </span>{" "}
+                          with its published tooling, not just a one-shot,
+                          partial-degree example. In other words, we look at the
+                          machine&apos;s real limit, not a cherry-picked
+                          marketing bend.
                         </p>
                         <p>
                           Higher angles reduce the need for multi-stage bends
                           and enable more complex geometries.
                         </p>
                         <p>
-                          Scoring is threshold-based on the manufacturer&apos;s
-                          published maximum angle: 195° or more earns full
-                          points, 180–194° earns a strong score, 120–179°
-                          earns a mid-range score, and lower published angles
-                          earn reduced points. If no bend angle is published,
-                          this category receives zero points and is labeled
-                          as "Not Published" on the product page.
+                          Scoring is currently threshold-based on the
+                          manufacturer&apos;s published maximum angle:{" "}
+                          <span className="font-semibold">195° or more</span>{" "}
+                          earns full points,{" "}
+                          <span className="font-semibold">180–194°</span> earns
+                          a strong score,{" "}
+                          <span className="font-semibold">120–179°</span> earns
+                          a mid-range score, and lower published angles earn
+                          reduced points. If no bend angle is published, this
+                          category receives zero points and is labeled as
+                          &quot;Not Published&quot; on the product page. Future
+                          revisions may move this to a linear scale across the
+                          actual min–max bend angles in the comparison set, but
+                          we prefer to keep the current, explicit thresholds
+                          until we have a larger dataset.
                         </p>
                       </>
                     )}
@@ -782,13 +811,23 @@ export default function ScoringPage() {
               </p>
               <ul className="space-y-1 list-disc pl-4">
                 <li>&quot;If I ordered today, what is the lead time on the machine?&quot;</li>
-                <li>&quot;What&apos;s the lead time on your most popular die sizes?&quot;</li>
+                <li>
+                  &quot;If I order a 2&quot; die today, about when would I have it?&quot;
+                </li>
               </ul>
               <p className="mt-2">
                 Some machines and dies ship same day or in a couple business
-                days. Others have multi-month die lead times. You&apos;ll get the
-                real answer in under a minute, and it will be more current than
-                anything we could publish here.
+                days. Others have multi-month die lead times.{" "}
+                <span className="font-semibold">
+                  Call every company you&apos;re seriously considering and ask
+                  the exact same questions, then compare answers.
+                </span>{" "}
+                You&apos;ll be amazed at how much you learn about each
+                company&apos;s organization, priorities, and customer service in
+                just a few minutes of phone time — and whatever they tell you
+                on that call will be more current (and more honest) than any
+                static lead-time number we could safely publish in a scoring
+                table.
               </p>
             </div>
             <div>

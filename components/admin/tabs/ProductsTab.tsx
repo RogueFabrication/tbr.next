@@ -175,23 +175,29 @@ export default function ProductsTab() {
     );
   }
 
-  // Derive a filesystem-safe slug for the image filename.
+  // Derive a filesystem-safe slug from a slug or id.
   // - Lowercase
   // - Only allow [a-z0-9-]
   // - Replace everything else with "-"
   // - Collapse repeated "-" and trim from ends
   // If we somehow end up empty, fall back to "missing-slug" so the path is still stable.
-  const rawSlug = String(
-    (selectedProduct as any).slug ?? selectedProduct.id ?? ""
-  )
-    .toLowerCase()
-    .trim();
+  const computeSafeSlug = (slugOrId: string | null | undefined): string => {
+    const raw = String(slugOrId ?? "")
+      .toLowerCase()
+      .trim();
 
-  const safeSlug =
-    rawSlug
-      .replace(/[^a-z0-9-]+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "") || "missing-slug";
+    const safe =
+      raw
+        .replace(/[^a-z0-9-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "") || "missing-slug";
+
+    return safe;
+  };
+
+  const safeSlug = computeSafeSlug(
+    (selectedProduct as any).slug ?? selectedProduct.id ?? "",
+  );
 
   const specRows: {
     key: string;
@@ -516,7 +522,7 @@ export default function ProductsTab() {
           >
             {products.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.id} — {[p.brand, p.model].filter(Boolean).join(" ") || "Unnamed"}
+                {computeSafeSlug((p as any).slug ?? p.id ?? "")}
               </option>
             ))}
           </select>
@@ -697,25 +703,26 @@ export default function ProductsTab() {
                       </div>
 
                       <div className="border-r border-gray-200 pr-2">
-                        <input
-                          className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-[0.75rem] text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
-                          value={userCode}
-                          onChange={(e) => {
-                            updateProductLocalField(
-                              selectedProduct.id,
-                              userKey,
-                              e.target.value.toUpperCase(),
-                            );
-                          }}
-                          onBlur={(e) =>
-                            updateProduct(
-                              selectedProduct.id,
-                              userKey,
-                              e.target.value.toUpperCase(),
-                            )
-                          }
-                          placeholder="XXXNNNN"
-                        />
+                      <input
+  className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-[0.75rem] text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400"
+  value={userCode}
+  onChange={(e) => {
+    // Let the user type naturally; don't mutate on each keystroke.
+    updateProductLocalField(
+      selectedProduct.id,
+      userKey,
+      e.target.value,
+    );
+  }}
+  onBlur={(e) => {
+    // Only normalize to uppercase once editing is finished.
+    const upper = e.target.value.toUpperCase();
+    updateProductLocalField(selectedProduct.id, userKey, upper);
+    updateProduct(selectedProduct.id, userKey, upper);
+  }}
+  placeholder="XXXNNNN"
+/>
+
                       </div>
 
                       <div className="flex items-center justify-end gap-2">

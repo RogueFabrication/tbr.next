@@ -236,7 +236,7 @@
     "diePriceMinNotes": "MFR Catalog online",
     "diePriceMinSource2": "2025-12-01",
     "diePriceMinUserCode": "JRG1001",
-    "diePrice150MidSource1": "www.RogueFab.com Specs",
+    "diePrice150MidSource1": "1.50 x 4.5 die, standard pressure die, no laser index on clamp, single clamp, no die spacers. Total $265. www.RogueFab.com Specs",
     "diePrice150MidNotes": "MFR Catalog online",
     "diePrice150MidSource2": "2025-12-01",
     "diePrice150MidUserCode": "JRG1001",
@@ -275,7 +275,7 @@
     "clrRange": "2.5-6.0",
     "cycleTime": "13 sec",
     "weight": "255",
-    "diePrice150Mid": "249",
+    "diePrice150Mid": "265",
     "image": "",
     "hasPowerUpgradePath": "Yes",
     "lengthStop": "Yes",
@@ -360,7 +360,9 @@
     "clrRange": "2.5-6.0",
     "cycleTime": "13 sec",
     "weight": "395",
-    "materials": "Mild steel, Stainless steel, 4130 chromoly, Brass, Copper, Titanium, Aluminum"
+    "materials": "Mild steel, Stainless steel, 4130 chromoly, Brass, Copper, Titanium, Aluminum",
+    "diePrice150Mid": "265",
+    "diePrice150MidSource1": "1.50 x 4.5 die, standard pressure die, no laser index on clamp, single clamp, no die spacers. Total $265. www.RogueFab.com Specs"
   },
   "roguefab-m625": {
     "framePriceMin": "1285",
@@ -408,6 +410,8 @@
     "thinWallUpgrade": "Yes",
     "wiperDieSupport": "No",
     "dieShapes": "Round tube, Pipe, Square tube, EMT, Metric round / square, Plastic / urethane pressure dies, Other",
-    "dieShapesSource1": "other = hexagon"
+    "dieShapesSource1": "other = hexagon",
+    "diePrice150Mid": "265",
+    "diePrice150MidSource1": "1.50 x 4.5 die, standard pressure die, no laser index on clamp, single clamp, no die spacers. Total $265. www.RogueFab.com Specs"
   }
 }
