@@ -59,6 +59,13 @@ export type Product = {
   dimensions?: string;
   warranty?: string;
   price?: string | number;
+  /**
+   * Optional reference-only field for how long the manufacturer has been
+   * operating under this brand / product line. Currently used only for admin
+   * display; scoring still uses conservative brand-based tiers for the
+   * "Years in Business" category.
+   */
+  yearsInBusiness?: string | number;
 
   /**
    * Lawyer-safe, disclosure-based scoring tiers.

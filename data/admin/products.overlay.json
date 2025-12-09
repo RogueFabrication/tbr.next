@@ -333,7 +333,12 @@
     "originTransparencyTierSource1": "",
     "usaManufacturingTierSource1": "",
     "singleSourceSystemTier": "2 – Frame + dies + hydraulics/lever (where applicable) all sold by this manufacturer",
-    "warrantyTier": "3 – Strong, clearly written warranty (e.g. lifetime on frame or ≥3-year comprehensive coverage)"
+    "warrantyTier": "3 – Strong, clearly written warranty (e.g. lifetime on frame or ≥3-year comprehensive coverage)",
+    "yearsInBusiness": "15",
+    "yearsInBusinessSource1": "www.RogueFab.com/FAQ",
+    "yearsInBusinessSource2": "2025-12-01",
+    "yearsInBusinessNotes": "Read through FAQ",
+    "yearsInBusinessUserCode": "JRG1001"
   },
   "roguefab-m605": {
     "highlights": "Mid expensive from this MFR, test data",

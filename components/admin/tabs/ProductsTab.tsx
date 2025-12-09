@@ -25,6 +25,7 @@ type Product = {
   maxWall?: string;
   dimensions?: string;
   warranty?: string;
+  yearsInBusiness?: string;
 
   // Disclosure-based scoring tiers (edited only from published claims)
   usaManufacturingTier?: string;
@@ -471,6 +472,12 @@ export default function ProductsTab() {
       label: "Typical system weight (display only)",
       description:
         "Our opinion of a real-world configuration weight (averaging between light/no-cart and heavy/cart setups). Only enter when we have enough data to be fair.",
+    },
+    {
+      key: "yearsInBusiness",
+      label: "Years in business (display / reference)",
+      description:
+        "Approximate years the manufacturer has been operating under this brand or product line. This is for transparency and review copy. The current scoring engine still uses conservative brand-based tiers for the 'Years in Business' category and does not read this field yet.",
     },
   ];
 
