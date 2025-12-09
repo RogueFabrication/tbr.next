@@ -493,7 +493,19 @@ export default function ReviewPage({ params, searchParams }: PageProps) {
               ) : (
                 <dl className="text-sm">
                   {specs.map(([k, v]) => {
-                    const valueStr = String(v);
+                    let valueStr = String(v);
+
+                    // Expand "FTC-unqualified" with an inline explanation so users
+                    // understand what "unqualified" means without needing a separate note.
+                    if (
+                      k === "country" &&
+                      valueStr.toLowerCase().includes("ftc-unqualified")
+                    ) {
+                      valueStr = valueStr.replace(
+                        /FTC-unqualified/gi,
+                        "FTC-unqualified (unqualified means not-claiming exceptions or pretending to be something it's not)",
+                      );
+                    }
 
                     // Show a short, conservative explanation for FTC "unqualified" Made in USA claims.
                     const showFtcNote =

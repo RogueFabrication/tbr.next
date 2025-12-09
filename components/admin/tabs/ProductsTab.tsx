@@ -25,6 +25,15 @@ type Product = {
   maxWall?: string;
   dimensions?: string;
   warranty?: string;
+
+  // Disclosure-based scoring tiers (edited only from published claims)
+  usaManufacturingTier?: string;
+  originTransparencyTier?: string;
+  /**
+   * "How complete is the system from this one manufacturer?"
+   */
+  singleSourceSystemTier?: string;
+  warrantyTier?: string;
   image?: string;
   highlights?: string; // stored comma-separated for simple admin editing
   dieShapes?: string; // comma-separated list of die shape families
@@ -115,7 +124,14 @@ export default function ProductsTab() {
   };
 
   // Update helper – keep type loose so we can use dynamic citation keys.
+  // Also perform an optimistic local update so fields (especially select/tier fields)
+  // keep their selected value visible immediately after blur.
   const updateProduct = async (id: string, field: string, value: string) => {
+    // Optimistic local update
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
+    );
+
     try {
       const response = await fetch(`/api/admin/products/${id}`, {
         method: "PATCH",
@@ -126,6 +142,7 @@ export default function ProductsTab() {
       });
 
       if (response.ok) {
+        // Keep the optimistic value; we still refresh to pick up any server-side normalization.
         fetchProducts();
       } else {
         console.error("Failed to update product");
@@ -222,6 +239,33 @@ export default function ProductsTab() {
       ],
     },
     {
+      key: "usaManufacturingTier",
+      label: "* USA manufacturing disclosure tier (0–5 pts)",
+      description:
+        "Disclosure-based only. This tier reflects how the manufacturer themselves describe where frame, dies, and hydraulics are made. We do not infer or guess origin and we do not verify supply chains – we simply score what they publicly claim.",
+      options: [
+        "5 – Frame + dies + hydraulics manufactured/assembled in USA (per manufacturer disclosure)",
+        "4 – Frame + dies USA; hydraulics partially USA (per disclosure)",
+        "3 – Frame USA; dies origin unclear; hydraulics clearly imported",
+        "2 – Mostly USA fabrication with key imported components (per disclosure)",
+        "1 – Minor USA contribution (assembly, hardware, or similar) per disclosure",
+        "0 – No disclosed USA manufacturing / clearly imported",
+      ],
+    },
+    {
+      key: "originTransparencyTier",
+      label: "* Origin / transparency tier (0–5 pts)",
+      description:
+        "How clearly the manufacturer documents the origin of major components. This is a transparency score only – it does NOT claim where anything is actually made.",
+      options: [
+        "5 – Full documentation of frame, dies, hydraulics, and major components",
+        "4 – Clear origin info for all major components, with only minor gaps",
+        "3 – Partial disclosure (some components documented, others omitted)",
+        "2 – Minimal disclosure (scattered or vague origin language)",
+        "0 – No meaningful origin disclosure or conflicting/unclear claims",
+      ],
+    },
+    {
       key: "powerType",
       label: "* Power Type",
       description:
@@ -275,7 +319,7 @@ export default function ProductsTab() {
       key: "sBendCapability",
       label: "* S-Bend capable (Yes/No)",
       description:
-        "Yes/No: documented ability to create a true S-bend: two opposite-direction bends with effectively no straight between them. For scoring we require ≤0.125\" straight (tangent) between bends, proven by specs, photos, or repeatable test pieces. Marketing examples with several inches of straight between bends do NOT qualify.",
+        "Yes/No: documented ability to create a true S-bend: two opposite-direction bends with effectively no straight between them. For scoring we require ≤0.125\" straight (tangent) between bends, proven by specs, photos, or repeatable test pieces. Marketing examples with several inches of straight between bends do NOT qualify. This field is heavily weighted in scoring because true S-bend capability unlocks complex chassis and header work.",
       options: ["", "Yes", "No"],
     },
     {
@@ -333,6 +377,28 @@ export default function ProductsTab() {
       description:
         "Documented ability to use wiper dies on this frame. Important for thin-wall and high-precision work. We still keep mandrel in its own scoring category; this flag only covers the presence of wiper die support as an additional bend-quality lever.",
       options: ["", "Yes", "No"],
+    },
+    {
+      key: "singleSourceSystemTier",
+      label: "* Single-source system (0–2 pts, binary)",
+      description:
+        "Binary: either a complete, fully functional system (frame + dies + hydraulics / lever) can be bought from one primary manufacturer/storefront, or it cannot. Kit-bashers don't care; everyone else usually bails as soon as one major component isn't available from the main source.",
+      options: [
+        "2 – Frame + dies + hydraulics/lever all sold by one primary manufacturer/storefront",
+        "0 – One or more required components must be sourced elsewhere",
+      ],
+    },
+    {
+      key: "warrantyTier",
+      label: "* Warranty tier (0–3 pts; disclosure only)",
+      description:
+        "Score the strength and clarity of the written warranty only. We do NOT and cannot verify whether warranties are honored in practice – this is purely about what the manufacturer publicly promises.",
+      options: [
+        "3 – Strong, clearly written warranty (e.g. lifetime on frame or ≥3-year comprehensive coverage)",
+        "2 – Standard limited warranty (e.g. 1–2 years on frame/components) clearly documented",
+        "1 – Short or heavily limited warranty that is still explicitly documented",
+        "0 – No meaningful written warranty, sold as-is, or warranty not mentioned",
+      ],
     },
     {
       key: "framePriceMin",
@@ -520,11 +586,29 @@ export default function ProductsTab() {
               setCitationClipboard(null);
             }}
           >
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {computeSafeSlug((p as any).slug ?? p.id ?? "")}
-              </option>
-            ))}
+            {products.map((p) => {
+              const safeSlug = computeSafeSlug(
+                (p as any).slug ?? p.id ?? "",
+              );
+
+              // Prefer a clean Brand + Model label for humans, and only fall
+              // back to the slug when we don't have anything better. This
+              // avoids leaking any legacy junk that may be sitting in slug/id
+              // (for example old "-typex" artifacts) into the dropdown.
+              const brandModel = [p.brand, p.model]
+                .filter((s) => !!s && String(s).trim().length > 0)
+                .join(" ")
+                .trim();
+
+              const label =
+                brandModel.length > 0 ? brandModel : safeSlug;
+
+              return (
+                <option key={p.id} value={p.id}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>

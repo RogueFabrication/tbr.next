@@ -327,7 +327,13 @@
     "portabilitySource1": "Built in base, rolling cart optional (made by MFR) www.roguefab.com",
     "portabilitySource2": "2025-12-01",
     "portabilityNotes": "MFR Catalog online",
-    "portabilityUserCode": "JRG1001"
+    "portabilityUserCode": "JRG1001",
+    "usaManufacturingTier": "4 – Frame + dies USA; hydraulics partially USA (per disclosure)",
+    "originTransparencyTier": "5 – Full documentation of frame, dies, hydraulics, and major components",
+    "originTransparencyTierSource1": "",
+    "usaManufacturingTierSource1": "",
+    "singleSourceSystemTier": "2 – Frame + dies + hydraulics/lever (where applicable) all sold by this manufacturer",
+    "warrantyTier": "3 – Strong, clearly written warranty (e.g. lifetime on frame or ≥3-year comprehensive coverage)"
   },
   "roguefab-m605": {
     "highlights": "Mid expensive from this MFR, test data",

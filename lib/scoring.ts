@@ -28,7 +28,7 @@ export type ScoringCategory = {
 /** Total possible score across all categories. */
 export const TOTAL_POINTS = 100;
 
-/** 11-category, 100-point scoring framework. */
+/** 15-category, 100-point scoring framework. */
 export const SCORING_CATEGORIES: ScoringCategory[] = [
   {
     index: 1,
@@ -37,93 +37,124 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     maxPoints: 20,
     method: "scaled",
     tagline:
-      "Scaled features-per-dollar scoring based on a minimum safe operating system cost (frame, die, hydraulics, and required stand).",
+      "How much real capability and completeness you get per dollar for a typical starter system (frame + dies + power + stand).",
   },
   {
     index: 2,
     key: "easeOfUseSetup",
     name: "Ease of Use & Setup",
-    maxPoints: 12,
+    maxPoints: 11,
     method: "tier",
     tagline:
-      "12-point category combining a base ergonomics/operation score with explicit portability tiers (fixed vs portable vs rolling).",
+      "Portability/base configuration, angle measurement, auto-stop on bend angle, length/rotation indexing, and other features that actually make the thing easier to live with day to day.",
   },
   {
     index: 3,
     key: "maxDiameterRadius",
-    name: "Max Diameter & Radius Capacity",
-    maxPoints: 12,
+    name: "Max Diameter & CLR Capability",
+    maxPoints: 11,
     method: "scaled",
-    tagline: "Scaled scoring based on maximum tube diameter and CLR range.",
+    tagline:
+      "Realistic maximum round tube size and CLR range you can run on this frame with catalog tooling (not marketing unicorn examples).",
   },
   {
     index: 4,
-    key: "usaManufacturing",
-    name: "USA Manufacturing",
-    maxPoints: 10,
-    method: "binary",
+    key: "bendAngleCapability",
+    name: "Bend Angle Capability",
+    maxPoints: 9,
+    method: "scaled",
     tagline:
-      "Binary scoring using a strict, FTC-style Made in USA standard: only machines documented as all or virtually all US-made receive points.",
+      "Maximum single-pass bend angle the machine + tooling can actually achieve for typical sizes, based on documented specs.",
   },
   {
     index: 5,
-    key: "bendAngleCapability",
-    name: "Bend Angle Capability",
-    maxPoints: 10,
-    method: "scaled",
-    tagline: "Scaled scoring based on documented maximum bend angle.",
-  },
-  {
-    index: 6,
     key: "wallThicknessCapability",
     name: "Wall Thickness Capability",
     maxPoints: 9,
     method: "scaled",
     tagline:
-      "Scaled scoring based on thickest published 1.75\" OD wall capacity plus a small bonus for documented material coverage (mild, 4130, stainless, aluminum, etc.).",
+      "How thick of a 1.75\" DOM wall the manufacturer is willing to put in writing for this frame, using their own published specs.",
   },
   {
-    index: 7,
+    index: 6,
     key: "dieSelectionShapes",
     name: "Die Selection & Shapes",
     maxPoints: 8,
     method: "tier",
     tagline:
-      "Tier-based scoring on documented tube/pipe die families (round tube, pipe, square, rectangular, EMT, metric, plastic/urethane).",
+      "Breadth and depth of the die family: round tube, pipe, square/rectangular, metric, EMT, and any specialty or thin-wall-focused tooling.",
+  },
+  {
+    index: 7,
+    key: "yearsInBusiness",
+    name: "Track Record (Years in Business)",
+    maxPoints: 3,
+    method: "tier",
+    tagline:
+      "Documented operating history of the brand. This matters, but far less than performance and features, so we keep the weight modest.",
   },
   {
     index: 8,
-    key: "yearsInBusiness",
-    name: "Years in Business",
+    key: "upgradePathModularity",
+    name: "Upgrade Path & Modularity",
     maxPoints: 7,
     method: "tier",
-    tagline: "Tier-based scoring on company longevity and market track record.",
+    tagline:
+      "Factory-supported power upgrades, length/rotation indexing, angle measurement, auto-stop, thick/thin-wall upgrades, and wiper-die support.",
   },
   {
     index: 9,
-    key: "upgradePathModularity",
-    name: "Upgrade Path & Modularity",
-    maxPoints: 8,
-    method: "tier",
-    tagline:
-      "Points for documented power upgrades, LRA control (length stops, rotation indexing, angle readout, auto-stop), and bend-quality tooling (thin/thick wall, wipers).",
-  },
-  {
-    index: 10,
     key: "mandrelCompatibility",
     name: "Mandrel Compatibility",
     maxPoints: 4,
     method: "tier",
-    tagline: "Tier-based scoring on supported mandrel options and upgrades.",
+    tagline:
+      "Documented support for mandrel bending on this frame (or a direct factory kit). No guesses; only what's clearly supported by the manufacturer.",
+  },
+  {
+    index: 10,
+    key: "sBendCapability",
+    name: "True S-Bend Capability",
+    maxPoints: 3,
+    method: "binary",
+    tagline:
+      "Ability to make a true S-bend with ≤0.125\" straight between opposing bends, proven by documentation or repeatable test pieces. Marketing photos with several inches of straight do not count.",
   },
   {
     index: 11,
-    key: "sBendCapability",
-    name: "S-Bend Capability",
+    key: "usaManufacturingDisclosure",
+    name: "USA Manufacturing (Disclosure-Based)",
+    maxPoints: 5,
+    method: "tier",
+    tagline:
+      "Points based strictly on what the manufacturer publicly claims about where frames, dies, and hydraulics are made or assembled. We do not independently verify or guess where parts are actually made.",
+  },
+  {
+    index: 12,
+    key: "originTransparency",
+    name: "Origin Transparency",
+    maxPoints: 5,
+    method: "tier",
+    tagline:
+      "How clearly the manufacturer explains where major components come from. This scores the quality of disclosure, not the origin itself.",
+  },
+  {
+    index: 13,
+    key: "singleSourceSystem",
+    name: "Single-Source System",
     maxPoints: 2,
     method: "binary",
     tagline:
-      "Binary scoring for true back-to-back S-bends (≤0.125\" straight between bends).",
+      "Binary: can a normal buyer obtain a complete, fully functional bending system (frame + dies + hydraulics/lever) from one primary manufacturer/storefront, or not?",
+  },
+  {
+    index: 14,
+    key: "warrantySupport",
+    name: "Warranty (Published Terms Only)",
+    maxPoints: 3,
+    method: "tier",
+    tagline:
+      "Warranty strength based strictly on the published terms (coverage and duration). We do not score how well the warranty is honored in practice.",
   },
 ];
 
@@ -226,6 +257,11 @@ export function getProductScore(
     // categories and entryPrice.
     priceRange: undefined,
     powerType: p.powerType,
+    // Disclosure-based scoring tiers (from admin overlay)
+    usaManufacturingTier: (p as any).usaManufacturingTier,
+    originTransparencyTier: (p as any).originTransparencyTier,
+    singleSourceSystemTier: (p as any).singleSourceSystemTier,
+    warrantyTier: (p as any).warrantyTier,
     // Portability is a structured admin field used to award 0–3 pts inside
     // the Ease of Use & Setup category. We pass the raw label through and let
     // the scoring engine normalise it.

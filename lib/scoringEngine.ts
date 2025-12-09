@@ -8,6 +8,24 @@
  * Integration into the current catalog happens via adapter code elsewhere.
  */
 
+// Extract leading integer tier from a string like "5 – Frame + dies + hydraulics..."
+// or accept a numeric value directly. Clamps to [0, max].
+function parseTier(raw: unknown, max: number): number {
+  if (raw == null) return 0;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    const n = raw;
+    return Math.max(0, Math.min(max, n));
+  }
+
+  const text = String(raw).trim();
+  const match = text.match(/^(\d+)/);
+  if (!match) return 0;
+
+  const n = Number(match[1]);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(max, n));
+}
+
 export interface ScoringCriteria {
   name: string;
   maxPoints: number;
@@ -138,6 +156,11 @@ export interface ScoringInput {
   wiperDieSupport?: string | boolean;
   mandrelBender?: string;
   sBendCapability?: boolean;
+  // Disclosure-based scoring tiers (from admin overlay)
+  usaManufacturingTier?: string | number | null;
+  originTransparencyTier?: string | number | null;
+  singleSourceSystemTier?: string | number | null;
+  warrantyTier?: string | number | null;
   [key: string]: unknown;
 }
 
@@ -180,7 +203,7 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   });
   totalScore += valueScore;
 
-  // 2. Ease of Use & Setup (12 points)
+  // 2. Ease of Use & Setup (11 points)
   //
   // This combines:
   // - A base ergonomics/operation score (7–11 pts) driven by legacy
@@ -246,88 +269,56 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   }
 
   let easeScore = easeBase + portabilityScore;
-  if (easeScore > 12) easeScore = 12;
+  if (easeScore > 11) easeScore = 11;
 
   scoreBreakdown.push({
     criteria: "Ease of Use & Setup",
     points: easeScore,
-    maxPoints: 12,
+    maxPoints: 11,
     reasoning: `${powerType || "Unknown power type"} operation with ${
       brand || "unknown brand"
-    } ergonomics (base score ${easeBase}/12) and portability tier: ${portabilityLabel} (+${portabilityScore} pts).`,
+    } ergonomics (base score ${easeBase}/11) and portability tier: ${portabilityLabel} (+${portabilityScore} pts).`,
   });
   totalScore += easeScore;
 
-  // 3. Max Diameter & Radius Capacity (12 points)
+  // 3. Max Diameter & Radius Capacity (11 points)
   let capacityScore = 0;
   const maxCapacity = String(bender.maxCapacity ?? "").toLowerCase();
-  if (maxCapacity.includes("2.5") || maxCapacity.includes("2-1/2")) capacityScore = 12;
-  else if (maxCapacity.includes("2-3/8") || maxCapacity.includes("2.375")) capacityScore = 11;
-  else if (maxCapacity.includes("2.25") || maxCapacity.includes("2-1/4")) capacityScore = 10;
-  else if (maxCapacity.includes("2.0") || maxCapacity.includes('2"')) capacityScore = 9;
-  else if (maxCapacity.includes("1.75") || maxCapacity.includes("1-3/4")) capacityScore = 7;
-  else if (maxCapacity.includes("1.5") || maxCapacity.includes("1-1/2")) capacityScore = 5;
-  else if (maxCapacity) capacityScore = 4;
+  if (maxCapacity.includes("2.5") || maxCapacity.includes("2-1/2")) capacityScore = 11;
+  else if (maxCapacity.includes("2-3/8") || maxCapacity.includes("2.375")) capacityScore = 10;
+  else if (maxCapacity.includes("2.25") || maxCapacity.includes("2-1/4")) capacityScore = 9;
+  else if (maxCapacity.includes("2.0") || maxCapacity.includes('2"')) capacityScore = 8;
+  else if (maxCapacity.includes("1.75") || maxCapacity.includes("1-3/4")) capacityScore = 6;
+  else if (maxCapacity.includes("1.5") || maxCapacity.includes("1-1/2")) capacityScore = 4;
+  else if (maxCapacity) capacityScore = 3;
 
   scoreBreakdown.push({
     criteria: "Max Diameter & Radius Capacity",
     points: capacityScore,
-    maxPoints: 12,
+    maxPoints: 11,
     reasoning: `${bender.maxCapacity ?? "Unknown"} maximum tube diameter capacity`,
   });
   totalScore += capacityScore;
 
-  // 4. USA Manufacturing (10 points)
-  // TODO: Upgrade from a simple binary USA vs non-USA rule to FTC-style tiers
-  // based on explicit manufacturer origin statements ("Made in USA",
-  // "Assembled in USA", etc.) once the catalog/overlay model exposes those
-  // origin claims in a structured way.
-  const countryClaimRaw = String(bender.countryOfOrigin ?? "").trim();
-  let usaScore = 0;
-  let usaReason: string;
-
-  if (!countryClaimRaw) {
-    usaReason = "Country of origin / FTC claim not specified";
-  } else if (countryClaimRaw === 'FTC-unqualified "Made in USA"') {
-    // Only unqualified FTC-compliant Made in USA claims receive points
-    usaScore = 10;
-    usaReason = 'Origin/claim: FTC-unqualified "Made in USA"';
-  } else if (countryClaimRaw === "Assembled in USA / qualified USA claim") {
-    // Qualified / assembled-in-USA claims are surfaced but do not score here
-    usaReason =
-      "Origin/claim: Assembled in USA / qualified USA claim (no unqualified Made in USA score)";
-  } else {
-    // Everything else – including legacy raw country strings – is treated as non-scoring
-    usaReason = `Origin/claim: ${countryClaimRaw}`;
-  }
-
-  scoreBreakdown.push({
-    criteria: "USA Manufacturing",
-    points: usaScore,
-    maxPoints: 10,
-    reasoning: usaReason,
-  });
-  totalScore += usaScore;
-
-  // 5. Bend Angle Capability (10 points)
+  // 4. Bend Angle Capability (9 points)
   let angleScore = 0;
   const bendAngle = typeof bender.bendAngle === "number" ? bender.bendAngle : NaN;
   if (!Number.isNaN(bendAngle)) {
-    if (bendAngle >= 195) angleScore = 10;
-    else if (bendAngle >= 180) angleScore = 8;
-    else if (bendAngle >= 120) angleScore = 5;
-    else angleScore = 3;
+    if (bendAngle >= 195) angleScore = 9;
+    else if (bendAngle >= 180) angleScore = 7;
+    else if (bendAngle >= 120) angleScore = 4;
+    else angleScore = 2;
   }
 
   scoreBreakdown.push({
     criteria: "Bend Angle Capability",
     points: angleScore,
-    maxPoints: 10,
+    maxPoints: 9,
     reasoning: Number.isNaN(bendAngle) ? "No published bend angle" : `${bendAngle}° maximum bend angle`,
   });
   totalScore += angleScore;
 
-  // 6. Wall Thickness Capability (9 points)
+  // 5. Wall Thickness Capability (9 points)
   //
   // This now combines two pieces:
   // - Thickness: 0–6 points based on the thickest published 1.75" OD DOM wall.
@@ -464,7 +455,7 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   });
   totalScore += wallScore;
 
-  // 7. Die Selection & Shapes (8 points)
+  // 6. Die Selection & Shapes (8 points)
   //
   // Uses explicit, manufacturer-documented die shape coverage from `dieShapes`.
   // Admin stores this as a comma-separated list of labels. We score ONLY tube/pipe
@@ -536,29 +527,29 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   });
   totalScore += dieScore;
 
-  // 8. Years in Business (7 points)
+  // 7. Track Record (Years in Business) (3 points)
   let businessScore = 0;
-  if (brand === "Hossfeld") businessScore = 7;
-  else if (brand === "JD2") businessScore = 6;
-  else if (brand === "Pro-Tools" || brand === "Baileigh") businessScore = 5;
-  else if (brand === "RogueFab") businessScore = 4;
-  else if (brand === "SWAG Off Road") businessScore = 3;
-  else businessScore = 3;
+  if (brand === "Hossfeld") businessScore = 3;
+  else if (brand === "JD2") businessScore = 2;
+  else if (brand === "Pro-Tools" || brand === "Baileigh") businessScore = 2;
+  else if (brand === "RogueFab") businessScore = 1;
+  else if (brand === "SWAG Off Road") businessScore = 1;
+  else businessScore = 1;
 
   scoreBreakdown.push({
-    criteria: "Years in Business",
+    criteria: "Track Record (Years in Business)",
     points: businessScore,
-    maxPoints: 7,
+    maxPoints: 3,
     reasoning:
-      businessScore >= 6
+      businessScore >= 2
         ? "Established industry veteran (20+ years)"
-        : businessScore >= 4
+        : businessScore >= 1
         ? "Proven track record (10+ years)"
         : "Newer market entry",
   });
   totalScore += businessScore;
 
-  // 9. Upgrade Path & Modularity (8 points)
+  // 8. Upgrade Path & Modularity (7 points)
   //
   // This category is driven by explicit yes/no style fields coming from the
   // catalog/overlay, not brand names. Each documented upgrade earns 1 point:
@@ -628,8 +619,8 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   if (hasThinWallUpgrade) upgradeScore += 1;
   if (hasWiperDieSupport) upgradeScore += 1;
 
-  // Hard clamp to 8 in case multiple legacy fields overlap.
-  if (upgradeScore > 8) upgradeScore = 8;
+  // Hard clamp to 7 in case multiple legacy fields overlap.
+  if (upgradeScore > 7) upgradeScore = 7;
 
   const upgradePieces: string[] = [];
   if (hasPowerUpgradePath) upgradePieces.push("power upgrade path");
@@ -644,7 +635,7 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   scoreBreakdown.push({
     criteria: "Upgrade Path & Modularity",
     points: upgradeScore,
-    maxPoints: 8,
+    maxPoints: 7,
     reasoning:
       upgradePieces.length === 0
         ? "No documented upgrade path beyond the base configuration for power, LRA control, or bend-quality tooling."
@@ -652,7 +643,7 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   });
   totalScore += upgradeScore;
 
-  // 10. Mandrel Availability (4 points)
+  // 9. Mandrel Availability (4 points)
   let mandrelScore = 0;
   const mandrelRaw = String(
     // Prefer a dedicated "mandrel" field, but fall back to the legacy
@@ -677,7 +668,7 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   });
   totalScore += mandrelScore;
 
-  // 11. S-Bend Capability (2 points)
+  // 10. S-Bend Capability (3 points)
   let sBendScore = 0;
   const rawSBend = (bender as any).sBendCapability;
   const sBendCapability =
@@ -687,17 +678,78 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
       ? ["yes", "true"].includes(rawSBend.trim().toLowerCase())
       : false;
 
-  if (sBendCapability === true) sBendScore = 2;
+  if (sBendCapability === true) sBendScore = 3;
 
   scoreBreakdown.push({
     criteria: "S-Bend Capability",
     points: sBendScore,
-    maxPoints: 2,
+    maxPoints: 3,
     reasoning: sBendCapability
       ? "Meets TubeBenderReviews S-bend definition: two opposite-direction bends with ≤0.125\" straight (tangent) between them, verified via specs/photos."
       : "No documented ability to form back-to-back opposite bends with ≤0.125\" tangent; marketing \"S-bend\" claims with several inches of straight between bends do not qualify.",
   });
   totalScore += sBendScore;
+
+  // 11. USA Manufacturing Disclosure (5 points)
+  const usaManufacturingDisclosure = parseTier(
+    (bender as any).usaManufacturingTier,
+    5,
+  );
+  scoreBreakdown.push({
+    criteria: "USA Manufacturing (Disclosure-Based)",
+    points: usaManufacturingDisclosure,
+    maxPoints: 5,
+    reasoning:
+      usaManufacturingDisclosure > 0
+        ? `Disclosure-based tier ${usaManufacturingDisclosure}/5 based on manufacturer's published claims about where frames, dies, and hydraulics are made or assembled. We do not independently verify or guess where parts are actually made.`
+        : "No disclosed USA manufacturing claims or clearly imported system.",
+  });
+  totalScore += usaManufacturingDisclosure;
+
+  // 12. Origin Transparency (5 points)
+  const originTransparency = parseTier(
+    (bender as any).originTransparencyTier,
+    5,
+  );
+  scoreBreakdown.push({
+    criteria: "Origin Transparency",
+    points: originTransparency,
+    maxPoints: 5,
+    reasoning:
+      originTransparency > 0
+        ? `Transparency tier ${originTransparency}/5 based on how clearly the manufacturer documents the origin of major components. This scores disclosure quality only, not the origin itself.`
+        : "No meaningful origin disclosure or conflicting/unclear claims.",
+  });
+  totalScore += originTransparency;
+
+  // 13. Single-Source System (2 points, binary)
+  const singleSourceSystem = parseTier(
+    (bender as any).singleSourceSystemTier,
+    2,
+  );
+  scoreBreakdown.push({
+    criteria: "Single-Source System",
+    points: singleSourceSystem,
+    maxPoints: 2,
+    reasoning:
+      singleSourceSystem === 2
+        ? "Complete, fully functional system (frame + dies + hydraulics/lever) available from one primary manufacturer/storefront."
+        : "One or more required components must be sourced elsewhere.",
+  });
+  totalScore += singleSourceSystem;
+
+  // 14. Warranty Support (3 points)
+  const warrantySupport = parseTier((bender as any).warrantyTier, 3);
+  scoreBreakdown.push({
+    criteria: "Warranty (Published Terms Only)",
+    points: warrantySupport,
+    maxPoints: 3,
+    reasoning:
+      warrantySupport > 0
+        ? `Warranty tier ${warrantySupport}/3 based strictly on published warranty terms (coverage and duration). We do not score how well the warranty is honored in practice.`
+        : "No meaningful written warranty, sold as-is, or warranty not mentioned.",
+  });
+  totalScore += warrantySupport;
 
   return {
     totalScore,
