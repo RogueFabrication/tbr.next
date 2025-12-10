@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getAllTubeBendersWithOverlay, findTubeBenderWithOverlay } from "../../../lib/catalogOverlay";
 import { slugOf, titleOf, slugForProduct } from "../../../lib/ids";
 import { getProductScore, TOTAL_POINTS } from "../../../lib/scoring";
+import ScoreBreakdownToggle from "../../../components/ScoreBreakdownToggle";
 import ReviewAuditPanel from "../../../components/ReviewAuditPanel";
 
 const fallbackImg = "/images/products/placeholder.png";
@@ -139,7 +140,9 @@ export default function ReviewPage({ params, searchParams }: PageProps) {
   const title = titleOf(product);
   const compareHref = `/compare?ids=${encodeURIComponent(product.id)}`;
   const img = imagePathForSlug(product.slug ?? product.id);
-  const { total: score, breakdown } = getProductScore(product as any);
+  // Per-product score (total + breakdown) used both for the main score badge
+  // and for the full "score math & citation log" breakdown below.
+  const score = getProductScore(product);
 
   // Allow the score breakdown panel to auto-open when navigated via
   // .../reviews/[slug]?score=details (used by the "pt details" links).
@@ -395,7 +398,7 @@ export default function ReviewPage({ params, searchParams }: PageProps) {
                       Overall score
                     </span>
                     <span className="font-semibold text-emerald-900">
-                      {score} / {TOTAL_POINTS}
+                      {score?.total ?? "—"} / {TOTAL_POINTS}
                     </span>
                   </div>
                 </div>
@@ -439,7 +442,7 @@ export default function ReviewPage({ params, searchParams }: PageProps) {
                 </div>
               )}
 
-              {Array.isArray(breakdown) && breakdown.length > 0 && (
+              {Array.isArray(score?.breakdown) && score.breakdown.length > 0 && (
                 <details
                   className="mb-3 text-xs md:text-sm"
                   open={scoreDetailsOpen}
@@ -448,7 +451,7 @@ export default function ReviewPage({ params, searchParams }: PageProps) {
                     Score breakdown
                   </summary>
                   <div className="mt-2 space-y-1.5">
-                    {breakdown.map((item, idx) => {
+                    {score.breakdown.map((item, idx) => {
                       const scoreColorClass = (points: number, maxPoints: number): string => {
                         if (!maxPoints || points == null) return "bg-gray-200 text-gray-800";
                         const ratio = points / maxPoints;
@@ -557,10 +560,22 @@ export default function ReviewPage({ params, searchParams }: PageProps) {
           </aside>
         </div>
       </section>
-      {/* Audit trail & citations */}
-      {product && <ReviewAuditPanel product={product as any} />}
+      {/* 
+        Score math + citation log:
+        This sits near the bottom of the review page, close to whatever
+        "expand citations" / audit UI you already have (ReviewAuditPanel).
+        Users have to explicitly expand this to see the full per-category math.
+      */}
+      <div className="mx-auto mt-6 max-w-6xl px-6 pb-10 space-y-4">
+        <ScoreBreakdownToggle score={score} />
 
-      <div className="mt-6 text-sm text-muted-foreground">
+        {/* Existing audit / citation panel; this already shows sources and notes.
+           Placing the breakdown toggle immediately above it keeps all
+           transparency-related content together. */}
+        {product && <ReviewAuditPanel product={product as any} />}
+      </div>
+
+      <div className="mx-auto max-w-6xl px-6 mt-6 text-sm text-muted-foreground">
         <Link className="underline" href="/reviews">Back to all reviews</Link>
       </div>
     </main>

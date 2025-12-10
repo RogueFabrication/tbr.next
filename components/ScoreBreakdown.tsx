@@ -119,9 +119,11 @@ export default function ScoreBreakdown({ score }: ScoreBreakdownProps) {
       </div>
 
       <p className="text-[11px] text-gray-500">
-        If something looks off, it&apos;s almost always a data issue (for
-        example, missing specs or an outdated admin overlay), not a hidden
-        multiplier. Fix the inputs and the math here will update automatically.
+        If something looks off, it is almost always a problem with the specs we
+        were given or how they were entered, not a hidden multiplier. Let us
+        know which number looks wrong and we&apos;ll re-check it against the
+        manufacturer&apos;s published information and update the score if
+        needed.
       </p>
     </div>
   );
