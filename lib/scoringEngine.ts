@@ -34,77 +34,97 @@ export interface ScoringCriteria {
 }
 
 /**
- * Human-readable criteria reference. Not currently used in calculations, but
- * kept for documentation and potential future UI.
+ * Human-readable criteria reference. Not currently used in calculations, and
+ * not kept perfectly in sync with the live scoring categories. Treat this as
+ * legacy documentation only.
  */
 export const SCORING_CRITERIA: ScoringCriteria[] = [
   {
     name: "Value for Money",
     maxPoints: 20,
     description: "Price-to-performance ratio based on base/minimum price of the range",
-    weight: 0.20,
+    weight: 0.2,
   },
   {
     name: "Ease of Use & Setup",
-    maxPoints: 12,
+    maxPoints: 11,
     description: "Assembly time, portability, operation simplicity",
-    weight: 0.12,
+    weight: 0.11,
   },
   {
-    name: "Max Diameter & Radius Capacity",
-    maxPoints: 12,
-    description: "Maximum tube diameter and minimum bend radius capability",
-    weight: 0.12,
-  },
-  {
-    name: "USA Manufacturing",
+    name: "Max Diameter Capacity",
     maxPoints: 10,
-    description: "American-made components and assembly",
-    weight: 0.10,
+    description: "Maximum tube diameter capability (CLR to be added later once fully documented).",
+    weight: 0.1,
   },
   {
     name: "Bend Angle Capability",
-    maxPoints: 10,
+    maxPoints: 9,
     description: "Maximum bend angle achievable (180°+ preferred)",
-    weight: 0.10,
+    weight: 0.09,
   },
   {
     name: "Wall Thickness Capability",
     maxPoints: 9,
-    description: "Maximum wall thickness for 1.75\" OD DOM tubing",
+    description: "Maximum wall thickness for 1.75\" OD DOM tubing, plus documented material coverage.",
     weight: 0.09,
   },
   {
     name: "Die Selection & Shapes",
     maxPoints: 8,
     description:
-      "Available die coverage for round tube, pipe, square/rectangular tube, EMT, metric tube, plus optional plastic/urethane pressure dies",
+      "Available die coverage for round tube, pipe, square, EMT, metric round/square, plastic/urethane pressure dies, and other documented shapes.",
     weight: 0.08,
   },
   {
     name: "Years in Business",
-    maxPoints: 7,
-    description: "Company longevity and market experience",
-    weight: 0.07,
+    maxPoints: 3,
+    description: "Company longevity and market experience (lightly weighted).",
+    weight: 0.03,
   },
   {
     name: "Upgrade Path & Modularity",
     maxPoints: 8,
     description:
-      "Documented upgrade path for power, LRA control (length, rotation, angle), and bend-quality tooling (thin/thick wall, wipers).",
+      "Documented upgrade path for power, LRA control (length, rotation, angle, auto-stop), and bend-quality tooling (thin/thick wall, wipers).",
     weight: 0.08,
   },
   {
     name: "Mandrel Compatibility",
     maxPoints: 4,
-    description: "Mandrel bending capability – 4 points if a factory-supported option exists, 0 if not",
+    description:
+      "Mandrel bending capability – 0 for none, 2 for 'economy' mandrels, 4 for bronze or equivalent factory-supported system.",
     weight: 0.04,
   },
   {
     name: "S-Bend Capability",
+    maxPoints: 3,
+    description: "Ability to create S-bends and complex geometries under a strict ≤0.125\" tangent rule.",
+    weight: 0.03,
+  },
+  {
+    name: "USA Manufacturing (Disclosure-Based)",
+    maxPoints: 5,
+    description: "Tiered points based on what the manufacturer publicly claims about origin.",
+    weight: 0.05,
+  },
+  {
+    name: "Origin Transparency",
+    maxPoints: 5,
+    description: "How clearly the manufacturer documents origin of major components.",
+    weight: 0.05,
+  },
+  {
+    name: "Single-Source System",
     maxPoints: 2,
-    description: "Ability to create S-bends and complex geometries",
+    description: "Binary: 2 pts if full system from one primary source, else 0.",
     weight: 0.02,
+  },
+  {
+    name: "Warranty (Published Terms Only)",
+    maxPoints: 3,
+    description: "Published warranty strength (duration and coverage); not how often it is honored.",
+    weight: 0.03,
   },
 ];
 
@@ -180,11 +200,7 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   const scoreBreakdown: ScoreBreakdownItem[] = [];
   let totalScore = 0;
 
-  // 1. Value for Money (20 points)
-  // TODO: Replace this legacy string-matching logic with a data-driven
-  // "features per dollar" formula that uses component-level entry pricing
-  // (frame + starter die + hydraulics + stand) and normalizes across all
-  // products. The scoring page describes this planned behavior explicitly.
+  // 1. Value for Money (legacy stub; real value is layered in getProductScore)
   let valueScore = 0;
   const priceRange = String(bender.priceRange ?? "").toLowerCase();
   if (priceRange.includes("$780") || priceRange.includes("$885")) valueScore = 20;
@@ -199,7 +215,7 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
     criteria: "Value for Money",
     points: valueScore,
     maxPoints: 20,
-    reasoning: `Price point ${bender.priceRange ?? "N/A"} relative to features and capacity`,
+    reasoning: `Legacy price-band heuristic on ${bender.priceRange ?? "N/A"}; overridden by the modern features-per-dollar scoring in getProductScore.`,
   });
   totalScore += valueScore;
 
@@ -207,15 +223,14 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   //
   // This combines:
   // - A base ergonomics/operation score (7–11 pts) driven by legacy
-  //   brand/power-type heuristics; this will eventually move to a fully
-  //   spec-based formula, but for now we document exactly how it behaves.
+  //   brand/power-type heuristics.
   // - A portability tier (0–3 pts) from the admin "portability" field:
   //     0 = fixed base only
   //     1 = portable, no rolling option
   //     2 = portable with optional rolling base/cart
   //     3 = rolling base as a standard feature
   //
-  // The final category score is clamped to 12/12.
+  // The final category score is clamped to 11/11.
   const brand = String(bender.brand ?? "");
   const powerType = String(bender.powerType ?? "");
 
@@ -281,26 +296,42 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   });
   totalScore += easeScore;
 
-  // 3. Max Diameter & Radius Capacity (11 points)
+  // 3. Max Diameter & CLR Capability (10 points)
+  //
+  // NOTE: As of now this category scores *only* maximum round tube OD based on
+  // published specs. CLR is not yet wired into the numeric score because CLR
+  // data is not standardized across all machines. The /scoring page copy is
+  // explicit about this so we are not pretending to use CLR in the math before
+  // the data exists; CLR ranges will be added once we have consistent data for
+  // every machine in the comparison.
   let capacityScore = 0;
   const maxCapacity = String(bender.maxCapacity ?? "").toLowerCase();
-  if (maxCapacity.includes("2.5") || maxCapacity.includes("2-1/2")) capacityScore = 11;
-  else if (maxCapacity.includes("2-3/8") || maxCapacity.includes("2.375")) capacityScore = 10;
-  else if (maxCapacity.includes("2.25") || maxCapacity.includes("2-1/4")) capacityScore = 9;
-  else if (maxCapacity.includes("2.0") || maxCapacity.includes('2"')) capacityScore = 8;
-  else if (maxCapacity.includes("1.75") || maxCapacity.includes("1-3/4")) capacityScore = 6;
-  else if (maxCapacity.includes("1.5") || maxCapacity.includes("1-1/2")) capacityScore = 4;
-  else if (maxCapacity) capacityScore = 3;
+  if (maxCapacity.includes("2.5") || maxCapacity.includes("2-1/2")) capacityScore = 10;
+  else if (maxCapacity.includes("2-3/8") || maxCapacity.includes("2.375")) capacityScore = 9;
+  else if (maxCapacity.includes("2.25") || maxCapacity.includes("2-1/4")) capacityScore = 8;
+  else if (maxCapacity.includes("2.0") || maxCapacity.includes('2"')) capacityScore = 7;
+  else if (maxCapacity.includes("1.75") || maxCapacity.includes("1-3/4")) capacityScore = 5;
+  else if (maxCapacity.includes("1.5") || maxCapacity.includes("1-1/2")) capacityScore = 3;
+  else if (maxCapacity) capacityScore = 2;
 
   scoreBreakdown.push({
-    criteria: "Max Diameter & Radius Capacity",
+    criteria: "Max Diameter & CLR Capability",
     points: capacityScore,
-    maxPoints: 11,
-    reasoning: `${bender.maxCapacity ?? "Unknown"} maximum tube diameter capacity`,
+    maxPoints: 10,
+    reasoning: `${
+      bender.maxCapacity ?? "Unknown"
+    } maximum round tube capacity based on published specs. Math today is OD-only; CLR ranges will be added to the score once consistent CLR data is available for all machines.`,
   });
   totalScore += capacityScore;
 
   // 4. Bend Angle Capability (9 points)
+  //
+  // Explicit tiers:
+  // - ≥ 195° → 9 pts
+  // - 180–194° → 7 pts
+  // - 120–179° → 4 pts
+  // - < 120° → 2 pts
+  // - no published angle → 0 pts
   let angleScore = 0;
   const bendAngle = typeof bender.bendAngle === "number" ? bender.bendAngle : NaN;
   if (!Number.isNaN(bendAngle)) {
@@ -320,15 +351,17 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
 
   // 5. Wall Thickness Capability (9 points)
   //
-  // This now combines two pieces:
+  // This combines:
   // - Thickness: 0–6 points based on the thickest published 1.75" OD DOM wall.
   // - Materials: 0–3 points based on documented material compatibility.
   //
-  // We do not guess. Missing data gets conservative baseline handling and a
-  // clear explanation in the reasoning string.
+  // If there is no published max wall for 1.75" OD, we do NOT fabricate data:
+  // the entire category is scored as 0 and the reasoning says so.
   let thicknessScore = 0;
+  let materialScore = 0;
   const wallRaw = bender.wallThicknessCapacity;
   let wallReasonPart: string;
+  let materialReasonPart = "";
 
   if (wallRaw !== undefined && wallRaw !== null && wallRaw !== "") {
     const thickness = parseFloat(String(wallRaw));
@@ -337,109 +370,107 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
       else if (thickness >= 0.120) thicknessScore = 5;
       else if (thickness >= 0.095) thicknessScore = 4;
       else if (thickness > 0) thicknessScore = 3;
-      wallReasonPart = `${wallRaw}" wall capacity for 1.75" OD DOM`;
+      wallReasonPart = `${wallRaw}" wall capacity for 1.75" OD DOM.`;
     } else {
       thicknessScore = 0;
-      wallReasonPart = `Unparseable wall thickness value: ${String(wallRaw)}`;
+      wallReasonPart = `Unparseable wall thickness value: ${String(wallRaw)}.`;
+    }
+
+    // Materials scoring (0–3 points)
+    const rawMaterials = Array.isArray(bender.materials)
+      ? (bender.materials as unknown[])
+      : [];
+
+    const materialSlugs = rawMaterials
+      .map((m) => String(m || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    let hasMild = false;
+    let has4130 = false;
+    let hasStainless = false;
+    let hasAluminum = false;
+    let hasTitanium = false;
+    let hasCopperBrass = false;
+    let hasOtherMat = false;
+
+    for (const label of materialSlugs) {
+      if (label.includes("mild")) hasMild = true;
+      if (label.includes("4130") || label.includes("chromoly")) has4130 = true;
+      if (
+        label.includes("stainless") ||
+        label.includes("304") ||
+        label.includes("316")
+      )
+        hasStainless = true;
+      if (label.includes("alum")) hasAluminum = true;
+      if (label.includes("titanium") || label === "ti") hasTitanium = true;
+      if (
+        label.includes("copper") ||
+        label.includes("brass") ||
+        label.includes("bronze")
+      )
+        hasCopperBrass = true;
+      if (
+        !label.includes("mild") &&
+        !label.includes("4130") &&
+        !label.includes("chromoly") &&
+        !label.includes("stainless") &&
+        !label.includes("304") &&
+        !label.includes("316") &&
+        !label.includes("alum") &&
+        !label.includes("titanium") &&
+        label !== "ti" &&
+        !label.includes("copper") &&
+        !label.includes("brass") &&
+        !label.includes("bronze")
+      ) {
+        hasOtherMat = true;
+      }
+    }
+
+    let rawMaterialWeight = 0;
+    if (hasMild) rawMaterialWeight += 2;
+    if (has4130) rawMaterialWeight += 2;
+    if (hasStainless) rawMaterialWeight += 1.5;
+    if (hasAluminum) rawMaterialWeight += 1.5;
+    if (hasTitanium) rawMaterialWeight += 1;
+    if (hasCopperBrass) rawMaterialWeight += 1;
+    if (hasOtherMat) rawMaterialWeight += 1;
+
+    if (rawMaterials.length === 0) {
+      materialScore = 0;
+      materialReasonPart =
+        "No published material compatibility list; material coverage not scored.";
+    } else {
+      const maxRawMaterialWeight = 2 + 2 + 1.5 + 1.5 + 1 + 1 + 1; // 10
+      const normalised =
+        maxRawMaterialWeight > 0
+          ? (3 * rawMaterialWeight) / maxRawMaterialWeight
+          : 0;
+      materialScore = Math.round(
+        Math.max(0, Math.min(3, normalised)),
+      );
+
+      const matLabels: string[] = [];
+      if (hasMild) matLabels.push("mild steel");
+      if (has4130) matLabels.push("4130 chromoly");
+      if (hasStainless) matLabels.push("stainless (304/316)");
+      if (hasAluminum) matLabels.push("aluminum");
+      if (hasTitanium) matLabels.push("titanium");
+      if (hasCopperBrass) matLabels.push("copper/brass/bronze");
+      if (hasOtherMat) matLabels.push("other documented alloys");
+
+      materialReasonPart =
+        matLabels.length > 0
+          ? `Documented material coverage includes: ${matLabels.join(", ")}.`
+          : "Materials list provided but could not be mapped to known categories.";
     }
   } else {
-    // No published wall data: we assign a very small baseline and say so.
-    thicknessScore = 2;
-    wallReasonPart =
-      "No published wall thickness data; assigned a small conservative baseline instead of guessing.";
-  }
-
-  // Materials scoring (0–3 points)
-  const rawMaterials = Array.isArray(bender.materials)
-    ? (bender.materials as unknown[])
-    : [];
-
-  const materialSlugs = rawMaterials
-    .map((m) => String(m || "").trim().toLowerCase())
-    .filter(Boolean);
-
-  let hasMild = false;
-  let has4130 = false;
-  let hasStainless = false;
-  let hasAluminum = false;
-  let hasTitanium = false;
-  let hasCopperBrass = false;
-  let hasOtherMat = false;
-
-  for (const label of materialSlugs) {
-    if (label.includes("mild")) hasMild = true;
-    if (label.includes("4130") || label.includes("chromoly")) has4130 = true;
-    if (
-      label.includes("stainless") ||
-      label.includes("304") ||
-      label.includes("316")
-    )
-      hasStainless = true;
-    if (label.includes("alum")) hasAluminum = true;
-    if (label.includes("titanium") || label === "ti") hasTitanium = true;
-    if (
-      label.includes("copper") ||
-      label.includes("brass") ||
-      label.includes("bronze")
-    )
-      hasCopperBrass = true;
-    if (
-      !label.includes("mild") &&
-      !label.includes("4130") &&
-      !label.includes("chromoly") &&
-      !label.includes("stainless") &&
-      !label.includes("304") &&
-      !label.includes("316") &&
-      !label.includes("alum") &&
-      !label.includes("titanium") &&
-      label !== "ti" &&
-      !label.includes("copper") &&
-      !label.includes("brass") &&
-      !label.includes("bronze")
-    ) {
-      hasOtherMat = true;
-    }
-  }
-
-  let rawMaterialWeight = 0;
-  if (hasMild) rawMaterialWeight += 2;
-  if (has4130) rawMaterialWeight += 2;
-  if (hasStainless) rawMaterialWeight += 1.5;
-  if (hasAluminum) rawMaterialWeight += 1.5;
-  if (hasTitanium) rawMaterialWeight += 1;
-  if (hasCopperBrass) rawMaterialWeight += 1;
-  if (hasOtherMat) rawMaterialWeight += 1;
-
-  let materialScore = 0;
-  let materialReasonPart: string;
-
-  if (rawMaterials.length === 0) {
+    // No published wall data at the reference size: entire category scores 0.
+    thicknessScore = 0;
     materialScore = 0;
-    materialReasonPart =
-      "No published material compatibility list; material coverage not scored.";
-  } else {
-    const maxRawMaterialWeight = 2 + 2 + 1.5 + 1.5 + 1 + 1 + 1; // 10
-    const normalised =
-      maxRawMaterialWeight > 0
-        ? (3 * rawMaterialWeight) / maxRawMaterialWeight
-        : 0;
-    materialScore = Math.round(
-      Math.max(0, Math.min(3, normalised)),
-    );
-
-    const matLabels: string[] = [];
-    if (hasMild) matLabels.push("mild steel");
-    if (has4130) matLabels.push("4130 chromoly");
-    if (hasStainless) matLabels.push("stainless (304/316)");
-    if (hasAluminum) matLabels.push("aluminum");
-    if (hasTitanium) matLabels.push("titanium");
-    if (hasCopperBrass) matLabels.push("copper/brass/bronze");
-    if (hasOtherMat) matLabels.push("other documented alloys");
-
-    materialReasonPart =
-      matLabels.length > 0
-        ? `Documented material coverage includes: ${matLabels.join(", ")}.`
-        : "Materials list provided but could not be mapped to known categories.";
+    wallReasonPart =
+      "No published max wall thickness for 1.75\" OD DOM; this category is scored as 0 rather than guessing.";
   }
 
   const wallScore = Math.max(
@@ -457,21 +488,17 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
 
   // 6. Die Selection & Shapes (8 points)
   //
-  // Uses explicit, manufacturer-documented die shape coverage from `dieShapes`.
-  // Admin stores this as a comma-separated list of labels. We score ONLY tube/pipe
-  // families and EMT/metric/plastic pressure dies. Solid shapes (flat bar, hex, etc.)
-  // are effectively assumed when round tube exists and are NOT part of this score.
+  // 8 fixed buckets, 1 point each (max 8 pts):
+  // - Round tube
+  // - Pipe
+  // - Square tube
+  // - EMT
+  // - Metric round
+  // - Metric square / rectangular
+  // - Plastic / urethane pressure dies
+  // - Other documented shapes (e.g. rectangular-only, hex, etc.)
   //
-  // Shape weights (max 8 pts total):
-  // - Round tube: 3 pts
-  // - Square tube: 1 pt
-  // - Rectangular tube: 1 pt
-  // - EMT: 1 pt
-  // - Metric round / square: 1 pt
-  // - Plastic / urethane pressure dies: 1 pt
-  //
-  // "Other" is allowed in admin for documentation but does not add points.
-
+  // Admin stores this as a comma-separated list of labels in `dieShapes`.
   const rawDieShapes = (bender as any).dieShapes;
   let dieTokens: string[] = [];
 
@@ -486,24 +513,45 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
       .filter(Boolean);
   }
 
-  const dieSet = new Set(dieTokens);
+  const dieSlugs = dieTokens.map((s) => s.toLowerCase());
 
-  const hasRound = dieSet.has("Round tube");
-  const hasPipe = dieSet.has("Pipe");
-  const hasSquare = dieSet.has("Square tube");
-  const hasRectangular = dieSet.has("Rectangular tube");
-  const hasEmt = dieSet.has("EMT");
-  const hasMetric = dieSet.has("Metric round / square");
-  const hasPlastic = dieSet.has("Plastic / urethane pressure dies");
+  const hasRound = dieSlugs.some(
+    (s) => s.includes("round") && s.includes("tube"),
+  );
+  const hasPipe = dieSlugs.some((s) => s.includes("pipe"));
+  const hasSquare = dieSlugs.some(
+    (s) => s.includes("square") && s.includes("tube"),
+  );
+  const hasEmt = dieSlugs.some((s) => s.includes("emt"));
+  const hasMetricRound = dieSlugs.some(
+    (s) =>
+      s.includes("metric") &&
+      (s.includes("round") || s.includes("od")),
+  );
+  const hasMetricSquareRect = dieSlugs.some(
+    (s) =>
+      s.includes("metric") &&
+      (s.includes("square") || s.includes("rect")),
+  );
+  const hasPlastic = dieSlugs.some(
+    (s) => s.includes("plastic") || s.includes("urethane"),
+  );
+  const hasOtherShape = dieSlugs.some(
+    (s) =>
+      s.includes("other") ||
+      s.includes("hex") ||
+      (s.includes("rectangular") && !s.includes("tube")),
+  );
 
   let dieScore = 0;
-  if (hasRound) dieScore += 3;
+  if (hasRound) dieScore += 1;
   if (hasPipe) dieScore += 1;
   if (hasSquare) dieScore += 1;
-  if (hasRectangular) dieScore += 1;
   if (hasEmt) dieScore += 1;
-  if (hasMetric) dieScore += 1;
+  if (hasMetricRound) dieScore += 1;
+  if (hasMetricSquareRect) dieScore += 1;
   if (hasPlastic) dieScore += 1;
+  if (hasOtherShape) dieScore += 1;
 
   if (dieScore > 8) dieScore = 8;
 
@@ -511,10 +559,11 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   if (hasRound) coveredShapes.push("round tube");
   if (hasPipe) coveredShapes.push("pipe");
   if (hasSquare) coveredShapes.push("square tube");
-  if (hasRectangular) coveredShapes.push("rectangular tube");
   if (hasEmt) coveredShapes.push("EMT");
-  if (hasMetric) coveredShapes.push("metric round/square");
+  if (hasMetricRound) coveredShapes.push("metric round");
+  if (hasMetricSquareRect) coveredShapes.push("metric square/rectangular");
   if (hasPlastic) coveredShapes.push("plastic/urethane pressure dies");
+  if (hasOtherShape) coveredShapes.push("other documented shapes");
 
   scoreBreakdown.push({
     criteria: "Die Selection & Shapes",
@@ -523,11 +572,16 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
     reasoning:
       coveredShapes.length === 0
         ? "No documented tube/pipe die families beyond basic or unspecified coverage."
-        : `Documented die coverage for: ${coveredShapes.join(", ")}.`,
+        : `Documented die coverage for: ${coveredShapes.join(
+            ", ",
+          )}. Points are awarded only for die families the bender manufacturer explicitly documents as compatible for this frame, including any clearly claimed third-party die ecosystems.`,
   });
   totalScore += dieScore;
 
   // 7. Track Record (Years in Business) (3 points)
+  //
+  // Still a light, brand-based heuristic. Admin-facing /scoring copy explains
+  // that this is intentionally low-weight compared to performance categories.
   let businessScore = 0;
   if (brand === "Hossfeld") businessScore = 3;
   else if (brand === "JD2") businessScore = 2;
@@ -542,26 +596,25 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
     maxPoints: 3,
     reasoning:
       businessScore >= 2
-        ? "Established industry veteran (20+ years)"
+        ? "Established industry veteran with a long operating history."
         : businessScore >= 1
-        ? "Proven track record (10+ years)"
-        : "Newer market entry",
+        ? "Proven track record, but not as long-standing as the oldest brands."
+        : "Newer market entry.",
   });
   totalScore += businessScore;
 
-  // 8. Upgrade Path & Modularity (7 points)
+  // 8. Upgrade Path & Modularity (8 points)
   //
-  // This category is driven by explicit yes/no style fields coming from the
-  // catalog/overlay, not brand names. Each documented upgrade earns 1 point:
+  // 8 discrete flags, 1 point each:
   //
   //   A. Power upgrade path (1)
   //      hasPowerUpgradePath
   //
-  //   B. LRA control path (3)
+  //   B. LRA control path (4)
   //      hasLengthStop
   //      hasRotationIndexing
-  //      hasAngleMeasurement (+1)
-  //      hasAutoStop (+1)
+  //      hasAngleMeasurement
+  //      hasAutoStop
   //
   //   C. Bend-quality tooling upgrades (3)
   //      hasThickWallUpgrade
@@ -608,7 +661,7 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   // A. Power upgrade path (1)
   if (hasPowerUpgradePath) upgradeScore += 1;
 
-  // B. LRA control path (3)
+  // B. LRA control path (4)
   if (hasLengthStop) upgradeScore += 1;
   if (hasRotationIndexing) upgradeScore += 1;
   if (hasAngleMeasurement) upgradeScore += 1;
@@ -619,8 +672,7 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   if (hasThinWallUpgrade) upgradeScore += 1;
   if (hasWiperDieSupport) upgradeScore += 1;
 
-  // Hard clamp to 7 in case multiple legacy fields overlap.
-  if (upgradeScore > 7) upgradeScore = 7;
+  if (upgradeScore > 8) upgradeScore = 8;
 
   const upgradePieces: string[] = [];
   if (hasPowerUpgradePath) upgradePieces.push("power upgrade path");
@@ -635,7 +687,7 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   scoreBreakdown.push({
     criteria: "Upgrade Path & Modularity",
     points: upgradeScore,
-    maxPoints: 7,
+    maxPoints: 8,
     reasoning:
       upgradePieces.length === 0
         ? "No documented upgrade path beyond the base configuration for power, LRA control, or bend-quality tooling."
@@ -643,28 +695,41 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   });
   totalScore += upgradeScore;
 
-  // 9. Mandrel Availability (4 points)
+  // 9. Mandrel Compatibility (4 points)
+  //
+  // 3-tier mapping:
+  // - 0 pts: none
+  // - 2 pts: "economy" mandrels (non-bronze, plastic/steel, etc.)
+  // - 4 pts: bronze / full mandrel system ("available" or explicitly "bronze")
   let mandrelScore = 0;
   const mandrelRaw = String(
-    // Prefer a dedicated "mandrel" field, but fall back to the legacy
-    // "mandrelBender" key for any older overlay data.
     (bender as any).mandrel ?? (bender as any).mandrelBender ?? "",
   )
     .trim()
     .toLowerCase();
 
-  if (mandrelRaw === "available") {
+  if (mandrelRaw === "bronze" || mandrelRaw === "available") {
     mandrelScore = 4;
+  } else if (mandrelRaw === "economy") {
+    mandrelScore = 2;
+  }
+
+  let mandrelReason: string;
+  if (mandrelScore === 4) {
+    mandrelReason =
+      "Mandrel bending capability documented by the manufacturer for this frame with a full bronze or equivalent mandrel system.";
+  } else if (mandrelScore === 2) {
+    mandrelReason =
+      "Economy mandrel option documented by the manufacturer for this frame (non-bronze mandrels such as plastic, aluminum, or steel).";
+  } else {
+    mandrelReason = "No documented mandrel capability for this frame.";
   }
 
   scoreBreakdown.push({
     criteria: "Mandrel Compatibility",
     points: mandrelScore,
     maxPoints: 4,
-    reasoning:
-      mandrelScore === 4
-        ? "Mandrel bending capability documented by the manufacturer"
-        : "No documented mandrel capability",
+    reasoning: mandrelReason,
   });
   totalScore += mandrelScore;
 
@@ -690,7 +755,11 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
   });
   totalScore += sBendScore;
 
-  // 11. USA Manufacturing Disclosure (5 points)
+  // 11. USA Manufacturing (Disclosure-Based) (5 points)
+  //
+  // Tier meaning is defined on the /scoring page; this function only converts
+  // the admin-entered tier (0–5) into points and documents that it's
+  // disclosure-based, not a legal opinion on FTC compliance.
   const usaManufacturingDisclosure = parseTier(
     (bender as any).usaManufacturingTier,
     5,
@@ -701,59 +770,84 @@ export function calculateTubeBenderScore(bender: ScoringInput): ScoredResult {
     maxPoints: 5,
     reasoning:
       usaManufacturingDisclosure > 0
-        ? `Disclosure-based tier ${usaManufacturingDisclosure}/5 based on manufacturer's published claims about where frames, dies, and hydraulics are made or assembled. We do not independently verify or guess where parts are actually made.`
-        : "No disclosed USA manufacturing claims or clearly imported system.",
+        ? `Disclosure-based tier ${usaManufacturingDisclosure}/5 based solely on the manufacturer's own claims about where frames, dies, hydraulics, and assembly occur. We do not audit factories or offer legal opinions on FTC compliance; this scores the stated claim only.`
+        : "No disclosed USA manufacturing claims, clearly imported origin, or only very weak USA-flavored language.",
   });
   totalScore += usaManufacturingDisclosure;
 
   // 12. Origin Transparency (5 points)
-  const originTransparency = parseTier(
+  const originTransparencyTier = parseTier(
     (bender as any).originTransparencyTier,
     5,
   );
   scoreBreakdown.push({
     criteria: "Origin Transparency",
-    points: originTransparency,
+    points: originTransparencyTier,
     maxPoints: 5,
     reasoning:
-      originTransparency > 0
-        ? `Transparency tier ${originTransparency}/5 based on how clearly the manufacturer documents the origin of major components. This scores disclosure quality only, not the origin itself.`
-        : "No meaningful origin disclosure or conflicting/unclear claims.",
+      originTransparencyTier > 0
+        ? `Transparency tier ${originTransparencyTier}/5 based on how clearly the manufacturer documents the origin of major components. This scores documentation quality only; it does not reward or penalize any specific country of origin.`
+        : "No meaningful origin disclosure, or only vague/marketing language without concrete component origin details.",
   });
-  totalScore += originTransparency;
+  totalScore += originTransparencyTier;
 
   // 13. Single-Source System (2 points, binary)
-  const singleSourceSystem = parseTier(
+  //
+  // Binary by design:
+  // - 2 pts: complete, fully functional system (frame + dies + hydraulics/lever)
+  //          available from one primary manufacturer/storefront.
+  // - 0 pts: anything else (including “one part sourced elsewhere”).
+  const singleSourceTier = parseTier(
     (bender as any).singleSourceSystemTier,
     2,
   );
+  const singleSourceScore = singleSourceTier === 2 ? 2 : 0;
+
   scoreBreakdown.push({
     criteria: "Single-Source System",
-    points: singleSourceSystem,
+    points: singleSourceScore,
     maxPoints: 2,
     reasoning:
-      singleSourceSystem === 2
+      singleSourceScore === 2
         ? "Complete, fully functional system (frame + dies + hydraulics/lever) available from one primary manufacturer/storefront."
-        : "One or more required components must be sourced elsewhere.",
+        : "One or more required components must be sourced elsewhere, or the manufacturer does not clearly offer a complete system from a single source.",
   });
-  totalScore += singleSourceSystem;
+  totalScore += singleSourceScore;
 
   // 14. Warranty Support (3 points)
-  const warrantySupport = parseTier((bender as any).warrantyTier, 3);
+  //
+  // Direct 0–3 mapping from admin tier:
+  // 0 = no warranty mentioned / sold as-is
+  // 1 = very short or vague coverage
+  // 2 = clear 1–2 year coverage
+  // 3 = clear multi-year or lifetime frame coverage
+  const warrantySupportTier = parseTier((bender as any).warrantyTier, 3);
+  let warrantyReason: string;
+
+  if (warrantySupportTier === 3) {
+    warrantyReason =
+      "Clear multi-year or lifetime coverage on major structural components, based on published warranty terms.";
+  } else if (warrantySupportTier === 2) {
+    warrantyReason =
+      "Clear written warranty with roughly 1–2 years of coverage on the machine or major components.";
+  } else if (warrantySupportTier === 1) {
+    warrantyReason =
+      "Some warranty language present, but short, limited, or vague in duration/coverage.";
+  } else {
+    warrantyReason =
+      "No meaningful written warranty, sold as-is, or warranty not mentioned in published documentation.";
+  }
+
   scoreBreakdown.push({
     criteria: "Warranty (Published Terms Only)",
-    points: warrantySupport,
+    points: warrantySupportTier,
     maxPoints: 3,
-    reasoning:
-      warrantySupport > 0
-        ? `Warranty tier ${warrantySupport}/3 based strictly on published warranty terms (coverage and duration). We do not score how well the warranty is honored in practice.`
-        : "No meaningful written warranty, sold as-is, or warranty not mentioned.",
+    reasoning: `${warrantyReason} This category is based strictly on published terms; we do not score how well the warranty is honored in practice.`,
   });
-  totalScore += warrantySupport;
+  totalScore += warrantySupportTier;
 
   return {
     totalScore,
     scoreBreakdown,
   };
 }
-

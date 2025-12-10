@@ -4,11 +4,11 @@ import { SCORING_CATEGORIES, TOTAL_POINTS } from "../../lib/scoring";
 export const metadata: Metadata = {
   title: "Tube Bender Scoring Methodology",
   description:
-    "See the full, 100-point scoring framework used to rate tube benders on TubeBenderReviews.",
+    "See the full scoring framework used to rate tube benders on TubeBenderReviews.",
   openGraph: {
     title: "Tube Bender Scoring Methodology",
     description:
-      "Transparent, multi-category, 100-point scoring system for tube bender comparisons.",
+      "Transparent, category-based scoring system for tube bender comparisons.",
   },
 };
 
@@ -55,8 +55,8 @@ export default function ScoringPage() {
                 {TOTAL_POINTS}
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                Each bender receives a score out of {TOTAL_POINTS} points across
-                all scoring categories.
+                Each bender receives a score out of {TOTAL_POINTS} points across{" "}
+                {SCORING_CATEGORIES.length} categories.
               </p>
             </div>
             <div>
@@ -98,6 +98,13 @@ export default function ScoringPage() {
           <h2 className="text-lg font-semibold text-gray-900">
             Detailed Category Scoring
           </h2>
+          <p className="mt-1 text-xs text-gray-600">
+            If you want to see these scores applied to a real machine, open any
+            review on TubeBenderReviews.com and scroll near the bottom of the
+            page. Click the link that expands the full citation and score
+            calculation section. You&apos;ll see every category score
+            calculated with the exact numbers we used for that machine.
+          </p>
 
           <div className="space-y-6">
             {SCORING_CATEGORIES.map((cat) => (
@@ -143,14 +150,13 @@ export default function ScoringPage() {
                   </div>
                 </header>
 
-                {/* Category-specific explanations (left column) */}
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  {/* What this measures */}
                   <div className="space-y-2 text-xs text-gray-600">
                     <p className="font-medium text-gray-900">
                       What this measures
                     </p>
 
-                    {/* Value for Money */}
                     {cat.key === "valueForMoney" && (
                       <>
                         <p>
@@ -163,742 +169,557 @@ export default function ScoringPage() {
                           We first total up the non-price categories (capacity,
                           bend angle, wall thickness, mandrel/S-bend capability,
                           die ecosystem, etc.) to get a single
-                          &quot;feature score&quot; (out of a fixed pool of
-                          feature points) for each machine. That feature score
-                          is then divided by the{" "}
-                          <span className="font-semibold">
-                            minimum safe operating system cost
-                          </span>{" "}
-                          and scaled into this category&apos;s point range.
+                          &quot;feature score&quot; for each machine. That
+                          feature score is then divided by the minimum safe
+                          operating system cost and scaled into a 0–20 point
+                          range. Machines with unusually strong
+                          features-per-dollar ratios approach 20/20; weaker
+                          ratios receive proportionally fewer points.
                         </p>
-                        <p>
-                          For each machine the minimum system cost is built
-                          explicitly from four admin fields:
+                        <p className="mt-2">
+                          To make this concrete, here is the actual math we use:
                         </p>
                         <ul className="ml-4 list-disc space-y-1">
                           <li>
-                            <span className="font-semibold">Frame</span> –{" "}
-                            <code className="font-mono text-[0.7rem]">
-                              framePriceMin
-                            </code>
+                            Take the machine&apos;s feature score from all
+                            non-price categories (for example,{" "}
+                            <span className="font-semibold">72</span> points out
+                            of 80 possible feature points).
                           </li>
                           <li>
-                            <span className="font-semibold">
-                              180° complete die
-                            </span>{" "}
-                            –{" "}
-                            <code className="font-mono text-[0.7rem]">
-                              diePriceMin
-                            </code>{" "}
-                            in a common size (typically ~1.50&quot; OD)
+                            Divide by the minimum safe system cost (for example,{" "}
+                            <span className="font-semibold">$3,600</span>):{" "}
+                            <code>72 ÷ 3600 ≈ 0.02</code> points per dollar.
                           </li>
                           <li>
-                            <span className="font-semibold">
-                              Hydraulics / power unit
-                            </span>{" "}
-                            –{" "}
-                            <code className="font-mono text-[0.7rem]">
-                              hydraulicPriceMin
-                            </code>{" "}
-                            (only when required)
-                          </li>
-                          <li>
-                            <span className="font-semibold">
-                              Stand / cart (if required)
-                            </span>{" "}
-                            –{" "}
-                            <code className="font-mono text-[0.7rem]">
-                              standPriceMin
-                            </code>
+                            Compare that features-per-dollar ratio to a
+                            conservative market baseline and scale it into a
+                            0–20 point range. Machines with unusually strong
+                            features-per-dollar ratios approach{" "}
+                            <span className="font-semibold">20/20</span>; weaker
+                            ratios receive proportionally fewer points.
                           </li>
                         </ul>
                         <p className="mt-2">
-                          Optional carts, boutique stands, cosmetic upgrades and
-                          non-essential accessories are excluded. When we cannot
-                          verify a component price, we either omit it (for truly
-                          optional items) or use a conservative baseline rather
-                          than guessing in a way that would inflate the score.
+                          If you want to see this in a live calculation, open
+                          any machine review and expand the full citation and
+                          score calculation section. You&apos;ll see every point
+                          for features divided by every dollar of cost, and the
+                          result multiplied into this 20-point category exactly
+                          as described here.
                         </p>
                       </>
                     )}
 
-                    {/* Ease of Use & Setup */}
                     {cat.key === "easeOfUseSetup" && (
                       <>
                         <p>
-                          Evaluates setup complexity and how easy the machine is
-                          to move and operate in a real shop. This category
-                          blends:
+                          Evaluates setup complexity, ergonomics, and how much
+                          effort it takes to go from crate to first accurate
+                          bend, plus how easy the machine is to move around your
+                          shop.
+                        </p>
+                        <p>
+                          The score combines a base ergonomics/operation number
+                          (brand + power-type heuristic) with a{" "}
+                          <span className="font-semibold">
+                            portability tier
+                          </span>{" "}
+                          derived from the admin field:
                         </p>
                         <ul className="ml-4 list-disc space-y-1">
                           <li>
-                            <span className="font-semibold">Portability</span>{" "}
-                            – whether the machine is fixed, portable,
-                            portable-with-rolling-option, or rolling as
-                            standard.
+                            <span className="font-semibold">0 pts</span> – fixed
+                            base that must be bolted to the floor or bench.
                           </li>
                           <li>
-                            <span className="font-semibold">Power type</span> –
-                            manual only vs. air/hydraulic vs. electric/hydraulic
-                            (when multiple options exist we score the best
-                            documented configuration).
+                            <span className="font-semibold">1 pt</span> –
+                            portable, no factory rolling option.
                           </li>
                           <li>
-                            <span className="font-semibold">
-                              Angle measurement &amp; auto-stop
-                            </span>{" "}
-                            – documented, machine-mounted angle readouts and
-                            any auto-stop-on-angle capability.
+                            <span className="font-semibold">2 pts</span> –
+                            portable with a documented rolling base/cart
+                            option.
+                          </li>
+                          <li>
+                            <span className="font-semibold">3 pts</span> –
+                            ships on a rolling base as standard.
                           </li>
                         </ul>
                         <p className="mt-2">
-                          Internally, these are turned into a 0–100 subscore
-                          using a simple weighted average:
-                        </p>
-                        <ul className="ml-4 list-disc space-y-1">
-                          <li>
-                            Portability tier (fixed → rolling standard) drives
-                            about half the subscore.
-                          </li>
-                          <li>
-                            Power options (manual → electric/hydraulic) drive
-                            about a third.
-                          </li>
-                          <li>
-                            Built-in angle readout and auto-stop make up the
-                            remainder.
-                          </li>
-                        </ul>
-                        <p className="mt-2">
-                          The final 0–100 subscore is then scaled to this
-                          category&apos;s point value (
-                          <code className="font-mono text-[0.7rem]">
-                            cat.maxPoints
-                          </code>
-                          ). On each review page, we show which portability tier
-                          and power options were used.
+                          The final Ease of Use &amp; Setup score is the sum of
+                          the base ergonomics/operation score and the
+                          portability tier, clamped to a maximum of{" "}
+                          {cat.maxPoints}/{cat.maxPoints}.
                         </p>
                       </>
                     )}
 
-                    {/* Max diameter / radius */}
                     {cat.key === "maxDiameterRadius" && (
                       <>
                         <p>
-                          Looks at maximum tube diameter capacity and (when
-                          documented) the range of centerline radii supported.
-                          Larger, more flexible capacity scores higher for
-                          shops that build a wider variety of projects.
+                          Looks at the{" "}
+                          <span className="font-semibold">
+                            maximum round tube outside diameter
+                          </span>{" "}
+                          the machine is rated for with its catalog tooling.
                         </p>
-                        <p className="mt-2">
-                          For each machine we reduce its capacity to a single
-                          number using the largest documented tube OD (after
-                          normalising units). Across the comparison set we then:
-                        </p>
-                        <ol className="ml-4 list-decimal space-y-1">
-                          <li>
-                            Find the smallest and largest max OD in the group.
-                          </li>
-                          <li>
-                            Linearly scale each machine&apos;s OD into a 0–100
-                            subscore between that min and max.
-                          </li>
-                        </ol>
-                        <p className="mt-2">
-                          That 0–100 capacity subscore is then scaled into this
-                          category&apos;s point value. As we add new machines
-                          with higher capacity, the scale updates automatically.
+                        <p className="mt-1">
+                          In the future this category will also explicitly score
+                          Center Line Radius (CLR) range. Right now, CLR
+                          documentation is not consistent across all machines,
+                          so the math is{" "}
+                          <span className="font-semibold">OD-only</span> even
+                          though we describe CLR in the copy. We&apos;d rather
+                          admit that limitation than pretend we are already
+                          scoring CLR numerically.
                         </p>
                       </>
                     )}
 
-                    {/* USA manufacturing (origin points) */}
-                    {cat.key === "usaManufacturing" && (
-                      <>
-                        <p>
-                          Scores how strong the manufacturer&apos;s{" "}
-                          <span className="font-semibold">
-                            published U.S.-origin claims
-                          </span>{" "}
-                          are for the major components: frame, dies, and
-                          hydraulics/lever.
-                        </p>
-                        <p className="mt-2">
-                          This is a <span className="font-semibold">
-                            disclosure-only
-                          </span>{" "}
-                          category. We do not investigate factories, trace
-                          supply chains, or decide what would or would not meet
-                          the FTC&apos;s legal standard for an unqualified{" "}
-                          &quot;Made in USA&quot; claim. Instead:
-                        </p>
-                        <ul className="ml-4 list-disc space-y-1">
-                          <li>
-                            We read what the manufacturer publishes (web site,
-                            manuals, official documentation).
-                          </li>
-                          <li>
-                            We select a tier in the admin (
-                            <code className="font-mono text-[0.7rem]">
-                              originUsaScore
-                            </code>
-                            , 0–5) that best matches that disclosure.
-                          </li>
-                          <li>
-                            We attach citations for every origin claim used in
-                            scoring.
-                          </li>
-                        </ul>
-                        <p className="mt-2 font-medium text-gray-900">
-                          Tier meanings (0–5)
-                        </p>
-                        <ul className="ml-4 list-disc space-y-1">
-                          <li>
-                            <span className="font-semibold">5</span> – Frame,
-                            dies, and power unit/lever are all clearly disclosed
-                            as manufactured/assembled in the USA with reasonable
-                            detail.
-                          </li>
-                          <li>
-                            <span className="font-semibold">4</span> – Frame and
-                            dies are clearly USA; hydraulics/lever are disclosed
-                            as mixed or partially imported.
-                          </li>
-                          <li>
-                            <span className="font-semibold">3</span> – Frame is
-                            clearly USA; origin of dies and/or hydraulics is
-                            less clear or obviously mixed.
-                          </li>
-                          <li>
-                            <span className="font-semibold">2</span> – Some
-                            meaningful USA fabrication is disclosed (for
-                            example, &quot;assembled in USA&quot; or clearly
-                            U.S.-built frame) but key components are imported.
-                          </li>
-                          <li>
-                            <span className="font-semibold">1</span> – Only
-                            trivial USA references (for example &quot;designed
-                            in USA&quot;) with no clear statement about where
-                            major components are made.
-                          </li>
-                          <li>
-                            <span className="font-semibold">0</span> – No
-                            reliable published origin information, or claims
-                            that are too vague/contradictory to rely on.
-                          </li>
-                        </ul>
-                        <p className="mt-2">
-                          That 0–5 tier is converted into a 0–100 subscore and
-                          then scaled to this category&apos;s{" "}
-                          {cat.maxPoints}-point weight. We label the tier choice
-                          and the underlying citations on each product&apos;s
-                          detailed breakdown.
-                        </p>
-                        <p className="mt-2 text-[0.7rem] text-gray-500">
-                          Important: this category reflects{" "}
-                          <span className="font-semibold">
-                            how the manufacturer presents their own product
-                          </span>
-                          . It is not a legal determination of actual origin.
-                        </p>
-                      </>
-                    )}
-
-                    {/* Origin transparency – new category */}
-                    {cat.key === "originTransparency" && (
-                      <>
-                        <p>
-                          Rates{" "}
-                          <span className="font-semibold">
-                            how clearly and completely the manufacturer explains
-                            where major components come from
-                          </span>
-                          , regardless of whether those components are U.S.-,
-                          EU-, or elsewhere-made.
-                        </p>
-                        <p className="mt-2">
-                          This category deliberately{" "}
-                          <span className="font-semibold">
-                            does not reward or punish
-                          </span>{" "}
-                          any particular country of origin. It only cares about
-                          how transparent the documentation is.
-                        </p>
-                        <p className="mt-2 font-medium text-gray-900">
-                          Tier meanings (0–5)
-                        </p>
-                        <ul className="ml-4 list-disc space-y-1">
-                          <li>
-                            <span className="font-semibold">5</span> – Clear
-                            breakdown for frame, dies, hydraulics, controls, and
-                            assembly (for example &quot;frame fabricated in
-                            &lt;country&gt;, dies machined in &lt;country&gt;,
-                            power unit built by &lt;vendor&gt; in
-                            &lt;country&gt;&quot;).
-                          </li>
-                          <li>
-                            <span className="font-semibold">4</span> – Major
-                            components (frame, dies, power unit) have explicit
-                            origin disclosures; small parts may be grouped or
-                            generalized.
-                          </li>
-                          <li>
-                            <span className="font-semibold">3</span> – Partial
-                            disclosures across multiple pages/manuals; you can
-                            puzzle out most of the story but it isn&apos;t all
-                            in one place.
-                          </li>
-                          <li>
-                            <span className="font-semibold">2</span> – Minimal
-                            origin language; one-line references with no real
-                            detail.
-                          </li>
-                          <li>
-                            <span className="font-semibold">1</span> – Vague,
-                            marketing-heavy origin language that doesn&apos;t
-                            meaningfully answer &quot;what is made where?&quot;
-                          </li>
-                          <li>
-                            <span className="font-semibold">0</span> – No origin
-                            info at all, or contradictory claims that make the
-                            documentation unreliable.
-                          </li>
-                        </ul>
-                        <p className="mt-2">
-                          In admin this is stored as{" "}
-                          <code className="font-mono text-[0.7rem]">
-                            originTransparencyTier
-                          </code>{" "}
-                          (0–5) with citations. We convert that to a 0–100
-                          subscore and scale to this category&apos;s{" "}
-                          {cat.maxPoints}-point weight.
-                        </p>
-                      </>
-                    )}
-
-                    {/* Bend angle capability */}
                     {cat.key === "bendAngleCapability" && (
                       <>
                         <p>
                           Evaluates the{" "}
                           <span className="font-semibold">
-                            maximum bend angle the machine is rated for
+                            maximum bend angle
                           </span>{" "}
-                          with its published tooling, not just a one-shot,
-                          partial-degree example.
+                          the machine is rated for with its published tooling,
+                          not just a one-shot partial-degree example.
                         </p>
-                        <p className="mt-2">
-                          We use the manufacturer&apos;s published maximum angle
-                          (multi-stroke is fine as long as it&apos;s documented)
-                          and apply explicit thresholds:
+                        <p className="mt-1">
+                          Scoring tiers are explicit:
                         </p>
                         <ul className="ml-4 list-disc space-y-1">
                           <li>
-                            <span className="font-semibold">Top tier</span> –
-                            published max angle ≥ 195°
+                            <span className="font-semibold">≥ 195°</span> – full{" "}
+                            <span className="font-semibold">
+                              {cat.maxPoints}
+                            </span>{" "}
+                            points.
                           </li>
                           <li>
-                            <span className="font-semibold">High</span> –{" "}
-                            180–194°
+                            <span className="font-semibold">180–194°</span> –{" "}
+                            <span className="font-semibold">7</span> points.
                           </li>
                           <li>
-                            <span className="font-semibold">Mid</span> –{" "}
-                            120–179°
+                            <span className="font-semibold">120–179°</span> –{" "}
+                            <span className="font-semibold">4</span> points.
                           </li>
                           <li>
-                            <span className="font-semibold">Low</span> – below
-                            120°
+                            <span className="font-semibold">&lt; 120°</span> –{" "}
+                            <span className="font-semibold">2</span> points.
+                          </li>
+                          <li>
+                            <span className="font-semibold">
+                              No published max angle
+                            </span>{" "}
+                            – <span className="font-semibold">0</span> points;
+                            the product page shows this as &quot;Not
+                            Published&quot;.
                           </li>
                         </ul>
-                        <p className="mt-2">
-                          Each tier maps to a fixed fraction of this
-                          category&apos;s points. If no bend angle is published,
-                          the machine gets 0 here and is labeled &quot;Not
-                          Published&quot; in the breakdown.
-                        </p>
                       </>
                     )}
 
-                    {/* Wall thickness capability */}
                     {cat.key === "wallThicknessCapability" && (
                       <>
                         <p>
-                          Standardises all machines to a 1.75&quot; OD reference
-                          size and scores based on the thickest published wall
-                          they can bend, plus which materials the manufacturer
-                          explicitly documents as compatible.
+                          Standardises all machines to a{" "}
+                          <span className="font-semibold">
+                            1.75&quot; OD DOM reference size
+                          </span>{" "}
+                          and scores based on the thickest wall the
+                          manufacturer is willing to publish, plus which
+                          materials they explicitly document as compatible.
                         </p>
-                        <p className="mt-2">
-                          Admin records a reference wall thickness (in inches)
-                          for 1.75&quot; DOM along with a materials list. Across
-                          the catalog we:
+                        <p className="mt-1">
+                          The math has two parts:
                         </p>
-                        <ol className="ml-4 list-decimal space-y-1">
+                        <ul className="ml-4 list-disc space-y-1">
                           <li>
-                            Find the thinnest and thickest published walls.
+                            <span className="font-semibold">
+                              Thickness (0–6 pts)
+                            </span>{" "}
+                            – based on the published max wall at 1.75&quot; OD.
+                            Thicker walls earn more points; very light walls
+                            earn fewer.
                           </li>
                           <li>
-                            Linearly scale each machine into a 0–100 wall
-                            subscore.
+                            <span className="font-semibold">
+                              Material coverage (0–3 pts)
+                            </span>{" "}
+                            – mild steel, 4130 chromoly, stainless, aluminum,
+                            titanium, copper/brass/bronze, and other alloys
+                            based only on what the manufacturer actually lists.
                           </li>
-                        </ol>
+                        </ul>
                         <p className="mt-2">
-                          We then add a small bump for documented materials
-                          coverage (mild steel, stainless, 4130, aluminium,
-                          titanium, copper/brass) and clamp the combined result
-                          at 0–100 before scaling it to this category&apos;s
-                          point value.
-                        </p>
-                        <p className="mt-2">
-                          If no wall thickness is published, we apply a small,
-                          conservative baseline instead of guessing and mark it
-                          as &quot;Not Published&quot; in the UI.
+                          Any machine{" "}
+                          <span className="font-semibold">
+                            without a published max wall
+                          </span>{" "}
+                          for 1.75&quot; OD DOM gets{" "}
+                          <span className="font-semibold">0 points</span> in
+                          this category. We do not infer capacity from photos
+                          or marketing language.
                         </p>
                       </>
                     )}
 
-                    {/* Die selection / shapes */}
                     {cat.key === "dieSelectionShapes" && (
                       <>
                         <p>
-                          Scores each machine&apos;s die ecosystem based on how
-                          many real-world shapes and standards it supports, not
-                          just one or two common tube sizes.
+                          Scores each machine&apos;s die ecosystem based on{" "}
+                          <span className="font-semibold">
+                            how many real-world tube/pipe families it covers
+                          </span>
+                          .
                         </p>
-                        <p className="mt-2">
-                          We only count shapes and standards that the
-                          manufacturer explicitly documents for that frame:
+                        <p className="mt-1">
+                          This is a simple checklist:{" "}
+                          <span className="font-semibold">
+                            1 point per documented family
+                          </span>{" "}
+                          up to {cat.maxPoints}:
                         </p>
-                        <ul className="ml-4 list-disc space-y-1">
-                          <li>Round tube (multiple sizes / CLRs)</li>
+                        <ul className="ml-4 list-disc space-y-1 mt-1">
+                          <li>Round tube</li>
                           <li>Pipe (NPS)</li>
-                          <li>Square and rectangular tube</li>
-                          <li>EMT and/or metric tube/pipe</li>
+                          <li>Square tube</li>
+                          <li>EMT</li>
+                          <li>Metric round</li>
+                          <li>Metric square/rectangular</li>
+                          <li>Plastic / urethane / low-marring pressure dies</li>
                           <li>
-                            Profile shapes (flat bar, angle, channel) when
-                            marketed for this bender
-                          </li>
-                          <li>
-                            Plastic/urethane/low-marring pressure dies sold for
-                            thin-wall or cosmetic work
+                            Other clearly documented shapes (for example,
+                            regular production dies for rectangular tube or hex
+                            tube).
                           </li>
                         </ul>
                         <p className="mt-2">
-                          Each documented family adds to a 0–100 subscore up to
-                          a fixed cap; that subscore is then scaled to this
-                          category&apos;s points. Ultra-niche or one-off
-                          special-order dies do not earn extra credit.
-                        </p>
-                        <p className="mt-2 text-[0.7rem] text-gray-500">
-                          We do not currently score whether dies are in stock,
-                          backordered, or made-to-order. Lead times move too
-                          quickly to score safely; we describe how to check them
-                          yourself later on this page.
+                          When a machine is explicitly designed around another
+                          brand&apos;s die ecosystem (for example, Pro-Tools),
+                          we only credit those shapes when the bender
+                          manufacturer clearly claims that compatibility and we
+                          can cite both their documentation and the die
+                          manufacturer&apos;s catalog. We do not silently import
+                          third-party ecosystems the manufacturer never
+                          mentions.
                         </p>
                       </>
                     )}
 
-                    {/* Years in business */}
                     {cat.key === "yearsInBusiness" && (
                       <>
                         <p>
-                          Lightly weights manufacturer track record: longer
-                          continuous operation generally means more mature
-                          products and support.
+                          Lightly weighted indicator of manufacturer track
+                          record. This category is only {cat.maxPoints} points
+                          out of 100; it nudges established brands up slightly
+                          but does not rescue a weak machine or sink a strong
+                          new entrant.
                         </p>
-                        <p className="mt-2">
-                          Admin stores an approximate{" "}
-                          <code className="font-mono text-[0.7rem]">
-                            yearsInBusiness
-                          </code>{" "}
-                          value based on manufacturer-published history. We:
-                        </p>
-                        <ol className="ml-4 list-decimal space-y-1">
-                          <li>
-                            Clamp years to a 0–30 range (30+ years all score the
-                            same).
-                          </li>
-                          <li>
-                            Convert that to a 0–100 subscore by simple
-                            proportion.
-                          </li>
-                        </ol>
-                        <p className="mt-2">
-                          That subscore is then scaled into this
-                          category&apos;s relatively small point weight so it
-                          can never dominate more important, spec-driven
-                          categories.
+                        <p className="mt-1">
+                          We use approximate years in business based on the
+                          manufacturer&apos;s published history and map that
+                          into a simple tiered score: long-standing brands earn
+                          a bit more, newer brands get a modest baseline.
                         </p>
                       </>
                     )}
 
-                    {/* Upgrade path & modularity */}
                     {cat.key === "upgradePathModularity" && (
                       <>
                         <p>
-                          Measures how far the platform can grow with you: power
-                          upgrade paths, length/rotation/angle control options,
-                          auto-stop features, and thin/thick-wall tooling
-                          upgrades.
+                          Answers:{" "}
+                          <span className="font-semibold">
+                            &quot;If I buy the base machine, how far can it
+                            grow with me?&quot;
+                          </span>
                         </p>
-                        <p className="mt-2">
-                          In admin we track a set of boolean flags, including:
+                        <p className="mt-1">
+                          This category is worth {cat.maxPoints} points total:{" "}
+                          <span className="font-semibold">
+                            1 point for each documented upgrade
+                          </span>
+                          :
                         </p>
-                        <ul className="ml-4 list-disc space-y-1">
+                        <ul className="ml-4 list-disc space-y-1 mt-1">
                           <li>Power upgrade path (manual → hydraulic, etc.)</li>
-                          <li>Length stop / backstop</li>
-                          <li>Rotation indexing</li>
-                          <li>Built-in angle measurement</li>
+                          <li>Length stop / backstop system</li>
+                          <li>Rotation indexing for bend-to-bend alignment</li>
+                          <li>Built-in or securely machine-mounted angle readout</li>
                           <li>Auto-stop for bend angle</li>
-                          <li>Thick-wall upgrade tooling</li>
-                          <li>Thin-wall upgrade tooling</li>
-                          <li>Wiper die support</li>
+                          <li>Thick-wall specific tooling or capacity upgrades</li>
+                          <li>Thin-wall / AL / stainless bend-quality upgrades</li>
+                          <li>Support for wiper dies</li>
                         </ul>
                         <p className="mt-2">
-                          Each documented, manufacturer-supported flag adds a
-                          fixed amount to a raw upgrade score. We normalise that
-                          raw score to a 0–100 subscore and then scale it to
-                          this category&apos;s points. Machines with no
-                          documented upgrade options stay at 0 here and are
-                          treated as fixed-capability platforms.
-                        </p>
-                        <p className="mt-2 text-[0.7rem] text-gray-500">
-                          Mandrel systems are scored separately in the Mandrel
-                          category so we don&apos;t double-count them.
+                          We only award points for upgrades the manufacturer
+                          actually documents for that frame. If none of the
+                          items above are published for a machine, it receives{" "}
+                          0/{cat.maxPoints} here.
                         </p>
                       </>
                     )}
 
-                    {/* Mandrel compatibility */}
                     {cat.key === "mandrelCompatibility" && (
                       <>
                         <p>
-                          Looks at whether the platform supports mandrel bending
-                          out of the box or via{" "}
+                          Looks at whether the platform supports mandrel
+                          bending out of the box or via{" "}
                           <span className="font-semibold">
                             manufacturer-documented, supported upgrades
                           </span>
                           .
                         </p>
-                        <p className="mt-2">
-                          In admin we distinguish between:
+                        <p className="mt-1">
+                          Scoring is three-tier:
                         </p>
-                        <ul className="ml-4 list-disc space-y-1">
+                        <ul className="ml-4 list-disc space-y-1 mt-1">
                           <li>
-                            <span className="font-semibold">None</span> – no
-                            mandrel option documented.
+                            <span className="font-semibold">0 points</span> – no
+                            documented mandrel option.
+                          </li>
+                          <li>
+                            <span className="font-semibold">2 points</span> – an{" "}
+                            <span className="font-semibold">economy mandrel</span>{" "}
+                            option (non-bronze mandrels such as plastic,
+                            aluminum, or steel) documented for this frame.
                           </li>
                           <li>
                             <span className="font-semibold">
-                              Economy mandrel
+                              {cat.maxPoints} points
                             </span>{" "}
-                            – non-bronze mandrels (plastic/aluminium/steel) sold
-                            and supported for this frame.
-                          </li>
-                          <li>
-                            <span className="font-semibold">
-                              Bronze mandrel
-                            </span>{" "}
-                            – traditional bronze mandrel system documented for
-                            this frame.
+                            – a full bronze or equivalent mandrel system,
+                            clearly documented and supported by the
+                            manufacturer.
                           </li>
                         </ul>
                         <p className="mt-2">
-                          Each level maps to a fixed fraction of this
-                          category&apos;s points, with bronze mandrels at the
-                          top. Wiper die support can add a small bonus, up to
-                          this category&apos;s cap.
-                        </p>
-                        <p className="mt-2">
-                          Third-party or DIY mandrel kits with no factory
-                          backing are treated as &quot;no mandrel option&quot;
-                          even if they physically exist; we only score what the
-                          manufacturer will stand behind.
+                          We only award points when the manufacturer explicitly
+                          publishes a mandrel option. Third-party or DIY kits
+                          that the manufacturer does not stand behind are
+                          treated as &quot;no mandrel option&quot; for scoring
+                          purposes.
                         </p>
                       </>
                     )}
 
-                    {/* S-bend capability */}
                     {cat.key === "sBendCapability" && (
                       <>
                         <p>
                           Binary category indicating whether the machine can
-                          produce a true S-bend:{" "}
+                          produce a{" "}
+                          <span className="font-semibold">true S-bend</span>: two
+                          bends in opposite directions with essentially no
+                          straight tangent between them.
+                        </p>
+                        <p className="mt-1">
+                          For scoring, we use a strict engineering definition:
+                          the straight section between the end of the first bend
+                          and the start of the second bend must be{" "}
                           <span className="font-semibold">
-                            two bends in opposite directions with essentially no
-                            straight tangent between them.
+                            at or below 0.125&quot; (1/8&quot;) of tangent
                           </span>
-                        </p>
-                        <p className="mt-2">
-                          For scoring, we use a strict definition:
-                        </p>
-                        <ul className="ml-4 list-disc space-y-1">
-                          <li>
-                            The straight section between bends must be ≤
-                            0.125&quot; (1/8&quot;) of tangent.
-                          </li>
-                          <li>
-                            Capability must be documented by the manufacturer or
-                            backed by repeatable test parts we can cite.
-                          </li>
-                        </ul>
-                        <p className="mt-2">
-                          If those criteria are met, the machine gets the full{" "}
-                          {cat.maxPoints} points in this category. Otherwise it
-                          gets 0, even if marketing photos show loose,
-                          several-inch &quot;S&quot; shapes between bends.
-                        </p>
-                      </>
-                    )}
-
-                    {/* Single-source system – new category */}
-                    {cat.key === "singleSourceSystem" && (
-                      <>
-                        <p>
-                          Checks whether you can buy a{" "}
+                          . Any configuration that leaves several inches of
+                          straight tube between bends – even if marketed as an
+                          &quot;S-bend&quot; –{" "}
                           <span className="font-semibold">
-                            complete, fully functional bending system
-                          </span>{" "}
-                          from a single primary source (typically the
-                          manufacturer&apos;s own web site) without needing to
-                          chase critical parts elsewhere.
-                        </p>
-                        <p className="mt-2">
-                          We only care about major functional components:
-                        </p>
-                        <ul className="ml-4 list-disc space-y-1">
-                          <li>Frame</li>
-                          <li>
-                            At least one real 180° die (including clamp and
-                            pressure die)
-                          </li>
-                          <li>
-                            Required power source (hydraulic power unit or
-                            manual lever/pump)
-                          </li>
-                          <li>
-                            Stand or base, if required for safe, stable
-                            operation
-                          </li>
-                        </ul>
-                        <p className="mt-2">
-                          Generic shop utilities (air, electricity, the tubing
-                          itself) are ignored – everyone needs those.
-                        </p>
-                        <p className="mt-2 font-medium text-gray-900">
-                          Scoring
-                        </p>
-                        <ul className="ml-4 list-disc space-y-1">
-                          <li>
-                            <span className="font-semibold">Full points</span>{" "}
-                            – All of the above can be purchased from one primary
-                            source, using normal catalog items.
-                          </li>
-                          <li>
-                            <span className="font-semibold">Zero points</span> –
-                            Any required piece must be sourced elsewhere.
-                          </li>
-                        </ul>
-                        <p className="mt-2">
-                          In admin this is a simple yes/no flag stored as{" "}
-                          <code className="font-mono text-[0.7rem]">
-                            singleSourceComplete
-                          </code>
-                          . Internally we convert that to a 0 or 100 subscore
-                          and scale it to this category&apos;s{" "}
-                          {cat.maxPoints}-point weight.
-                        </p>
-                      </>
-                    )}
-
-                    {/* Warranty support – new category */}
-                    {cat.key === "warrantySupport" && (
-                      <>
-                        <p>
-                          Scores{" "}
-                          <span className="font-semibold">
-                            what the manufacturer claims in writing about
-                            warranty coverage
-                          </span>{" "}
-                          for the machine. We do not test or verify whether they
-                          honor it.
-                        </p>
-                        <p className="mt-2">
-                          Admin selects a{" "}
-                          <code className="font-mono text-[0.7rem]">
-                            warrantyTier
-                          </code>{" "}
-                          (0–3) based solely on published warranty terms:
-                        </p>
-                        <ul className="ml-4 list-disc space-y-1">
-                          <li>
-                            <span className="font-semibold">3</span> – Clear,
-                            written warranty covering workmanship/materials for
-                            3+ years or lifetime on the frame, with exclusions
-                            spelled out.
-                          </li>
-                          <li>
-                            <span className="font-semibold">2</span> – Clear
-                            written warranty 1–2 years on frame and key
-                            components.
-                          </li>
-                          <li>
-                            <span className="font-semibold">1</span> – Warranty
-                            is mentioned but vague, partial, or very short
-                            (&lt;1 year).
-                          </li>
-                          <li>
-                            <span className="font-semibold">0</span> – No
-                            warranty mentioned or explicitly sold &quot;as
-                            is&quot;.
-                          </li>
-                        </ul>
-                        <p className="mt-2">
-                          We convert the 0–3 tier to a 0–100 subscore and scale
-                          it to this category&apos;s{" "}
-                          {cat.maxPoints}-point weight. Each product page links
-                          to the underlying warranty wording where possible so
-                          you can read the fine print yourself.
-                        </p>
-                        <p className="mt-2 text-[0.7rem] text-gray-500">
-                          Important: this category only measures clarity and
-                          breadth of the written warranty. It does{" "}
-                          <span className="font-semibold">
-                            not guarantee real-world service outcomes
+                            does not qualify
                           </span>
                           .
                         </p>
                       </>
                     )}
 
-                    {/* Default fallback for any other categories */}
-                    {!(
-                      cat.key === "valueForMoney" ||
-                      cat.key === "easeOfUseSetup" ||
-                      cat.key === "maxDiameterRadius" ||
-                      cat.key === "usaManufacturing" ||
-                      cat.key === "originTransparency" ||
-                      cat.key === "bendAngleCapability" ||
-                      cat.key === "wallThicknessCapability" ||
-                      cat.key === "dieSelectionShapes" ||
-                      cat.key === "yearsInBusiness" ||
-                      cat.key === "upgradePathModularity" ||
-                      cat.key === "mandrelCompatibility" ||
-                      cat.key === "sBendCapability" ||
-                      cat.key === "singleSourceSystem" ||
-                      cat.key === "warrantySupport"
-                    ) && (
+                    {cat.key === "usaManufacturingDisclosure" && (
+                      <>
+                        <p>
+                          Scores{" "}
+                          <span className="font-semibold">
+                            what the manufacturer claims
+                          </span>{" "}
+                          about origin, not what we or you might discover in a
+                          factory audit. This is intentionally{" "}
+                          {cat.maxPoints}-points out of 100 so it matters, but
+                          it doesn&apos;t dominate the system.
+                        </p>
+                        <p className="mt-1">
+                          The admin tool assigns a 0–5 tier based on published
+                          language, roughly:
+                        </p>
+                        <ul className="ml-4 list-disc space-y-1 mt-1">
+                          <li>
+                            <span className="font-semibold">5 pts</span> – broad,
+                            unqualified whole-system &quot;Made in USA&quot;-type
+                            claim (frame, dies, hydraulics, and assembly all
+                            implied to be domestic).
+                          </li>
+                          <li>
+                            <span className="font-semibold">4 pts</span> – clear
+                            claim that{" "}
+                            <span className="font-semibold">
+                              frames and dies
+                            </span>{" "}
+                            are made in the USA, with hydraulics or small
+                            hardware openly described as imported.
+                          </li>
+                          <li>
+                            <span className="font-semibold">3 pts</span> – mixed
+                            claims such as &quot;assembled in USA from domestic
+                            and imported components&quot; or &quot;frame made
+                            here, dies imported&quot;.
+                          </li>
+                          <li>
+                            <span className="font-semibold">2 pts</span> – weak
+                            USA-flavored language (&quot;engineered in USA&quot;,
+                            &quot;designed in USA&quot;) without a clear
+                            statement about where major parts are made.
+                          </li>
+                          <li>
+                            <span className="font-semibold">0 pts</span> –
+                            clearly non-USA origin or no USA-related claim at
+                            all.
+                          </li>
+                        </ul>
+                        <p className="mt-2">
+                          This category is{" "}
+                          <span className="font-semibold">
+                            disclosure-based only
+                          </span>
+                          . It does not tell you whether a claim would satisfy
+                          the FTC&apos;s rules for an unqualified &quot;Made in
+                          USA&quot; statement, and we are not giving legal
+                          opinions on that.
+                        </p>
+                      </>
+                    )}
+
+                    {cat.key === "originTransparency" && (
+                      <>
+                        <p>
+                          Scores how clearly a manufacturer explains{" "}
+                          <span className="font-semibold">
+                            where major components come from
+                          </span>{" "}
+                          – not which country is &quot;better&quot; or
+                          &quot;worse&quot;.
+                        </p>
+                        <p className="mt-1">
+                          Higher scores go to brands that publish concrete,
+                          component-level origin info (for example, &quot;frame
+                          machined in US, dies from Italy, hydraulics from
+                          Japan&quot;). Lower scores go to vague marketing
+                          language or silence.
+                        </p>
+                        <p className="mt-1">
+                          This category is intentionally separate from the USA
+                          Manufacturing score so that transparent non-US brands
+                          can still score well here.
+                        </p>
+                      </>
+                    )}
+
+                    {cat.key === "singleSourceSystem" && (
+                      <>
+                        <p>
+                          Binary category: can a normal buyer obtain a{" "}
+                          <span className="font-semibold">
+                            complete, fully functional system
+                          </span>{" "}
+                          (frame + dies + hydraulics or lever, plus any stand
+                          required for safe use) from one primary
+                          manufacturer/storefront?
+                        </p>
+                        <p className="mt-1">
+                          If the answer is yes, the machine gets{" "}
+                          <span className="font-semibold">2 points</span>. If
+                          the manufacturer pushes you to assemble a basic system
+                          from multiple companies, or does not clearly offer a
+                          full system, it gets{" "}
+                          <span className="font-semibold">0 points</span>.
+                        </p>
+                      </>
+                    )}
+
+                    {cat.key === "warrantySupport" && (
+                      <>
+                        <p>
+                          Scores the{" "}
+                          <span className="font-semibold">
+                            published warranty terms
+                          </span>{" "}
+                          only – not how often a company says &quot;yes&quot; or
+                          &quot;no&quot; on the phone.
+                        </p>
+                        <p className="mt-1">
+                          Tiers are simple:
+                        </p>
+                        <ul className="ml-4 list-disc space-y-1 mt-1">
+                          <li>
+                            <span className="font-semibold">0 pts</span> – no
+                            meaningful written warranty, sold as-is, or warranty
+                            not mentioned.
+                          </li>
+                          <li>
+                            <span className="font-semibold">1 pt</span> – some
+                            warranty language present, but short, limited, or
+                            vague in duration/coverage.
+                          </li>
+                          <li>
+                            <span className="font-semibold">2 pts</span> – clear
+                            written warranty with roughly 1–2 years of coverage
+                            on the machine or major components.
+                          </li>
+                          <li>
+                            <span className="font-semibold">
+                              {cat.maxPoints} pts
+                            </span>{" "}
+                            – clear multi-year or lifetime coverage on major
+                            structural components (for example, frame lifetime
+                            warranty) spelled out in the warranty terms.
+                          </li>
+                        </ul>
+                        <p className="mt-2">
+                          We do{" "}
+                          <span className="font-semibold">
+                            not score how well any warranty is honored in real
+                            life
+                          </span>
+                          . That still comes down to your experience and what
+                          you hear from real customers.
+                        </p>
+                      </>
+                    )}
+
+                    {/* Fallback generic explanation */}
+                    {![
+                      "valueForMoney",
+                      "easeOfUseSetup",
+                      "maxDiameterRadius",
+                      "bendAngleCapability",
+                      "wallThicknessCapability",
+                      "dieSelectionShapes",
+                      "yearsInBusiness",
+                      "upgradePathModularity",
+                      "mandrelCompatibility",
+                      "sBendCapability",
+                      "usaManufacturingDisclosure",
+                      "originTransparency",
+                      "singleSourceSystem",
+                      "warrantySupport",
+                    ].includes(cat.key) && (
                       <p>
-                        This category uses the scoring method shown above
-                        (scaled, tier-based, binary, or brand-weighted). Exact
-                        per-category details are documented in the admin
-                        scoring notes and surfaced on each machine&apos;s
-                        breakdown page.
+                        This category is described in more detail on the
+                        individual product pages and in the admin overlay. We
+                        score only what we can document from published specs and
+                        conservative assumptions.
                       </p>
                     )}
                   </div>
 
-                  {/* Data sources / verification (right column, generic) */}
+                  {/* Data sources & verification */}
                   <div className="space-y-2 text-xs text-gray-600">
                     <p className="font-medium text-gray-900">
                       Data sources &amp; verification
@@ -912,10 +733,20 @@ export default function ScoringPage() {
                       </li>
                       <li>
                         When a spec is not published, we mark it as &quot;Not
-                        Published&quot; in the UI and apply conservative
-                        defaults rather than estimating.
+                        Published&quot; in the UI and avoid estimating wherever
+                        possible.
                       </li>
                     </ul>
+                    <p className="mt-2">
+                      When we have to fall back to conservative assumptions
+                      (for example, treating unknown portability as fixed), we
+                      do it in a way that{" "}
+                      <span className="font-semibold">
+                        does not inflate scores
+                      </span>{" "}
+                      and explain that behavior in the score breakdown on each
+                      product page.
+                    </p>
                   </div>
                 </div>
               </article>
@@ -938,21 +769,16 @@ export default function ScoringPage() {
           </p>
           <div className="mt-4 grid gap-6 md:grid-cols-2 text-xs text-gray-600">
             <div>
-              <p className="mb-1 font-medium text-gray-900">Data sources</p>
+              <p className="font-medium text-gray-900 mb-1">Data sources</p>
               <ul className="space-y-1 list-disc pl-4">
                 <li>Manufacturer technical specs and capacity charts</li>
                 <li>Product manuals and official documentation</li>
-                <li>
-                  Company founding dates and manufacturer-published history
-                </li>
-                <li>
-                  Manufacturer-published origin and warranty language (with
-                  citations stored per machine)
-                </li>
+                <li>Company founding dates and published history</li>
+                <li>Published warranty and origin statements</li>
               </ul>
             </div>
             <div>
-              <p className="mb-1 font-medium text-gray-900">
+              <p className="font-medium text-gray-900 mb-1">
                 Scoring verification
               </p>
               <ul className="space-y-1 list-disc pl-4">
@@ -961,8 +787,8 @@ export default function ScoringPage() {
                   Conservative scoring when data is incomplete or ambiguous
                 </li>
                 <li>
-                  Individual product pages will expose per-category breakdowns
-                  so you can inspect each score.
+                  Per-product pages expose per-category breakdowns so you can
+                  inspect each score.
                 </li>
               </ul>
             </div>
@@ -982,7 +808,7 @@ export default function ScoringPage() {
           </p>
           <div className="mt-4 grid gap-6 md:grid-cols-2 text-xs text-gray-800">
             <div>
-              <p className="mb-1 font-medium text-gray-900">Lead times</p>
+              <p className="font-medium text-gray-900 mb-1">Lead times</p>
               <p className="mb-2">
                 Lead times move constantly and are rarely published in a way
                 that stays accurate. Instead of pretending to have a single
@@ -1000,21 +826,15 @@ export default function ScoringPage() {
                 </li>
               </ul>
               <p className="mt-2">
-                Some machines and dies ship same day or in a couple business
-                days. Others have multi-month die lead times.{" "}
-                <span className="font-semibold">
-                  Call every company you&apos;re seriously considering and ask
-                  the exact same questions, then compare answers.
-                </span>{" "}
-                You&apos;ll be amazed at how much you learn about each
-                company&apos;s organization, priorities, and customer service in
-                just a few minutes of phone time — and whatever they tell you on
-                that call will be more current (and more honest) than any static
-                lead-time number we could safely publish in a scoring table.
+                Whatever they tell you on that call will be more current than
+                any chart we could publish. Use the same questions with every
+                brand and compare answers.
               </p>
             </div>
             <div>
-              <p className="mb-1 font-medium text-gray-900">Service quality</p>
+              <p className="font-medium text-gray-900 mb-1">
+                Service quality
+              </p>
               <p className="mb-2">
                 Service quality is not published in specs and can&apos;t be
                 captured honestly in a single score. But you can learn a lot

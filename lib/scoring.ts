@@ -11,7 +11,7 @@ import {
 export type ScoringMethod = "tier" | "scaled" | "binary" | "brand";
 
 export type ScoringCategory = {
-  /** 1–11 ordering as presented on the scoring page. */
+  /** 1–15 ordering as presented on the scoring page. */
   index: number;
   /** Stable key for future use in scoring/overlays. */
   key: string;
@@ -46,16 +46,16 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     maxPoints: 11,
     method: "tier",
     tagline:
-      "Portability/base configuration, angle measurement, auto-stop on bend angle, length/rotation indexing, and other features that actually make the thing easier to live with day to day.",
+      "Portability/base configuration plus basic ergonomics and operational refinement that affect day-to-day use.",
   },
   {
     index: 3,
     key: "maxDiameterRadius",
     name: "Max Diameter & CLR Capability",
-    maxPoints: 11,
+    maxPoints: 10,
     method: "scaled",
     tagline:
-      "Realistic maximum round tube size and CLR range you can run on this frame with catalog tooling (not marketing unicorn examples).",
+      "Realistic maximum round tube size you can run on this frame with catalog tooling today. CLR ranges will be added to the math once every machine has documented CLR data.",
   },
   {
     index: 4,
@@ -82,7 +82,7 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     maxPoints: 8,
     method: "tier",
     tagline:
-      "Breadth and depth of the die family: round tube, pipe, square/rectangular, metric, EMT, and any specialty or thin-wall-focused tooling.",
+      "Breadth of the die family: round tube, pipe, square, EMT, metric, plastic/urethane, and clearly documented “other” shapes.",
   },
   {
     index: 7,
@@ -97,10 +97,10 @@ export const SCORING_CATEGORIES: ScoringCategory[] = [
     index: 8,
     key: "upgradePathModularity",
     name: "Upgrade Path & Modularity",
-    maxPoints: 7,
+    maxPoints: 8,
     method: "tier",
     tagline:
-      "Factory-supported power upgrades, length/rotation indexing, angle measurement, auto-stop, thick/thin-wall upgrades, and wiper-die support.",
+      "Factory-supported power upgrades, length/rotation indexing, angle measurement, auto-stop, thick/thin-wall upgrades, and wiper-die support – one point for each documented upgrade.",
   },
   {
     index: 9,
@@ -290,7 +290,7 @@ export function getProductScore(
     dieShapes: (p as any).dieShapes,
 
     // Mandrel availability in the new admin grid is stored as "mandrel" with
-    // values like "Available" / "None". We let this override any legacy
+    // values like "Available" / "None" / "Economy". We let this override any legacy
     // "mandrelBender" field so admin edits always win.
     mandrelBender: p.mandrel ?? p.mandrelBender,
     sBendCapability,
@@ -399,4 +399,3 @@ export function getProductScore(
     return { total: null, source: "none" };
   }
 }
-
