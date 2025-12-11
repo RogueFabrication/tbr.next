@@ -188,3 +188,110 @@ export async function upsertBenderOverlay(
 
   return mapRow(rows[0]);
 }
+// Add this type if it doesn't already exist
+export type BenderOverlayRow = {
+  product_id: string;
+  usa_manufacturing_tier: number | null;
+  origin_transparency_tier: number | null;
+  single_source_system_tier: number | null;
+  warranty_tier: number | null;
+  portability: string | null;
+  wall_thickness_capacity: string | null;
+  materials: string | null;
+  die_shapes: string | null;
+  mandrel: string | null;
+  has_power_upgrade_path: boolean | null;
+  length_stop: boolean | null;
+  rotation_indexing: boolean | null;
+  angle_measurement: boolean | null;
+  auto_stop: boolean | null;
+  thick_wall_upgrade: boolean | null;
+  thin_wall_upgrade: boolean | null;
+  wiper_die_support: boolean | null;
+  s_bend_capability: boolean | null;
+};
+
+// This is the normalized shape we’ll merge into Product objects.
+// (camelCase, matching your JSON overlay fields)
+export type BenderOverlayPatch = {
+  productId: string;
+  usaManufacturingTier: number | null;
+  originTransparencyTier: number | null;
+  singleSourceSystemTier: number | null;
+  warrantyTier: number | null;
+  portability: string | null;
+  wallThicknessCapacity: string | null;
+  materials: string | null;
+  dieShapes: string | null;
+  mandrel: string | null;
+  hasPowerUpgradePath: boolean;
+  lengthStop: boolean;
+  rotationIndexing: boolean;
+  angleMeasurement: boolean;
+  autoStop: boolean;
+  thickWallUpgrade: boolean;
+  thinWallUpgrade: boolean;
+  wiperDieSupport: boolean;
+  sBendCapability: boolean;
+};
+
+/**
+ * Load all rows from bender_overlays and return a map keyed by product_id.
+ * This is used on the read-side to overlay scoring-related fields on top
+ * of the JSON admin overlay.
+ */
+export async function getAllBenderOverlaysMap(): Promise<
+  Record<string, BenderOverlayPatch>
+> {
+  const rows = await sql<BenderOverlayRow>`
+    SELECT
+      product_id,
+      usa_manufacturing_tier,
+      origin_transparency_tier,
+      single_source_system_tier,
+      warranty_tier,
+      portability,
+      wall_thickness_capacity,
+      materials,
+      die_shapes,
+      mandrel,
+      has_power_upgrade_path,
+      length_stop,
+      rotation_indexing,
+      angle_measurement,
+      auto_stop,
+      thick_wall_upgrade,
+      thin_wall_upgrade,
+      wiper_die_support,
+      s_bend_capability
+    FROM bender_overlays
+  `;
+
+  const map: Record<string, BenderOverlayPatch> = {};
+
+  for (const row of rows) {
+    map[row.product_id] = {
+      productId: row.product_id,
+      usaManufacturingTier: row.usa_manufacturing_tier ?? null,
+      originTransparencyTier: row.origin_transparency_tier ?? null,
+      singleSourceSystemTier: row.single_source_system_tier ?? null,
+      warrantyTier: row.warranty_tier ?? null,
+      portability: row.portability ?? null,
+      wallThicknessCapacity: row.wall_thickness_capacity ?? null,
+      materials: row.materials ?? null,
+      dieShapes: row.die_shapes ?? null,
+      mandrel: row.mandrel ?? null,
+      hasPowerUpgradePath: !!row.has_power_upgrade_path,
+      lengthStop: !!row.length_stop,
+      rotationIndexing: !!row.rotation_indexing,
+      angleMeasurement: !!row.angle_measurement,
+      autoStop: !!row.auto_stop,
+      thickWallUpgrade: !!row.thick_wall_upgrade,
+      thinWallUpgrade: !!row.thin_wall_upgrade,
+      wiperDieSupport: !!row.wiper_die_support,
+      sBendCapability: !!row.s_bend_capability,
+    };
+  }
+
+  return map;
+}

@@ -5,7 +5,7 @@ import {
   type ProductCitationSourceType,
 } from "./catalog";
 import { mergeWithOverlay } from "./adminStore";
-import { loadAllBenderOverlays } from "./benderOverlayRepo";
+import { getAllBenderOverlaysMap } from "./benderOverlayRepo";
 
 /**
  * Parse a line-based citations field (as entered in admin) into structured
@@ -91,40 +91,29 @@ function parseCitationLines(raw: unknown): ProductCitation[] {
  * The overlay is keyed by product `id` and can override any subset of fields
  * on the base `Product` objects (e.g. price, weight, marketing highlights).
  */
-export async function getAllTubeBendersWithOverlay(): Promise<Product[]> {
-  // `mergeWithOverlay` is expected to be generic over rows that at least have
-  // an `id` field, and will shallow-merge any overlay values by that id.
-  //
-  // After merging, we normalize a few fields so that overlay edits stay
-  // compatible with how the public UI expects to consume them.
-  const merged = mergeWithOverlay(allTubeBenders);
 
-  // Load Neon overlay (safe if DB down — swallowed in catch)
-  let dbOverlay: Record<string, Record<string, unknown>> = {};
+export async function getAllTubeBendersWithOverlay(): Promise<Product[]> {
+  // 1) Start from base catalog
+  const mergedFromJson = mergeWithOverlay(allTubeBenders);
+
+  // 2) Load Neon overlays (scoring-related fields)
+  let neonMap: Record<string, any> | null = null;
   try {
-    dbOverlay = await loadAllBenderOverlays();
+    neonMap = await getAllBenderOverlaysMap();
   } catch (err) {
     if (process.env.NODE_ENV !== "production") {
-      console.warn("[catalogOverlay] Neon overlay load failed:", err);
+      console.warn(
+        "[catalogOverlay] failed to load Neon overlays:",
+        (err as Error).message,
+      );
     }
   }
 
-  return merged.map((raw) => {
+  return mergedFromJson.map((raw) => {
     const b = { ...raw } as Product & { highlights?: unknown };
+    const overlayFields = raw as any;
 
-    // DB overrides JSON overlay
-    const id = (raw as any).id;
-    if (id && dbOverlay[id]) {
-      Object.assign(b, dbOverlay[id]);
-    }
-
-    // Normalize highlights:
-    // - base catalog uses string[]
-    // - admin overlay currently writes a single comma-separated string
-    //   (e.g. "foo, bar, baz")
-    //
-    // If we see a string here, split it into a trimmed string[] so that
-    // Array.isArray checks in the public UI continue to work as designed.
+    // ---- existing highlight normalization ----
     if (typeof b.highlights === "string") {
       const parts = (b.highlights as string)
         .split(",")
@@ -133,25 +122,21 @@ export async function getAllTubeBendersWithOverlay(): Promise<Product[]> {
       b.highlights = parts as unknown as Product["highlights"];
     }
 
-    // Ensure review content and citations fields are explicitly passed through from overlay.
-    const overlayFields = raw as any;
-
+    // ---- existing citations handling (unchanged) ----
     let parsedCitations: ProductCitation[] | null = null;
     if (Array.isArray(overlayFields.citations)) {
-      // If overlay ever writes structured citations directly, trust them but
-      // filter to a minimal shape.
       parsedCitations = overlayFields.citations
         .map((c: any, index: number) => {
           if (!c || typeof c !== "object") return null;
-          const id = typeof c.id === "string" && c.id.length > 0
-            ? c.id
-            : `citation-${index + 1}`;
+          const id =
+            typeof c.id === "string" && c.id.length > 0
+              ? c.id
+              : `citation-${index + 1}`;
           return {
             id,
             category: String(c.category ?? "unspecified"),
             field: c.field ?? null,
-            sourceType: (c.sourceType ??
-              "other") as ProductCitationSourceType,
+            sourceType: (c.sourceType ?? "other") as ProductCitationSourceType,
             urlOrRef: String(c.urlOrRef ?? ""),
             title: c.title ?? null,
             accessed: c.accessed ?? null,
@@ -166,6 +151,51 @@ export async function getAllTubeBendersWithOverlay(): Promise<Product[]> {
       }
     }
 
+    // ---- Apply Neon overlay on top (if present) ----
+    const neon = neonMap?.[b.id];
+
+    if (neon) {
+      // Only override if Neon has a non-null value
+      if (neon.usaManufacturingTier != null) {
+        (b as any).usaManufacturingTier = neon.usaManufacturingTier;
+      }
+      if (neon.originTransparencyTier != null) {
+        (b as any).originTransparencyTier = neon.originTransparencyTier;
+      }
+      if (neon.singleSourceSystemTier != null) {
+        (b as any).singleSourceSystemTier = neon.singleSourceSystemTier;
+      }
+      if (neon.warrantyTier != null) {
+        (b as any).warrantyTier = neon.warrantyTier;
+      }
+      if (neon.portability != null) {
+        (b as any).portability = neon.portability;
+      }
+      if (neon.wallThicknessCapacity != null) {
+        (b as any).wallThicknessCapacity = neon.wallThicknessCapacity;
+      }
+      if (neon.materials != null) {
+        (b as any).materials = neon.materials;
+      }
+      if (neon.dieShapes != null) {
+        (b as any).dieShapes = neon.dieShapes;
+      }
+      if (neon.mandrel != null) {
+        (b as any).mandrel = neon.mandrel;
+      }
+
+      (b as any).hasPowerUpgradePath = neon.hasPowerUpgradePath;
+      (b as any).lengthStop = neon.lengthStop;
+      (b as any).rotationIndexing = neon.rotationIndexing;
+      (b as any).angleMeasurement = neon.angleMeasurement;
+      (b as any).autoStop = neon.autoStop;
+      (b as any).thickWallUpgrade = neon.thickWallUpgrade;
+      (b as any).thinWallUpgrade = neon.thinWallUpgrade;
+      (b as any).wiperDieSupport = neon.wiperDieSupport;
+      (b as any).sBendCapability = neon.sBendCapability;
+    }
+
+    // ---- final merged product ----
     return {
       ...b,
       pros: overlayFields.pros ?? b.pros ?? null,
@@ -173,8 +203,7 @@ export async function getAllTubeBendersWithOverlay(): Promise<Product[]> {
       consSources: overlayFields.consSources ?? b.consSources ?? null,
       keyFeatures: overlayFields.keyFeatures ?? b.keyFeatures ?? null,
       materials: overlayFields.materials ?? b.materials ?? null,
-      citationsRaw:
-        overlayFields.citationsRaw ?? b.citationsRaw ?? null,
+      citationsRaw: overlayFields.citationsRaw ?? b.citationsRaw ?? null,
       citations: parsedCitations ?? b.citations ?? null,
     } as Product;
   });
