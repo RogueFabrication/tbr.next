@@ -60,8 +60,8 @@ function dedupePreserveOrder(items: Product[]): Product[] {
 }
 
 type ComparePageProps = { searchParams?: { ids?: string | string[] } };
-export default function ComparePage({ searchParams }: ComparePageProps) {
-  const products = getAllTubeBendersWithOverlay() as Product[];
+export default async function ComparePage({ searchParams }: ComparePageProps) {
+  const products = (await getAllTubeBendersWithOverlay()) as Product[];
   const tokens = parseIds(searchParams?.ids); // raw query tokens
 
   let rows: Product[] = [];

@@ -33,8 +33,8 @@ function displayOriginLabel(country?: string): string {
   return "Imported / International origin";
 }
 
-export default function ReviewsIndexPage() {
-  const products = getAllTubeBendersWithOverlay();
+export default async function ReviewsIndexPage() {
+  const products = await getAllTubeBendersWithOverlay();
 
   const rows = products
     .map((p) => {

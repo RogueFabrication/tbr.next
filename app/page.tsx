@@ -12,9 +12,9 @@ export const metadata = {
     "Compare popular tube benders side-by-side and find the best choice for your shop.",
 };
 
-export default function Page() {
+export default async function Page() {
   // Prepare data for landing compare section
-  const products = getAllTubeBendersWithOverlay();
+  const products = await getAllTubeBendersWithOverlay();
   const parseMoney = (raw: unknown): number | null => {
     if (raw === null || raw === undefined || raw === "") return null;
     if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;

@@ -5,6 +5,7 @@ import {
   type ProductCitationSourceType,
 } from "./catalog";
 import { mergeWithOverlay } from "./adminStore";
+import { loadAllBenderOverlays } from "./benderOverlayRepo";
 
 /**
  * Parse a line-based citations field (as entered in admin) into structured
@@ -90,7 +91,7 @@ function parseCitationLines(raw: unknown): ProductCitation[] {
  * The overlay is keyed by product `id` and can override any subset of fields
  * on the base `Product` objects (e.g. price, weight, marketing highlights).
  */
-export function getAllTubeBendersWithOverlay(): Product[] {
+export async function getAllTubeBendersWithOverlay(): Promise<Product[]> {
   // `mergeWithOverlay` is expected to be generic over rows that at least have
   // an `id` field, and will shallow-merge any overlay values by that id.
   //
@@ -98,8 +99,24 @@ export function getAllTubeBendersWithOverlay(): Product[] {
   // compatible with how the public UI expects to consume them.
   const merged = mergeWithOverlay(allTubeBenders);
 
+  // Load Neon overlay (safe if DB down — swallowed in catch)
+  let dbOverlay: Record<string, Record<string, unknown>> = {};
+  try {
+    dbOverlay = await loadAllBenderOverlays();
+  } catch (err) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[catalogOverlay] Neon overlay load failed:", err);
+    }
+  }
+
   return merged.map((raw) => {
     const b = { ...raw } as Product & { highlights?: unknown };
+
+    // DB overrides JSON overlay
+    const id = (raw as any).id;
+    if (id && dbOverlay[id]) {
+      Object.assign(b, dbOverlay[id]);
+    }
 
     // Normalize highlights:
     // - base catalog uses string[]
@@ -171,9 +188,10 @@ export function getAllTubeBendersWithOverlay(): Product[] {
  * that all public reads of a single product stay consistent with the merged
  * catalog.
  */
-export function findTubeBenderWithOverlay(
-  predicate: (bender: Product) => boolean,
-): Product | undefined {
-  return getAllTubeBendersWithOverlay().find(predicate);
+export async function findTubeBenderWithOverlay(
+  predicate: (bender: Product) => boolean
+): Promise<Product | undefined> {
+  const all = await getAllTubeBendersWithOverlay();
+  return all.find(predicate);
 }
 

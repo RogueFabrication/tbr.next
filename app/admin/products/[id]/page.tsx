@@ -1,0 +1,453 @@
+"use client";
+
+import { useEffect, useState, FormEvent } from "react";
+import { useParams } from "next/navigation";
+
+type OverlayFormState = {
+  usaManufacturingTier: string;
+  originTransparencyTier: string;
+  singleSourceSystemTier: string;
+  warrantyTier: string;
+  portability: string;
+  wallThicknessCapacity: string;
+  materials: string;
+  dieShapes: string;
+  mandrel: string;
+  hasPowerUpgradePath: boolean;
+  lengthStop: boolean;
+  rotationIndexing: boolean;
+  angleMeasurement: boolean;
+  autoStop: boolean;
+  thickWallUpgrade: boolean;
+  thinWallUpgrade: boolean;
+  wiperDieSupport: boolean;
+  sBendCapability: boolean;
+};
+
+export default function ProductOverlayAdminPage() {
+  const params = useParams<{ id: string }>();
+  const productId = (params?.id ?? "") as string;
+
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [statusKind, setStatusKind] = useState<"info" | "ok" | "error">(
+    "info",
+  );
+
+  const [form, setForm] = useState<OverlayFormState>({
+    usaManufacturingTier: "",
+    originTransparencyTier: "",
+    singleSourceSystemTier: "",
+    warrantyTier: "",
+    portability: "",
+    wallThicknessCapacity: "",
+    materials: "",
+    dieShapes: "",
+    mandrel: "",
+    hasPowerUpgradePath: false,
+    lengthStop: false,
+    rotationIndexing: false,
+    angleMeasurement: false,
+    autoStop: false,
+    thickWallUpgrade: false,
+    thinWallUpgrade: false,
+    wiperDieSupport: false,
+    sBendCapability: false,
+  });
+
+  // Load existing overlay from Neon
+  useEffect(() => {
+    if (!productId) return;
+
+    const run = async () => {
+      setStatusMsg("Loading overlay from Neon…");
+      setStatusKind("info");
+      try {
+        const res = await fetch(`/api/admin/products/${productId}`);
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          setStatusMsg(
+            data?.error ?? "Failed to load overlay (auth or server error).",
+          );
+          setStatusKind("error");
+          setLoaded(true);
+          return;
+        }
+
+        const overlay = data?.overlay ?? null;
+
+        if (overlay) {
+          setForm((prev) => ({
+            ...prev,
+            usaManufacturingTier:
+              overlay.usaManufacturingTier != null
+                ? String(overlay.usaManufacturingTier)
+                : "",
+            originTransparencyTier:
+              overlay.originTransparencyTier != null
+                ? String(overlay.originTransparencyTier)
+                : "",
+            singleSourceSystemTier:
+              overlay.singleSourceSystemTier != null
+                ? String(overlay.singleSourceSystemTier)
+                : "",
+            warrantyTier:
+              overlay.warrantyTier != null
+                ? String(overlay.warrantyTier)
+                : "",
+            portability: overlay.portability ?? "",
+            wallThicknessCapacity: overlay.wallThicknessCapacity ?? "",
+            materials: overlay.materials ?? "",
+            dieShapes: overlay.dieShapes ?? "",
+            mandrel: overlay.mandrel ?? "",
+            hasPowerUpgradePath: !!overlay.hasPowerUpgradePath,
+            lengthStop: !!overlay.lengthStop,
+            rotationIndexing: !!overlay.rotationIndexing,
+            angleMeasurement: !!overlay.angleMeasurement,
+            autoStop: !!overlay.autoStop,
+            thickWallUpgrade: !!overlay.thickWallUpgrade,
+            thinWallUpgrade: !!overlay.thinWallUpgrade,
+            wiperDieSupport: !!overlay.wiperDieSupport,
+            sBendCapability: !!overlay.sBendCapability,
+          }));
+          setStatusMsg("Loaded current overlay from Neon.");
+          setStatusKind("ok");
+        } else {
+          setStatusMsg(
+            "No overlay row exists yet for this product. You can create one with this form.",
+          );
+          setStatusKind("info");
+        }
+
+        setLoaded(true);
+      } catch (err) {
+        setStatusMsg(
+          err instanceof Error
+            ? err.message
+            : "Unexpected error loading overlay.",
+        );
+        setStatusKind("error");
+        setLoaded(true);
+      }
+    };
+
+    run();
+  }, [productId]);
+
+  function updateField<K extends keyof OverlayFormState>(
+    key: K,
+    value: OverlayFormState[K],
+  ) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function parseIntOrNull(value: string): number | null {
+    if (!value.trim()) return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setStatusMsg(null);
+
+    const body = {
+      usaManufacturingTier: parseIntOrNull(form.usaManufacturingTier),
+      originTransparencyTier: parseIntOrNull(form.originTransparencyTier),
+      singleSourceSystemTier: parseIntOrNull(form.singleSourceSystemTier),
+      warrantyTier: parseIntOrNull(form.warrantyTier),
+      portability: form.portability || null,
+      wallThicknessCapacity: form.wallThicknessCapacity || null,
+      materials: form.materials || null,
+      dieShapes: form.dieShapes || null,
+      mandrel: form.mandrel || null,
+      hasPowerUpgradePath: form.hasPowerUpgradePath,
+      lengthStop: form.lengthStop,
+      rotationIndexing: form.rotationIndexing,
+      angleMeasurement: form.angleMeasurement,
+      autoStop: form.autoStop,
+      thickWallUpgrade: form.thickWallUpgrade,
+      thinWallUpgrade: form.thinWallUpgrade,
+      wiperDieSupport: form.wiperDieSupport,
+      sBendCapability: form.sBendCapability,
+    };
+
+    try {
+      const res = await fetch(`/api/admin/products/${productId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setStatusMsg(data?.error ?? "Failed to save overlay.");
+        setStatusKind("error");
+        setSaving(false);
+        return;
+      }
+
+      setStatusMsg("Overlay saved to Neon.");
+      setStatusKind("ok");
+    } catch (err) {
+      setStatusMsg(
+        err instanceof Error
+          ? err.message
+          : "Unexpected error saving overlay.",
+      );
+      setStatusKind("error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!productId) {
+    return (
+      <div className="text-sm text-red-700">
+        No product id in URL. Open{" "}
+        <code className="rounded bg-gray-100 px-1">
+          /admin/products/roguefab-m601
+        </code>{" "}
+        as an example.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-base font-semibold text-gray-900">
+          Scoring overlay for <span className="font-mono">{productId}</span>
+        </h2>
+        <p className="mt-1 text-xs text-gray-600">
+          This edits the Neon{" "}
+          <code className="rounded bg-gray-100 px-1">
+            bender_overlays
+          </code>{" "}
+          row for this product. Changes will later feed the scoring engine.
+        </p>
+      </div>
+
+      {statusMsg && (
+        <div
+          className={`rounded-md border px-3 py-2 text-xs ${
+            statusKind === "ok"
+              ? "border-green-200 bg-green-50 text-green-800"
+              : statusKind === "error"
+              ? "border-red-200 bg-red-50 text-red-800"
+              : "border-gray-200 bg-gray-50 text-gray-700"
+          }`}
+        >
+          {statusMsg}
+        </div>
+      )}
+
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Tiers */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-800">
+              Disclosure / scoring tiers
+            </h3>
+            <div className="mt-2 space-y-2 text-xs">
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  USA manufacturing tier (0–5)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={5}
+                  value={form.usaManufacturingTier}
+                  onChange={(e) =>
+                    updateField("usaManufacturingTier", e.target.value)
+                  }
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Origin transparency tier (0–5)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={5}
+                  value={form.originTransparencyTier}
+                  onChange={(e) =>
+                    updateField("originTransparencyTier", e.target.value)
+                  }
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Single-source system tier (0–2)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={2}
+                  value={form.singleSourceSystemTier}
+                  onChange={(e) =>
+                    updateField("singleSourceSystemTier", e.target.value)
+                  }
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Warranty tier (0–3)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={3}
+                  value={form.warrantyTier}
+                  onChange={(e) =>
+                    updateField("warrantyTier", e.target.value)
+                  }
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Capacity / text fields */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-800">
+              Capacity &amp; text fields
+            </h3>
+            <div className="mt-2 space-y-2 text-xs">
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Portability (normalized label)
+                </label>
+                <input
+                  type="text"
+                  placeholder="portable_with_rolling_option, fixed, rolling_standard…"
+                  value={form.portability}
+                  onChange={(e) => updateField("portability", e.target.value)}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Wall thickness capacity (for 1.75&quot; OD DOM)
+                </label>
+                <input
+                  type="text"
+                  placeholder=".156"
+                  value={form.wallThicknessCapacity}
+                  onChange={(e) =>
+                    updateField("wallThicknessCapacity", e.target.value)
+                  }
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Materials (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Mild steel, 4130 chromoly, Stainless…"
+                  value={form.materials}
+                  onChange={(e) =>
+                    updateField("materials", e.target.value)
+                  }
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Die shapes (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Round tube, Pipe, Square tube, EMT…"
+                  value={form.dieShapes}
+                  onChange={(e) =>
+                    updateField("dieShapes", e.target.value)
+                  }
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Mandrel (None, Economy, Available, Bronze, etc.)
+                </label>
+                <input
+                  type="text"
+                  value={form.mandrel}
+                  onChange={(e) => updateField("mandrel", e.target.value)}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Boolean flags */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-800">
+            Upgrade path &amp; capability flags
+          </h3>
+          <div className="mt-2 grid gap-2 text-xs md:grid-cols-3">
+            {([
+              ["hasPowerUpgradePath", "Power upgrade path"],
+              ["lengthStop", "Length stop / backstop"],
+              ["rotationIndexing", "Rotation indexing"],
+              ["angleMeasurement", "Angle measurement"],
+              ["autoStop", "Auto-stop for bend angle"],
+              ["thickWallUpgrade", "Thick-wall upgrade"],
+              ["thinWallUpgrade", "Thin-wall / AL / SS upgrade"],
+              ["wiperDieSupport", "Wiper die support"],
+              ["sBendCapability", "True S-bend capability"],
+            ] as const).map(([key, label]) => (
+              <label
+                key={key}
+                className="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2 py-1"
+              >
+                <input
+                  type="checkbox"
+                  checked={form[key]}
+                  onChange={(e) =>
+                    updateField(key, e.target.checked as any)
+                  }
+                  className="h-3 w-3"
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-gray-500">
+            Saving writes directly to Neon table{" "}
+            <code className="rounded bg-gray-100 px-1">
+              bender_overlays
+            </code>
+            .
+          </p>
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-blue-300"
+          >
+            {saving ? "Saving…" : "Save overlay"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+

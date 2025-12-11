@@ -117,13 +117,13 @@ type PageProps = {
   searchParams?: { [key: string]: string | string[] | undefined };
 };
 
-export default function ReviewPage({ params, searchParams }: PageProps) {
+export default async function ReviewPage({ params, searchParams }: PageProps) {
   // Read from the merged catalog so admin overlay edits are reflected.
-  const all = getAllTubeBendersWithOverlay() as Product[];
+  const all = await getAllTubeBendersWithOverlay() as Product[];
   const lookup = buildLookup(all);
   const product =
     lookup.get(slugOf(params.slug)) ??
-    (findTubeBenderWithOverlay((b) => slugOf(b.id) === slugOf(params.slug) || slugOf(b.slug ?? "") === slugOf(params.slug)) as Product | undefined);
+    (await findTubeBenderWithOverlay((b) => slugOf(b.id) === slugOf(params.slug) || slugOf(b.slug ?? "") === slugOf(params.slug)) as Product | undefined);
 
   if (!product) {
     return (
