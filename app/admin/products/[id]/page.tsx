@@ -22,6 +22,13 @@ type OverlayFormState = {
   thinWallUpgrade: boolean;
   wiperDieSupport: boolean;
   sBendCapability: boolean;
+
+  pros: string;
+  cons: string;
+  consSources: string;
+  keyFeatures: string;
+  highlights: string;
+  citationsRaw: string;
 };
 
 export default function ProductOverlayAdminPage() {
@@ -54,6 +61,13 @@ export default function ProductOverlayAdminPage() {
     thinWallUpgrade: false,
     wiperDieSupport: false,
     sBendCapability: false,
+
+    pros: "",
+    cons: "",
+    consSources: "",
+    keyFeatures: "",
+    highlights: "",
+    citationsRaw: "",
   });
 
   // Load existing overlay from Neon
@@ -111,6 +125,13 @@ export default function ProductOverlayAdminPage() {
             thinWallUpgrade: !!overlay.thinWallUpgrade,
             wiperDieSupport: !!overlay.wiperDieSupport,
             sBendCapability: !!overlay.sBendCapability,
+
+            pros: overlay.pros ?? "",
+            cons: overlay.cons ?? "",
+            consSources: overlay.consSources ?? "",
+            keyFeatures: overlay.keyFeatures ?? "",
+            highlights: overlay.highlights ?? "",
+            citationsRaw: overlay.citationsRaw ?? "",
           }));
           setStatusMsg("Loaded current overlay from Neon.");
           setStatusKind("ok");
@@ -173,6 +194,12 @@ export default function ProductOverlayAdminPage() {
       thinWallUpgrade: form.thinWallUpgrade,
       wiperDieSupport: form.wiperDieSupport,
       sBendCapability: form.sBendCapability,
+      pros: form.pros || null,
+      cons: form.cons || null,
+      consSources: form.consSources || null,
+      keyFeatures: form.keyFeatures || null,
+      highlights: form.highlights || null,
+      citationsRaw: form.citationsRaw || null,
     };
 
     try {
@@ -221,14 +248,16 @@ export default function ProductOverlayAdminPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-base font-semibold text-gray-900">
-          Scoring overlay for <span className="font-mono">{productId}</span>
+          Overlay &amp; review content for{" "}
+          <span className="font-mono">{productId}</span>
         </h2>
         <p className="mt-1 text-xs text-gray-600">
           This edits the Neon{" "}
           <code className="rounded bg-gray-100 px-1">
             bender_overlays
           </code>{" "}
-          row for this product. Changes will later feed the scoring engine.
+          row for this product. Later, the public scoring &amp; review pages
+          will read from here instead of the JSON overlay.
         </p>
       </div>
 
@@ -250,7 +279,7 @@ export default function ProductOverlayAdminPage() {
         onSubmit={handleSubmit}
         className="space-y-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
       >
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2">
           {/* Tiers */}
           <div>
             <h3 className="text-xs font-semibold text-gray-800">
@@ -323,7 +352,7 @@ export default function ProductOverlayAdminPage() {
           {/* Capacity / text fields */}
           <div>
             <h3 className="text-xs font-semibold text-gray-800">
-              Capacity &amp; text fields
+              Capacity &amp; normalized labels
             </h3>
             <div className="mt-2 space-y-2 text-xs">
               <div>
@@ -360,9 +389,7 @@ export default function ProductOverlayAdminPage() {
                   type="text"
                   placeholder="Mild steel, 4130 chromoly, Stainless…"
                   value={form.materials}
-                  onChange={(e) =>
-                    updateField("materials", e.target.value)
-                  }
+                  onChange={(e) => updateField("materials", e.target.value)}
                   className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
                 />
               </div>
@@ -374,9 +401,7 @@ export default function ProductOverlayAdminPage() {
                   type="text"
                   placeholder="Round tube, Pipe, Square tube, EMT…"
                   value={form.dieShapes}
-                  onChange={(e) =>
-                    updateField("dieShapes", e.target.value)
-                  }
+                  onChange={(e) => updateField("dieShapes", e.target.value)}
                   className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
                 />
               </div>
@@ -430,13 +455,121 @@ export default function ProductOverlayAdminPage() {
           </div>
         </div>
 
+        {/* Editorial content */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div>
+            <h3 className="text-xs font-semibold text-gray-800">
+              Pros / Cons &amp; sources
+            </h3>
+            <div className="mt-2 space-y-2 text-xs">
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Pros (one per line or paragraph)
+                </label>
+                <textarea
+                  rows={5}
+                  value={form.pros}
+                  onChange={(e) => updateField("pros", e.target.value)}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Cons (one per line or paragraph)
+                </label>
+                <textarea
+                  rows={5}
+                  value={form.cons}
+                  onChange={(e) => updateField("cons", e.target.value)}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Cons sources (freeform, legacy field)
+                </label>
+                <textarea
+                  rows={3}
+                  value={form.consSources}
+                  onChange={(e) =>
+                    updateField("consSources", e.target.value)
+                  }
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-semibold text-gray-800">
+              Key features, highlights &amp; citations
+            </h3>
+            <div className="mt-2 space-y-2 text-xs">
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Key features (one per line)
+                </label>
+                <textarea
+                  rows={4}
+                  value={form.keyFeatures}
+                  onChange={(e) =>
+                    updateField("keyFeatures", e.target.value)
+                  }
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Highlights (short marketing copy)
+                </label>
+                <textarea
+                  rows={3}
+                  value={form.highlights}
+                  onChange={(e) =>
+                    updateField("highlights", e.target.value)
+                  }
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700">
+                  Citations (one per line, pipe-separated fields)
+                </label>
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Format:{" "}
+                  <code className="rounded bg-gray-50 px-1">
+                    category | sourceType | urlOrRef | title | accessed |
+                    note
+                  </code>
+                  . Example:{" "}
+                  <code className="rounded bg-gray-50 px-1">
+                    valueForMoney | web-page | https://roguefab.com/specs |
+                    RogueFab M625 specs | 2025-12-01 | &quot;Max
+                    capacity&quot; row
+                  </code>
+                  .
+                </p>
+                <textarea
+                  rows={6}
+                  value={form.citationsRaw}
+                  onChange={(e) =>
+                    updateField("citationsRaw", e.target.value)
+                  }
+                  className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1 text-xs font-mono"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
           <p className="text-[11px] text-gray-500">
             Saving writes directly to Neon table{" "}
             <code className="rounded bg-gray-100 px-1">
               bender_overlays
             </code>
-            .
+            . This will ultimately become the single source of truth for
+            scoring &amp; review text.
           </p>
           <button
             type="submit"
@@ -450,4 +583,3 @@ export default function ProductOverlayAdminPage() {
     </div>
   );
 }
-
