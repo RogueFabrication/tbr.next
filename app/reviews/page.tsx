@@ -4,6 +4,9 @@ import { getAllTubeBendersWithOverlay } from "../../lib/catalogOverlay";
 import { getProductScore, TOTAL_POINTS } from "../../lib/scoring";
 import { slugForProduct, titleOf } from "../../lib/ids";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "Tube Bender Reviews | TubeBenderReviews",
   description:

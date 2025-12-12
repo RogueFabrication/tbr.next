@@ -5,7 +5,118 @@ import {
   type ProductCitationSourceType,
 } from "./catalog";
 import { mergeWithOverlay } from "./adminStore";
-import { getAllBenderOverlaysMap } from "./benderOverlayRepo";
+import { sql } from "./db";
+
+/**
+ * Neon row shape for bender_overlays.
+ * Keep in sync with the CREATE TABLE definition.
+ */
+type BenderOverlayRow = {
+  product_id: string;
+  usa_manufacturing_tier: number | null;
+  origin_transparency_tier: number | null;
+  single_source_system_tier: number | null;
+  warranty_tier: number | null;
+  portability: string | null;
+  wall_thickness_capacity: string | null;
+  materials: string | null;
+  die_shapes: string | null;
+  mandrel: string | null;
+  has_power_upgrade_path: boolean | null;
+  length_stop: boolean | null;
+  rotation_indexing: boolean | null;
+  angle_measurement: boolean | null;
+  auto_stop: boolean | null;
+  thick_wall_upgrade: boolean | null;
+  thin_wall_upgrade: boolean | null;
+  wiper_die_support: boolean | null;
+  s_bend_capability: boolean | null;
+};
+
+/**
+ * Fetch all Neon-backed overlays and map them to the camelCase properties
+ * the rest of the app / scoring engine expects to see on Product objects.
+ *
+ * Result is keyed by product_id (slug).
+ */
+async function fetchNeonOverlays(): Promise<
+  Record<string, Partial<Product>>
+> {
+  let rows: BenderOverlayRow[] = [];
+  try {
+    rows = await sql<BenderOverlayRow[]>`
+      SELECT
+        product_id,
+        usa_manufacturing_tier,
+        origin_transparency_tier,
+        single_source_system_tier,
+        warranty_tier,
+        portability,
+        wall_thickness_capacity,
+        materials,
+        die_shapes,
+        mandrel,
+        has_power_upgrade_path,
+        length_stop,
+        rotation_indexing,
+        angle_measurement,
+        auto_stop,
+        thick_wall_upgrade,
+        thin_wall_upgrade,
+        wiper_die_support,
+        s_bend_capability
+      FROM bender_overlays
+    `;
+  } catch (err) {
+    if (process.env.NODE_ENV !== "production") {
+      // In local dev, make it obvious if the Neon query is failing.
+      // In production we fail closed and just fall back to JSON overlay.
+      console.warn(
+        "[catalogOverlay] Failed to load Neon overlays:",
+        (err as Error).message,
+      );
+    }
+    return {};
+  }
+
+  const map: Record<string, Partial<Product>> = {};
+
+  for (const row of rows) {
+    const id = row.product_id;
+    if (!id) continue;
+
+    // materials/die_shapes are stored as text; we keep them as strings here.
+    // getProductScore() already knows how to normalise them (it splits strings
+    // into arrays).
+    map[id] = {
+      // Disclosure-based tiers
+      usaManufacturingTier: row.usa_manufacturing_tier ?? null,
+      originTransparencyTier: row.origin_transparency_tier ?? null,
+      singleSourceSystemTier: row.single_source_system_tier ?? null,
+      warrantyTier: row.warranty_tier ?? null,
+
+      // Portability and capacity/text fields
+      portability: row.portability ?? null,
+      wallThicknessCapacity: row.wall_thickness_capacity ?? null,
+      materials: row.materials ?? null,
+      dieShapes: row.die_shapes ?? null,
+      mandrel: row.mandrel ?? null,
+
+      // Upgrade path & capability flags
+      hasPowerUpgradePath: row.has_power_upgrade_path ?? false,
+      lengthStop: row.length_stop ?? false,
+      rotationIndexing: row.rotation_indexing ?? false,
+      angleMeasurement: row.angle_measurement ?? false,
+      autoStop: row.auto_stop ?? false,
+      thickWallUpgrade: row.thick_wall_upgrade ?? false,
+      thinWallUpgrade: row.thin_wall_upgrade ?? false,
+      wiperDieSupport: row.wiper_die_support ?? false,
+      sBendCapability: row.s_bend_capability ?? false,
+    } as Partial<Product>;
+  }
+
+  return map;
+}
 
 /**
  * Parse a line-based citations field (as entered in admin) into structured
@@ -46,8 +157,14 @@ function parseCitationLines(raw: unknown): ProductCitation[] {
       return;
     }
 
-    const [categoryRaw, sourceTypeRaw, urlOrRefRaw, titleRaw, accessedRaw, ...noteParts] =
-      parts;
+    const [
+      categoryRaw,
+      sourceTypeRaw,
+      urlOrRefRaw,
+      titleRaw,
+      accessedRaw,
+      ...noteParts
+    ] = parts;
 
     const category = categoryRaw || "unspecified";
     const urlOrRef = urlOrRefRaw || "";
@@ -81,39 +198,37 @@ function parseCitationLines(raw: unknown): ProductCitation[] {
 }
 
 /**
- * Returns all tube benders with any admin overlay applied.
+ * Returns all tube benders with:
  *
- * This is intended for server-side reads only (pages, layouts, and API routes).
- * It relies on the JSON-backed overlay store at `data/admin/products.overlay.json`
- * via `lib/adminStore`, which uses the Node filesystem and should not be
- * imported into client components.
+ *   base catalog
+ *   → JSON overlay (data/admin/products.overlay.json)
+ *   → Neon overlay (bender_overlays table)
  *
- * The overlay is keyed by product `id` and can override any subset of fields
- * on the base `Product` objects (e.g. price, weight, marketing highlights).
+ * Neon values win over JSON when both define the same field.
+ *
+ * This is intended for server-side reads only (pages, layouts, API routes).
  */
-
 export async function getAllTubeBendersWithOverlay(): Promise<Product[]> {
-  // 1) Start from base catalog
-  const mergedFromJson = mergeWithOverlay(allTubeBenders);
+  // 1) Base catalog + JSON overlay (legacy) – synchronous.
+  const baseWithJsonOverlay = mergeWithOverlay(allTubeBenders);
 
-  // 2) Load Neon overlays (scoring-related fields)
-  let neonMap: Record<string, any> | null = null;
-  try {
-    neonMap = await getAllBenderOverlaysMap();
-  } catch (err) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn(
-        "[catalogOverlay] failed to load Neon overlays:",
-        (err as Error).message,
-      );
-    }
-  }
+  // 2) Neon overlays (async).
+  const neonMap = await fetchNeonOverlays();
 
-  return mergedFromJson.map((raw) => {
-    const b = { ...raw } as Product & { highlights?: unknown };
-    const overlayFields = raw as any;
+  return baseWithJsonOverlay.map((raw) => {
+    const id = (raw as any).id as string | undefined;
+    const neonOverlay = id ? neonMap[id] ?? null : null;
 
-    // ---- existing highlight normalization ----
+    // Order matters:
+    //   base product → JSON overlay → Neon overlay
+    // so Neon always wins when present.
+    const merged = neonOverlay ? { ...raw, ...neonOverlay } : raw;
+
+    const b = { ...merged } as Product & { highlights?: unknown };
+
+    // Normalize highlights:
+    // - base catalog uses string[]
+    // - admin overlay may write a single comma-separated string
     if (typeof b.highlights === "string") {
       const parts = (b.highlights as string)
         .split(",")
@@ -122,7 +237,8 @@ export async function getAllTubeBendersWithOverlay(): Promise<Product[]> {
       b.highlights = parts as unknown as Product["highlights"];
     }
 
-    // ---- existing citations handling (unchanged) ----
+    const overlayFields = merged as any;
+
     let parsedCitations: ProductCitation[] | null = null;
     if (Array.isArray(overlayFields.citations)) {
       parsedCitations = overlayFields.citations
@@ -136,7 +252,8 @@ export async function getAllTubeBendersWithOverlay(): Promise<Product[]> {
             id,
             category: String(c.category ?? "unspecified"),
             field: c.field ?? null,
-            sourceType: (c.sourceType ?? "other") as ProductCitationSourceType,
+            sourceType: (c.sourceType ??
+              "other") as ProductCitationSourceType,
             urlOrRef: String(c.urlOrRef ?? ""),
             title: c.title ?? null,
             accessed: c.accessed ?? null,
@@ -151,51 +268,6 @@ export async function getAllTubeBendersWithOverlay(): Promise<Product[]> {
       }
     }
 
-    // ---- Apply Neon overlay on top (if present) ----
-    const neon = neonMap?.[b.id];
-
-    if (neon) {
-      // Only override if Neon has a non-null value
-      if (neon.usaManufacturingTier != null) {
-        (b as any).usaManufacturingTier = neon.usaManufacturingTier;
-      }
-      if (neon.originTransparencyTier != null) {
-        (b as any).originTransparencyTier = neon.originTransparencyTier;
-      }
-      if (neon.singleSourceSystemTier != null) {
-        (b as any).singleSourceSystemTier = neon.singleSourceSystemTier;
-      }
-      if (neon.warrantyTier != null) {
-        (b as any).warrantyTier = neon.warrantyTier;
-      }
-      if (neon.portability != null) {
-        (b as any).portability = neon.portability;
-      }
-      if (neon.wallThicknessCapacity != null) {
-        (b as any).wallThicknessCapacity = neon.wallThicknessCapacity;
-      }
-      if (neon.materials != null) {
-        (b as any).materials = neon.materials;
-      }
-      if (neon.dieShapes != null) {
-        (b as any).dieShapes = neon.dieShapes;
-      }
-      if (neon.mandrel != null) {
-        (b as any).mandrel = neon.mandrel;
-      }
-
-      (b as any).hasPowerUpgradePath = neon.hasPowerUpgradePath;
-      (b as any).lengthStop = neon.lengthStop;
-      (b as any).rotationIndexing = neon.rotationIndexing;
-      (b as any).angleMeasurement = neon.angleMeasurement;
-      (b as any).autoStop = neon.autoStop;
-      (b as any).thickWallUpgrade = neon.thickWallUpgrade;
-      (b as any).thinWallUpgrade = neon.thinWallUpgrade;
-      (b as any).wiperDieSupport = neon.wiperDieSupport;
-      (b as any).sBendCapability = neon.sBendCapability;
-    }
-
-    // ---- final merged product ----
     return {
       ...b,
       pros: overlayFields.pros ?? b.pros ?? null,
@@ -210,17 +282,14 @@ export async function getAllTubeBendersWithOverlay(): Promise<Product[]> {
 }
 
 /**
- * Convenience helper to retrieve a single tube bender by id or slug with
- * the overlay applied.
+ * Convenience helper to retrieve a single tube bender by id/slug with the
+ * JSON + Neon overlay applied.
  *
- * This keeps callers from needing to understand overlay mechanics and ensures
- * that all public reads of a single product stay consistent with the merged
- * catalog.
+ * NOTE: now async because it depends on Neon.
  */
 export async function findTubeBenderWithOverlay(
-  predicate: (bender: Product) => boolean
+  predicate: (bender: Product) => boolean,
 ): Promise<Product | undefined> {
   const all = await getAllTubeBendersWithOverlay();
   return all.find(predicate);
 }
-

@@ -6,6 +6,9 @@ import { getProductScore } from "../lib/scoring";
 import { titleOf, slugForProduct } from "../lib/ids";
 import LandingCompareSection, { type LandingCompareRow } from "../components/LandingCompareSection";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "TBR | TubeBenderReviews",
   description:

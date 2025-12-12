@@ -6,6 +6,9 @@ import { getProductScore, TOTAL_POINTS } from "../../../lib/scoring";
 import ScoreBreakdownToggle from "../../../components/ScoreBreakdownToggle";
 import ReviewAuditPanel from "../../../components/ReviewAuditPanel";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const fallbackImg = "/images/products/placeholder.png";
 
 /**

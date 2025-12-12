@@ -7,6 +7,9 @@ import { slugOf, parseIds, titleOf, slugForProduct } from "../../lib/ids";
 import { getProductScore, TOTAL_POINTS } from "../../lib/scoring";
 // NOTE: Only accepts canonical product identifiers (id/slug/name/brand+model)
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type Product = {
   id: string;
   slug?: string;

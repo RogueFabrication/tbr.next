@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 
 export default function AdminLoginPage() {
   const [token, setToken] = useState("");
@@ -101,6 +102,23 @@ export default function AdminLoginPage() {
         >
           {message}
         </p>
+      )}
+
+      {status === "ok" && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link
+            href="/admin/products"
+            className="rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700"
+          >
+            Open product list
+          </Link>
+          <Link
+            href="/admin/products/roguefab-m601"
+            className="rounded-md border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-900 shadow-sm hover:bg-gray-50"
+          >
+            Open example (roguefab-m601)
+          </Link>
+        </div>
       )}
     </div>
   );
