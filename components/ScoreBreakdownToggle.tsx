@@ -26,12 +26,11 @@ export default function ScoreBreakdownToggle({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-            Score math &amp; citation log
+            Score math summary
           </p>
           <p className="mt-0.5 text-[11px] text-gray-600">
-            This section shows every category, the exact points awarded, and the
-            reasoning used for this machine only. It&apos;s the same math
-            described on the scoring methodology page, applied to this model.
+            This shows every category, the exact points awarded, and the reasoning
+            used for this model. (Citations and audit trail are in the section below.)
           </p>
         </div>
         <button

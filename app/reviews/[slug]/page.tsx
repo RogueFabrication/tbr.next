@@ -572,10 +572,12 @@ export default async function ReviewPage({ params, searchParams }: PageProps) {
       <div className="mx-auto mt-6 max-w-6xl px-6 pb-10 space-y-4">
         <ScoreBreakdownToggle score={score} />
 
-        {/* Existing audit / citation panel; this already shows sources and notes.
-           Placing the breakdown toggle immediately above it keeps all
-           transparency-related content together. */}
-        {product && <ReviewAuditPanel product={product as any} />}
+        {/* Citations / audit panel.
+            NOTE: ReviewAuditPanel already contains its own <details> disclosure,
+            so we do NOT wrap it in another <details> (nested disclosures get confusing). */}
+        <div className="mt-6">
+          {product && <ReviewAuditPanel product={product as any} />}
+        </div>
       </div>
 
       <div className="mx-auto max-w-6xl px-6 mt-6 text-sm text-muted-foreground">
