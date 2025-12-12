@@ -295,3 +295,63 @@ export async function getAllBenderOverlaysMap(): Promise<
 
   return map;
 }
+
+/**
+ * Load overlay rows for a specific set of product IDs.
+ * Returns a map keyed by product_id.
+ */
+export async function getAllBenderOverlaysById(
+  ids: string[],
+): Promise<Record<string, BenderOverlayPatch>> {
+  const rows = (await sql`
+    SELECT
+      product_id,
+      usa_manufacturing_tier,
+      origin_transparency_tier,
+      single_source_system_tier,
+      warranty_tier,
+      portability,
+      wall_thickness_capacity,
+      materials,
+      die_shapes,
+      mandrel,
+      has_power_upgrade_path,
+      length_stop,
+      rotation_indexing,
+      angle_measurement,
+      auto_stop,
+      thick_wall_upgrade,
+      thin_wall_upgrade,
+      wiper_die_support,
+      s_bend_capability
+    FROM bender_overlays
+    WHERE product_id = ANY(${ids})
+  `) as unknown as BenderOverlayRow[];
+
+  const out: Record<string, BenderOverlayPatch> = {};
+  for (const r of rows) {
+    if (!r.product_id) continue;
+    out[r.product_id] = {
+      productId: r.product_id,
+      usaManufacturingTier: r.usa_manufacturing_tier ?? null,
+      originTransparencyTier: r.origin_transparency_tier ?? null,
+      singleSourceSystemTier: r.single_source_system_tier ?? null,
+      warrantyTier: r.warranty_tier ?? null,
+      portability: r.portability ?? null,
+      wallThicknessCapacity: r.wall_thickness_capacity ?? null,
+      materials: r.materials ?? null,
+      dieShapes: r.die_shapes ?? null,
+      mandrel: r.mandrel ?? null,
+      hasPowerUpgradePath: !!r.has_power_upgrade_path,
+      lengthStop: !!r.length_stop,
+      rotationIndexing: !!r.rotation_indexing,
+      angleMeasurement: !!r.angle_measurement,
+      autoStop: !!r.auto_stop,
+      thickWallUpgrade: !!r.thick_wall_upgrade,
+      thinWallUpgrade: !!r.thin_wall_upgrade,
+      wiperDieSupport: !!r.wiper_die_support,
+      sBendCapability: !!r.s_bend_capability,
+    };
+  }
+  return out;
+}
