@@ -36,24 +36,32 @@ export async function GET(
     return badRequest("Missing product id");
   }
 
+  // Next.js App Router can prefetch RSC payloads and call this endpoint multiple times.
+  // Bypass rate limiting for prefetch/RSC GETs to avoid self-throttling the admin editor.
+  const isPrefetch =
+    request.headers.get("next-router-prefetch") === "1" ||
+    request.headers.get("rsc") === "1";
+
   const clientId = getClientId(request);
-  // Apply rate limiting (authorized requests only)
-  const rateLimitResult = await enforceRateLimit(ratelimitAdmin, [
-    "admin_api",
-    clientId,
-    request.nextUrl.pathname,
-    request.method,
-  ]);
-  if (!rateLimitResult.ok) {
-    return Response.json(
-      { error: "Too many requests" },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": String(rateLimitResult.retryAfter ?? 60),
+  if (!isPrefetch) {
+    // Apply rate limiting (authorized, non-prefetch requests only)
+    const rateLimitResult = await enforceRateLimit(ratelimitAdmin, [
+      "admin_api",
+      clientId,
+      request.nextUrl.pathname,
+      request.method,
+    ]);
+    if (!rateLimitResult.ok) {
+      return Response.json(
+        { error: "Too many requests" },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimitResult.retryAfter ?? 60),
+          },
         },
-      },
-    );
+      );
+    }
   }
 
   try {
