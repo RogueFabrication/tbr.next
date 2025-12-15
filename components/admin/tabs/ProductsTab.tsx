@@ -94,6 +94,35 @@ export default function ProductsTab() {
     fetchProducts();
   }, []);
 
+  // Send a PATCH with one or more field updates.
+  // IMPORTANT: Do not refetch the whole product list after each write.
+  // The UI already does optimistic updates; full refetches create a GET storm.
+  const patchProduct = async (
+    id: string,
+    updates: Record<string, any>,
+  ): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/admin/products/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to update product");
+        return false;
+      }
+
+      // Keep optimistic value; no full refetch here.
+      return true;
+    } catch (error) {
+      console.error("Error updating product:", error);
+      return false;
+    }
+  };
+
   const fetchProducts = async () => {
     try {
       const res = await fetch("/api/admin/products", { cache: "no-store" });
@@ -133,24 +162,8 @@ export default function ProductsTab() {
       prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
     );
 
-    try {
-      const response = await fetch(`/api/admin/products/${id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ [field]: value }),
-      });
-
-      if (response.ok) {
-        // Keep the optimistic value; we still refresh to pick up any server-side normalization.
-        fetchProducts();
-      } else {
-        console.error("Failed to update product");
-      }
-    } catch (error) {
-      console.error("Error updating product:", error);
-    }
+    // Send the write without triggering a full list refetch (prevents GET storms).
+    await patchProduct(id, { [field]: value });
   };
 
   // Local-only update helper so we can keep inputs responsive while typing
@@ -841,26 +854,35 @@ export default function ProductsTab() {
                           }`}
                           onClick={() => {
                             if (!citationClipboard) return;
-                            updateProduct(
+                            // Optimistically update UI in one pass
+                            updateProductLocalField(
                               selectedProduct.id,
                               source1Key,
                               citationClipboard.source1,
                             );
-                            updateProduct(
+                            updateProductLocalField(
                               selectedProduct.id,
                               source2Key,
                               citationClipboard.source2,
                             );
-                            updateProduct(
+                            updateProductLocalField(
                               selectedProduct.id,
                               notesKey,
                               citationClipboard.notes,
                             );
-                            updateProduct(
+                            updateProductLocalField(
                               selectedProduct.id,
                               userKey,
                               citationClipboard.userCode,
                             );
+
+                            // One PATCH call instead of 4 PATCH + 4 GET storms
+                            patchProduct(selectedProduct.id, {
+                              [source1Key]: citationClipboard.source1,
+                              [source2Key]: citationClipboard.source2,
+                              [notesKey]: citationClipboard.notes,
+                              [userKey]: citationClipboard.userCode,
+                            });
                           }}
                         >
                           Paste
