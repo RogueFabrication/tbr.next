@@ -7,7 +7,7 @@ import {
   type BenderOverlayInput,
 } from "../../../../../lib/benderOverlayRepo";
 import {
-  getClientIp,
+  getClientId,
   ratelimitAdmin,
   enforceRateLimit,
 } from "../../../../../lib/rateLimit";
@@ -15,7 +15,7 @@ import {
 const ADMIN_COOKIE_NAME = "admin_token";
 
 function isAuthorized(request: NextRequest): boolean {
-  const envToken = process.env.ADMIN_TOKEN;
+  const envToken = process.env.ADMIN_TOKEN?.trim();
   if (!envToken) return false;
 
   const cookieToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
@@ -26,12 +26,14 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const ip = getClientIp(request);
+  const clientId = getClientId(request);
 
   // Apply rate limiting
   const rateLimitResult = await enforceRateLimit(ratelimitAdmin, [
     "admin_api",
-    ip,
+    clientId,
+    request.nextUrl.pathname,
+    request.method,
   ]);
   if (!rateLimitResult.ok) {
     return Response.json(
@@ -68,12 +70,14 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const ip = getClientIp(request);
+  const clientId = getClientId(request);
 
   // Apply rate limiting
   const rateLimitResult = await enforceRateLimit(ratelimitAdmin, [
     "admin_api",
-    ip,
+    clientId,
+    request.nextUrl.pathname,
+    request.method,
   ]);
   if (!rateLimitResult.ok) {
     return Response.json(
