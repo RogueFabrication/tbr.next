@@ -44,7 +44,7 @@ async function fetchNeonOverlays(): Promise<
 > {
   let rows: BenderOverlayRow[] = [];
   try {
-    rows = await sql<BenderOverlayRow[]>`
+    rows = (await sql`
       SELECT
         product_id,
         usa_manufacturing_tier,
@@ -66,7 +66,7 @@ async function fetchNeonOverlays(): Promise<
         wiper_die_support,
         s_bend_capability
       FROM bender_overlays
-    `;
+    `) as unknown as BenderOverlayRow[];
   } catch (err) {
     if (process.env.NODE_ENV !== "production") {
       // In local dev, make it obvious if the Neon query is failing.

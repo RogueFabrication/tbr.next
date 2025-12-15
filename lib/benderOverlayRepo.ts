@@ -243,7 +243,7 @@ export type BenderOverlayPatch = {
 export async function getAllBenderOverlaysMap(): Promise<
   Record<string, BenderOverlayPatch>
 > {
-  const rows = await sql<BenderOverlayRow>`
+  const rows = (await sql`
     SELECT
       product_id,
       usa_manufacturing_tier,
@@ -265,7 +265,7 @@ export async function getAllBenderOverlaysMap(): Promise<
       wiper_die_support,
       s_bend_capability
     FROM bender_overlays
-  `;
+  `) as unknown as BenderOverlayRow[];
 
   const map: Record<string, BenderOverlayPatch> = {};
 

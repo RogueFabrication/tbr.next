@@ -92,7 +92,7 @@ export async function getBenderOverlayMap(): Promise<
   let rows: BenderOverlayRow[] = [];
 
   try {
-    rows = await sql<BenderOverlayRow[]>`
+    rows = (await sql`
       SELECT
         product_id,
         usa_manufacturing_tier,
@@ -114,7 +114,7 @@ export async function getBenderOverlayMap(): Promise<
         wiper_die_support,
         s_bend_capability
       FROM bender_overlays
-    `;
+    `) as unknown as BenderOverlayRow[];
   } catch (err) {
     if (process.env.NODE_ENV !== "production") {
       console.warn(
