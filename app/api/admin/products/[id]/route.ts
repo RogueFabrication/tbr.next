@@ -26,9 +26,18 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const clientId = getClientId(request);
+  if (!isAuthorized(request)) {
+    return badRequest("Not authorized");
+  }
 
-  // Apply rate limiting
+  const productId = params?.id;
+
+  if (!productId) {
+    return badRequest("Missing product id");
+  }
+
+  const clientId = getClientId(request);
+  // Apply rate limiting (authorized requests only)
   const rateLimitResult = await enforceRateLimit(ratelimitAdmin, [
     "admin_api",
     clientId,
@@ -45,16 +54,6 @@ export async function GET(
         },
       },
     );
-  }
-
-  const productId = params?.id;
-
-  if (!isAuthorized(request)) {
-    return badRequest("Not authorized");
-  }
-
-  if (!productId) {
-    return badRequest("Missing product id");
   }
 
   try {
@@ -70,9 +69,18 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const clientId = getClientId(request);
+  if (!isAuthorized(request)) {
+    return badRequest("Not authorized");
+  }
 
-  // Apply rate limiting
+  const productId = params?.id;
+
+  if (!productId) {
+    return badRequest("Missing product id");
+  }
+
+  const clientId = getClientId(request);
+  // Apply rate limiting (authorized requests only)
   const rateLimitResult = await enforceRateLimit(ratelimitAdmin, [
     "admin_api",
     clientId,
@@ -91,16 +99,6 @@ export async function POST(
     );
   }
 
-  const productId = params?.id;
-
-  if (!isAuthorized(request)) {
-    return badRequest("Not authorized");
-  }
-
-  if (!productId) {
-    return badRequest("Missing product id");
-  }
-
   let body: Partial<BenderOverlayInput>;
   try {
     body = (await request.json()) ?? {};
@@ -108,19 +106,14 @@ export async function POST(
     return badRequest("Invalid JSON body");
   }
 
-  // Trust the client’s shape; we just coerce types where needed.
+  // Trust the client's shape; we just coerce types where needed.
   const input: BenderOverlayInput = {
-    usaManufacturingTier:
-      body.usaManufacturingTier ?? null,
-    originTransparencyTier:
-      body.originTransparencyTier ?? null,
-    singleSourceSystemTier:
-      body.singleSourceSystemTier ?? null,
+    usaManufacturingTier: body.usaManufacturingTier ?? null,
+    originTransparencyTier: body.originTransparencyTier ?? null,
+    singleSourceSystemTier: body.singleSourceSystemTier ?? null,
     warrantyTier: body.warrantyTier ?? null,
-    portability:
-      (body.portability ?? null) as string | null,
-    wallThicknessCapacity:
-      (body.wallThicknessCapacity ?? null) as string | null,
+    portability: (body.portability ?? null) as string | null,
+    wallThicknessCapacity: (body.wallThicknessCapacity ?? null) as string | null,
     materials: (body.materials ?? null) as string | null,
     dieShapes: (body.dieShapes ?? null) as string | null,
     mandrel: (body.mandrel ?? null) as string | null,
