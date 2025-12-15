@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useRef, useState, FormEvent } from "react";
 import { useParams } from "next/navigation";
 
 type OverlayFormState = {
@@ -34,6 +34,10 @@ type OverlayFormState = {
 export default function ProductOverlayAdminPage() {
   const params = useParams<{ id: string }>();
   const productId = (params?.id ?? "") as string;
+
+  // Prevent accidental request storms (remounts / double-invokes / router refreshes)
+  const loadInFlightRef = useRef(false);
+  const retryTimerRef = useRef<number | null>(null);
 
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -74,14 +78,44 @@ export default function ProductOverlayAdminPage() {
   useEffect(() => {
     if (!productId) return;
 
+    // Clear any previous scheduled retry when productId changes/unmounts
+    if (retryTimerRef.current) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
     const run = async () => {
+      if (loadInFlightRef.current) return;
+      loadInFlightRef.current = true;
       setStatusMsg("Loading overlay from Neon…");
       setStatusKind("info");
       try {
-        const res = await fetch(`/api/admin/products/${productId}`);
+        const res = await fetch(`/api/admin/products/${productId}`, {
+          cache: "no-store",
+        });
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
+          // If rate-limited, back off and try once after Retry-After.
+          if (res.status === 429) {
+            const retryAfterRaw = res.headers.get("retry-after");
+            const retryAfterSec = Math.max(
+              1,
+              Number.isFinite(Number(retryAfterRaw)) ? Number(retryAfterRaw) : 60,
+            );
+            setStatusMsg(
+              `Too many requests. Waiting ${retryAfterSec}s before retrying…`,
+            );
+            setStatusKind("error");
+            setLoaded(true);
+            retryTimerRef.current = window.setTimeout(() => {
+              retryTimerRef.current = null;
+              loadInFlightRef.current = false;
+              run();
+            }, retryAfterSec * 1000);
+            return;
+          }
+
           setStatusMsg(
             data?.error ?? "Failed to load overlay (auth or server error).",
           );
@@ -151,10 +185,20 @@ export default function ProductOverlayAdminPage() {
         );
         setStatusKind("error");
         setLoaded(true);
+      } finally {
+        // Allow future loads (manual reload, id change, etc.)
+        loadInFlightRef.current = false;
       }
     };
 
     run();
+
+    return () => {
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
   }, [productId]);
 
   function updateField<K extends keyof OverlayFormState>(
