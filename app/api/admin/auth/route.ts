@@ -21,14 +21,16 @@ export async function POST(request: NextRequest) {
       return badRequest('Token is required');
     }
 
-    const adminToken = process.env.ADMIN_TOKEN;
+    const adminToken = process.env.ADMIN_TOKEN?.trim();
     if (!adminToken) {
       return badRequest('Admin token not configured');
     }
 
+    const submittedToken = String(token).trim();
+
     // If correct token is provided, allow login even if this client is currently rate-limited/locked out.
     // (If an attacker has the correct token, they already have admin access.)
-    if (token === adminToken) {
+    if (submittedToken === adminToken) {
       await clearAuthFailures(clientId);
 
       const response = ok({ message: 'Authentication successful' });
