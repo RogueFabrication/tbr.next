@@ -107,7 +107,7 @@ export const ratelimitAuth = new Proxy({} as Ratelimit, {
   },
 });
 
-// Rate limiter for admin API endpoints (60 requests per 60 seconds)
+// Rate limiter for admin API endpoints (600 requests per 60 seconds)
 // Created lazily to handle missing Redis in dev
 let _ratelimitAdmin: Ratelimit | null = null;
 function getRatelimitAdmin(): Ratelimit {
@@ -116,13 +116,13 @@ function getRatelimitAdmin(): Ratelimit {
   if (!redis) {
     // In dev with missing Redis, create a dummy that always allows (fail open)
     _ratelimitAdmin = {
-      limit: async () => ({ success: true, limit: 60, remaining: 59, reset: Date.now() + 60000 }),
+      limit: async () => ({ success: true, limit: 600, remaining: 599, reset: Date.now() + 60000 }),
     } as unknown as Ratelimit;
     return _ratelimitAdmin;
   }
   _ratelimitAdmin = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(60, "60 s"),
+    limiter: Ratelimit.slidingWindow(600, "60 s"),
     analytics: true,
   });
   return _ratelimitAdmin;
