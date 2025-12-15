@@ -39,8 +39,9 @@ export async function GET(
   // Next.js App Router can prefetch RSC payloads and call this endpoint multiple times.
   // Bypass rate limiting for prefetch/RSC GETs to avoid self-throttling the admin editor.
   const isPrefetch =
-    request.headers.get("next-router-prefetch") === "1" ||
-    request.headers.get("rsc") === "1";
+  request.headers.has("next-router-prefetch") ||
+  request.headers.has("rsc");
+
 
   const clientId = getClientId(request);
   if (!isPrefetch) {
