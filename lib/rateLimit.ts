@@ -21,6 +21,29 @@ export function getClientIp(request: NextRequest): string {
   return "unknown";
 }
 
+/**
+ * Small stable hash for scoping rate limits per client device without new deps.
+ * (Not cryptographic; just reduces collisions vs raw UA strings.)
+ */
+function hashString(input: string): string {
+  let hash = 5381;
+  for (let i = 0; i < input.length; i++) {
+    hash = ((hash << 5) + hash) ^ input.charCodeAt(i); // djb2 xor variant
+  }
+  // Convert to unsigned 32-bit and hex
+  return (hash >>> 0).toString(16);
+}
+
+/**
+ * Client identifier for auth throttling: IP + hashed user-agent.
+ * Prevents one person on a shared NAT/static IP from locking out everyone.
+ */
+export function getClientId(request: NextRequest): string {
+  const ip = getClientIp(request);
+  const ua = request.headers.get("user-agent") ?? "unknown";
+  return `${ip}:${hashString(ua)}`;
+}
+
 let redisInstance: Redis | null = null;
 
 /**
@@ -139,14 +162,14 @@ export async function enforceRateLimit(
 }
 
 /**
- * Check if an IP is locked out due to too many failed auth attempts.
+ * Check if a client identifier is locked out due to too many failed auth attempts.
  * Returns lockout duration in seconds if locked, null if not locked.
  */
-export async function checkAuthLockout(ip: string): Promise<number | null> {
+export async function checkAuthLockout(id: string): Promise<number | null> {
   try {
     const redis = getRedis();
     if (!redis) return null; // Fail open in dev
-    const lockKey = `admin_auth_lock:${ip}`;
+    const lockKey = `admin_auth_lock:${id}`;
     const ttl = await redis.ttl(lockKey);
     if (ttl > 0) {
       return ttl;
@@ -164,15 +187,15 @@ export async function checkAuthLockout(ip: string): Promise<number | null> {
 
 /**
  * Increment failed auth attempt counter and apply lockout if threshold reached.
- * @param ip - Client IP address
+ * @param id - Client identifier (e.g., IP + UA hash)
  * @returns true if lockout was triggered, false otherwise
  */
-export async function recordAuthFailure(ip: string): Promise<boolean> {
+export async function recordAuthFailure(id: string): Promise<boolean> {
   try {
     const redis = getRedis();
     if (!redis) return false; // Fail open in dev
-    const failKey = `admin_auth_fail:${ip}`;
-    const lockKey = `admin_auth_lock:${ip}`;
+    const failKey = `admin_auth_fail:${id}`;
+    const lockKey = `admin_auth_lock:${id}`;
 
     // Increment failure count with 10 minute expiry
     const count = await redis.incr(failKey);
@@ -195,12 +218,12 @@ export async function recordAuthFailure(ip: string): Promise<boolean> {
 /**
  * Clear auth failure counter and lockout (call on successful auth).
  */
-export async function clearAuthFailures(ip: string): Promise<void> {
+export async function clearAuthFailures(id: string): Promise<void> {
   try {
     const redis = getRedis();
     if (!redis) return; // No-op in dev if Redis missing
-    await redis.del(`admin_auth_fail:${ip}`);
-    await redis.del(`admin_auth_lock:${ip}`);
+    await redis.del(`admin_auth_fail:${id}`);
+    await redis.del(`admin_auth_lock:${id}`);
   } catch (err) {
     console.error("[rateLimit] Failed to clear auth failures:", err);
     // Non-critical, don't throw

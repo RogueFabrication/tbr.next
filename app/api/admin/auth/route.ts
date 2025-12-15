@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { ok, badRequest } from '../../../../lib/http';
 import {
   getClientIp,
+  getClientId,
   ratelimitAuth,
   enforceRateLimit,
   checkAuthLockout,
@@ -11,9 +12,10 @@ import {
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
+  const clientId = getClientId(request);
 
   // Check for lockout first
-  const lockoutSeconds = await checkAuthLockout(ip);
+  const lockoutSeconds = await checkAuthLockout(clientId);
   if (lockoutSeconds !== null) {
     return Response.json(
       { error: 'Too many attempts' },
@@ -29,7 +31,7 @@ export async function POST(request: NextRequest) {
   // Apply rate limiting
   const rateLimitResult = await enforceRateLimit(ratelimitAuth, [
     'admin_auth',
-    ip,
+    clientId,
   ]);
   if (!rateLimitResult.ok) {
     return Response.json(
@@ -57,12 +59,12 @@ export async function POST(request: NextRequest) {
 
     if (token !== adminToken) {
       // Record failed attempt
-      await recordAuthFailure(ip);
+      await recordAuthFailure(clientId);
       return badRequest('Invalid credentials');
     }
 
     // Clear failure counter on success
-    await clearAuthFailures(ip);
+    await clearAuthFailures(clientId);
 
     const response = ok({ message: 'Authentication successful' });
     
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch {
-    await recordAuthFailure(ip);
+    await recordAuthFailure(clientId);
     return badRequest('Invalid credentials');
   }
 }
