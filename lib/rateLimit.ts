@@ -5,9 +5,16 @@ import { Redis } from "@upstash/redis";
 
 /**
  * Extract client IP from request headers.
- * Checks x-forwarded-for (first IP), then x-real-ip, else "unknown".
+ * Checks x-vercel-forwarded-for (first IP), then x-forwarded-for, then x-real-ip, else "unknown".
  */
 export function getClientIp(request: NextRequest): string {
+  // Vercel often provides this header
+  const vercelFwd = request.headers.get("x-vercel-forwarded-for");
+  if (vercelFwd) {
+    const firstIp = vercelFwd.split(",")[0]?.trim();
+    if (firstIp) return firstIp;
+  }
+
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
     // x-forwarded-for can contain multiple IPs, take the first one

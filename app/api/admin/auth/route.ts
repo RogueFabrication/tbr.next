@@ -14,37 +14,6 @@ export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
   const clientId = getClientId(request);
 
-  // Check for lockout first
-  const lockoutSeconds = await checkAuthLockout(clientId);
-  if (lockoutSeconds !== null) {
-    return Response.json(
-      { error: 'Too many attempts' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': String(lockoutSeconds),
-        },
-      },
-    );
-  }
-
-  // Apply rate limiting
-  const rateLimitResult = await enforceRateLimit(ratelimitAuth, [
-    'admin_auth',
-    clientId,
-  ]);
-  if (!rateLimitResult.ok) {
-    return Response.json(
-      { error: 'Too many attempts' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': String(rateLimitResult.retryAfter ?? 60),
-        },
-      },
-    );
-  }
-
   try {
     const { token } = await request.json();
 
@@ -57,26 +26,46 @@ export async function POST(request: NextRequest) {
       return badRequest('Admin token not configured');
     }
 
-    if (token !== adminToken) {
-      // Record failed attempt
-      await recordAuthFailure(clientId);
-      return badRequest('Invalid credentials');
+    // If correct token is provided, allow login even if this client is currently rate-limited/locked out.
+    // (If an attacker has the correct token, they already have admin access.)
+    if (token === adminToken) {
+      await clearAuthFailures(clientId);
+
+      const response = ok({ message: 'Authentication successful' });
+      response.cookies.set('admin_token', adminToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      });
+      return response;
     }
 
-    // Clear failure counter on success
-    await clearAuthFailures(clientId);
+    // Wrong token: enforce lockout + rate limit
+    const lockoutSeconds = await checkAuthLockout(clientId);
+    if (lockoutSeconds !== null) {
+      return Response.json(
+        { error: 'Too many attempts' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(lockoutSeconds) },
+        },
+      );
+    }
 
-    const response = ok({ message: 'Authentication successful' });
-    
-    // Set admin token cookie
-    response.cookies.set('admin_token', adminToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
-    });
+    const rateLimitResult = await enforceRateLimit(ratelimitAuth, ['admin_auth', clientId]);
+    if (!rateLimitResult.ok) {
+      return Response.json(
+        { error: 'Too many attempts' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(rateLimitResult.retryAfter ?? 60) },
+        },
+      );
+    }
 
-    return response;
+    await recordAuthFailure(clientId);
+    return badRequest('Invalid credentials');
   } catch {
     await recordAuthFailure(clientId);
     return badRequest('Invalid credentials');
