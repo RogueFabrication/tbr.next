@@ -6,6 +6,11 @@ import {
   upsertBenderOverlay,
   type BenderOverlayInput,
 } from "../../../../../lib/benderOverlayRepo";
+import {
+  getClientIp,
+  ratelimitAdmin,
+  enforceRateLimit,
+} from "../../../../../lib/rateLimit";
 
 const ADMIN_COOKIE_NAME = "admin_token";
 
@@ -21,6 +26,25 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  const ip = getClientIp(request);
+
+  // Apply rate limiting
+  const rateLimitResult = await enforceRateLimit(ratelimitAdmin, [
+    "admin_api",
+    ip,
+  ]);
+  if (!rateLimitResult.ok) {
+    return Response.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rateLimitResult.retryAfter ?? 60),
+        },
+      },
+    );
+  }
+
   const productId = params?.id;
 
   if (!isAuthorized(request)) {
@@ -44,6 +68,25 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  const ip = getClientIp(request);
+
+  // Apply rate limiting
+  const rateLimitResult = await enforceRateLimit(ratelimitAdmin, [
+    "admin_api",
+    ip,
+  ]);
+  if (!rateLimitResult.ok) {
+    return Response.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rateLimitResult.retryAfter ?? 60),
+        },
+      },
+    );
+  }
+
   const productId = params?.id;
 
   if (!isAuthorized(request)) {
