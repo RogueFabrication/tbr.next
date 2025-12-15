@@ -61,7 +61,7 @@ function getRatelimitAuth(): Ratelimit {
     // In dev with missing Redis, create a dummy that always allows (fail open)
     _ratelimitAuth = {
       limit: async () => ({ success: true, limit: 5, remaining: 4, reset: Date.now() + 60000 }),
-    } as Ratelimit;
+    } as unknown as Ratelimit;
     return _ratelimitAuth;
   }
   _ratelimitAuth = new Ratelimit({
@@ -87,7 +87,7 @@ function getRatelimitAdmin(): Ratelimit {
     // In dev with missing Redis, create a dummy that always allows (fail open)
     _ratelimitAdmin = {
       limit: async () => ({ success: true, limit: 60, remaining: 59, reset: Date.now() + 60000 }),
-    } as Ratelimit;
+    } as unknown as Ratelimit;
     return _ratelimitAdmin;
   }
   _ratelimitAdmin = new Ratelimit({
