@@ -117,3 +117,17 @@ export async function POST(
     return badRequest("Failed to save overlay to Neon");
   }
 }
+
+// The admin UI uses PATCH for per-field updates. Previously this route only
+// implemented GET/POST, so PATCH requests never reached the server (and would
+// not appear in DevTools as a successful network transaction).
+//
+// For now, delegate PATCH -> POST so we keep a single update implementation.
+// If you later want strict REST semantics, you can move the update logic into
+// a shared function and have POST/PATCH call it.
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  return POST(request, { params });
+}
