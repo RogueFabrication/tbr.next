@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 // Admin grid reads from /api/admin/products; writes hit /api/admin/products/[id]
 
 type Product = {
@@ -82,6 +82,16 @@ type RowCitationClipboard = {
   userCode: string;
 };
 
+type PendingWriteState = {
+  buffer: Record<string, Record<string, any>>; // id -> { field: value, ... }
+  timers: Record<string, number | null>; // id -> window.setTimeout handle
+  inflight: Record<string, boolean>; // id -> request in-flight
+  retryTimer: Record<string, number | null>; // id -> retry handle
+};
+
+const WRITE_DEBOUNCE_MS = 600;
+const MAX_RETRY_ATTEMPTS = 1;
+
 export default function ProductsTab() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,8 +100,32 @@ export default function ProductsTab() {
   const [citationClipboard, setCitationClipboard] =
     useState<RowCitationClipboard | null>(null);
 
+  // Coalesce writes per-product to avoid hammering the API.
+  const pendingRef = useRef<PendingWriteState>({
+    buffer: {},
+    timers: {},
+    inflight: {},
+    retryTimer: {},
+  });
+  const retryCountRef = useRef<Record<string, number>>({});
+
+  const markDirty = useRef<boolean>(false);
+
   useEffect(() => {
     fetchProducts();
+  }, []);
+
+  // Best-effort: prevent timers from running after unmount / route change.
+  useEffect(() => {
+    return () => {
+      const st = pendingRef.current;
+      Object.values(st.timers).forEach((t) => {
+        if (t) window.clearTimeout(t);
+      });
+      Object.values(st.retryTimer).forEach((t) => {
+        if (t) window.clearTimeout(t);
+      });
+    };
   }, []);
 
   // Send a PATCH with one or more field updates.
@@ -111,7 +145,16 @@ export default function ProductsTab() {
       });
 
       if (!response.ok) {
-        console.error("Failed to update product");
+        // Respect rate limiting if present.
+        if (response.status === 429) {
+          const retryAfterHeader = response.headers.get("Retry-After");
+          const retryAfterSec = retryAfterHeader
+            ? Math.max(0, parseInt(retryAfterHeader, 10) || 0)
+            : 0;
+          console.warn(`Rate limited (429). Retry-After: ${retryAfterSec}s`);
+        } else {
+          console.error("Failed to update product");
+        }
         return false;
       }
 
@@ -121,6 +164,54 @@ export default function ProductsTab() {
       console.error("Error updating product:", error);
       return false;
     }
+  };
+
+  const flushQueuedWrites = async (id: string) => {
+    const st = pendingRef.current;
+    if (st.inflight[id]) return;
+
+    const updates = st.buffer[id];
+    if (!updates || Object.keys(updates).length === 0) return;
+
+    st.inflight[id] = true;
+    st.buffer[id] = {};
+
+    const ok = await patchProduct(id, updates);
+    st.inflight[id] = false;
+
+    if (!ok) {
+      // If we got rate limited, retry once after Retry-After (or a small backoff).
+      const attempts = retryCountRef.current[id] ?? 0;
+      if (attempts < MAX_RETRY_ATTEMPTS) {
+        retryCountRef.current[id] = attempts + 1;
+        // Default retry delay if server didn't give one.
+        const delayMs = 1200;
+        if (st.retryTimer[id]) window.clearTimeout(st.retryTimer[id]!);
+        st.retryTimer[id] = window.setTimeout(() => {
+          st.retryTimer[id] = null;
+          flushQueuedWrites(id);
+        }, delayMs);
+      } else {
+        // Give up after 1 retry to avoid loops.
+        retryCountRef.current[id] = 0;
+      }
+    } else {
+      retryCountRef.current[id] = 0;
+      markDirty.current = true;
+    }
+  };
+
+  const queueWrite = (id: string, updates: Record<string, any>) => {
+    const st = pendingRef.current;
+    st.buffer[id] = { ...(st.buffer[id] ?? {}), ...updates };
+
+    if (st.timers[id]) {
+      window.clearTimeout(st.timers[id]!);
+    }
+    st.timers[id] = window.setTimeout(() => {
+      st.timers[id] = null;
+      flushQueuedWrites(id);
+    }, WRITE_DEBOUNCE_MS);
   };
 
   const fetchProducts = async () => {
@@ -162,8 +253,8 @@ export default function ProductsTab() {
       prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
     );
 
-    // Send the write without triggering a full list refetch (prevents GET storms).
-    await patchProduct(id, { [field]: value });
+    // Queue network write (debounced + coalesced per-product).
+    queueWrite(id, { [field]: value });
   };
 
   // Local-only update helper so we can keep inputs responsive while typing
@@ -876,8 +967,8 @@ export default function ProductsTab() {
                               citationClipboard.userCode,
                             );
 
-                            // One PATCH call instead of 4 PATCH + 4 GET storms
-                            patchProduct(selectedProduct.id, {
+                            // Queue as a single coalesced write (no immediate spam)
+                            queueWrite(selectedProduct.id, {
                               [source1Key]: citationClipboard.source1,
                               [source2Key]: citationClipboard.source2,
                               [notesKey]: citationClipboard.notes,
@@ -1169,10 +1260,7 @@ function EditableField({
     setIsEditing(false);
   };
 
-  const handleCancel = () => {
-    setEditValue(value);
-    setIsEditing(false);
-  };
+  // Cancel isn't wired; keep it simple and avoid extra state churn.
 
   if (isEditing) {
     if (options) {
