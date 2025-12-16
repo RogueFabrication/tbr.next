@@ -36,7 +36,7 @@ export default function ProductOverlayAdminPage() {
   const productId = (params?.id ?? "") as string;
 
   const inflightRef = useRef(false);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastLoadedIdRef = useRef<string | null>(null);
 
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -76,49 +76,24 @@ export default function ProductOverlayAdminPage() {
   // Load existing overlay from Neon
   useEffect(() => {
     if (!productId) return;
+    // Prevent duplicate loads for the same product id
+    if (lastLoadedIdRef.current === productId) return;
+    if (inflightRef.current) return;
+    inflightRef.current = true;
+    lastLoadedIdRef.current = productId;
 
-    // Clear any previously scheduled retry when product changes / component re-renders.
-    if (retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
-
-    const controller = new AbortController();
-
-    const load = async () => {
-      // Single-flight guard: prevents request storms from stacked renders/timers.
-      if (inflightRef.current) return;
-      inflightRef.current = true;
-
+    const run = async () => {
       setStatusMsg("Loading overlay from Neon…");
       setStatusKind("info");
-
       try {
         const res = await fetch(`/api/admin/products/${productId}`, {
           cache: "no-store",
-          signal: controller.signal,
         });
 
-        // If rate-limited, schedule exactly ONE retry using Retry-After (seconds).
         if (res.status === 429) {
-          const retryAfterHeader = res.headers.get("Retry-After");
-          const retryAfter =
-            (retryAfterHeader ? Number(retryAfterHeader) : NaN) || 60;
-
-          setStatusMsg(
-            `Too many requests. Waiting ${retryAfter}s before retrying…`,
-          );
+          setStatusMsg("Too many requests. Please wait a moment and refresh.");
           setStatusKind("error");
           setLoaded(true);
-
-          if (!controller.signal.aborted && !retryTimerRef.current) {
-            retryTimerRef.current = setTimeout(() => {
-              retryTimerRef.current = null;
-              // allow a new request
-              inflightRef.current = false;
-              void load();
-            }, retryAfter * 1000);
-          }
           return;
         }
 
@@ -187,7 +162,6 @@ export default function ProductOverlayAdminPage() {
 
         setLoaded(true);
       } catch (err) {
-        if ((err as any)?.name === "AbortError") return;
         setStatusMsg(
           err instanceof Error
             ? err.message
@@ -196,23 +170,11 @@ export default function ProductOverlayAdminPage() {
         setStatusKind("error");
         setLoaded(true);
       } finally {
-        // If we scheduled a retry, the timer handler manages inflight reset.
-        if (!retryTimerRef.current) {
-          inflightRef.current = false;
-        }
+        inflightRef.current = false;
       }
     };
 
-    void load();
-
-    return () => {
-      controller.abort();
-      if (retryTimerRef.current) {
-        clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
-      inflightRef.current = false;
-    };
+    run();
   }, [productId]);
 
   function updateField<K extends keyof OverlayFormState>(
