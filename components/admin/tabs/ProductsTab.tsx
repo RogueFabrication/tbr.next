@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 // Admin grid reads from /api/admin/products; writes hit /api/admin/products/[id]
 
 type Product = {
@@ -82,15 +82,10 @@ type RowCitationClipboard = {
   userCode: string;
 };
 
-type PendingWriteState = {
-  buffer: Record<string, Record<string, any>>; // id -> { field: value, ... }
-  timers: Record<string, number | null>; // id -> window.setTimeout handle
-  inflight: Record<string, boolean>; // id -> request in-flight
-  retryTimer: Record<string, number | null>; // id -> retry handle
+type PendingWrite = {
+  updates: Record<string, any>;
+  timer: ReturnType<typeof setTimeout> | null;
 };
-
-const WRITE_DEBOUNCE_MS = 600;
-const MAX_RETRY_ATTEMPTS = 1;
 
 export default function ProductsTab() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -100,32 +95,12 @@ export default function ProductsTab() {
   const [citationClipboard, setCitationClipboard] =
     useState<RowCitationClipboard | null>(null);
 
-  // Coalesce writes per-product to avoid hammering the API.
-  const pendingRef = useRef<PendingWriteState>({
-    buffer: {},
-    timers: {},
-    inflight: {},
-    retryTimer: {},
-  });
-  const retryCountRef = useRef<Record<string, number>>({});
-
-  const markDirty = useRef<boolean>(false);
+  // Coalesce rapid edits into a single PATCH per product per short interval.
+  // This prevents 429s caused by bursts of per-field saves.
+  const pendingWritesRef = useRef<Map<string, PendingWrite>>(new Map());
 
   useEffect(() => {
     fetchProducts();
-  }, []);
-
-  // Best-effort: prevent timers from running after unmount / route change.
-  useEffect(() => {
-    return () => {
-      const st = pendingRef.current;
-      Object.values(st.timers).forEach((t) => {
-        if (t) window.clearTimeout(t);
-      });
-      Object.values(st.retryTimer).forEach((t) => {
-        if (t) window.clearTimeout(t);
-      });
-    };
   }, []);
 
   // Send a PATCH with one or more field updates.
@@ -166,53 +141,66 @@ export default function ProductsTab() {
     }
   };
 
-  const flushQueuedWrites = async (id: string) => {
-    const st = pendingRef.current;
-    if (st.inflight[id]) return;
+  const flushQueuedWrite = async (id: string): Promise<boolean> => {
+    const entry = pendingWritesRef.current.get(id);
+    if (!entry) return true;
 
-    const updates = st.buffer[id];
-    if (!updates || Object.keys(updates).length === 0) return;
-
-    st.inflight[id] = true;
-    st.buffer[id] = {};
-
-    const ok = await patchProduct(id, updates);
-    st.inflight[id] = false;
-
-    if (!ok) {
-      // If we got rate limited, retry once after Retry-After (or a small backoff).
-      const attempts = retryCountRef.current[id] ?? 0;
-      if (attempts < MAX_RETRY_ATTEMPTS) {
-        retryCountRef.current[id] = attempts + 1;
-        // Default retry delay if server didn't give one.
-        const delayMs = 1200;
-        if (st.retryTimer[id]) window.clearTimeout(st.retryTimer[id]!);
-        st.retryTimer[id] = window.setTimeout(() => {
-          st.retryTimer[id] = null;
-          flushQueuedWrites(id);
-        }, delayMs);
-      } else {
-        // Give up after 1 retry to avoid loops.
-        retryCountRef.current[id] = 0;
-      }
-    } else {
-      retryCountRef.current[id] = 0;
-      markDirty.current = true;
+    // Clear timer before sending.
+    if (entry.timer) {
+      clearTimeout(entry.timer);
+      entry.timer = null;
     }
+
+    const updates = entry.updates;
+    // Reset entry now so new edits can queue while this request is in-flight.
+    entry.updates = {};
+
+    // If nothing to send, treat as success.
+    if (!updates || Object.keys(updates).length === 0) return true;
+
+    return await patchProduct(id, updates);
   };
 
   const queueWrite = (id: string, updates: Record<string, any>) => {
-    const st = pendingRef.current;
-    st.buffer[id] = { ...(st.buffer[id] ?? {}), ...updates };
+    const map = pendingWritesRef.current;
+    const existing = map.get(id);
 
-    if (st.timers[id]) {
-      window.clearTimeout(st.timers[id]!);
+    if (!existing) {
+      map.set(id, { updates: { ...updates }, timer: null });
+    } else {
+      existing.updates = { ...existing.updates, ...updates };
+      if (existing.timer) {
+        clearTimeout(existing.timer);
+        existing.timer = null;
+      }
     }
-    st.timers[id] = window.setTimeout(() => {
-      st.timers[id] = null;
-      flushQueuedWrites(id);
-    }, WRITE_DEBOUNCE_MS);
+
+    const entry = map.get(id)!;
+    // Debounce interval: tune if needed (500–800ms is typically right).
+    entry.timer = setTimeout(() => {
+      void flushQueuedWrite(id);
+    }, 650);
   };
+
+  // Flush queued writes when navigating away/unmounting the tab.
+  useEffect(() => {
+    return () => {
+      const map = pendingWritesRef.current;
+      for (const [id, entry] of map.entries()) {
+        if (entry.timer) {
+          clearTimeout(entry.timer);
+          entry.timer = null;
+        }
+        // Fire-and-forget best effort. We intentionally do not block unmount.
+        const updates = entry.updates;
+        if (updates && Object.keys(updates).length > 0) {
+          void patchProduct(id, updates);
+        }
+      }
+      map.clear();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchProducts = async () => {
     try {
