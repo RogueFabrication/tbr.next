@@ -3,29 +3,11 @@ import { NextRequest } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-/**
- * Extract client IP from request headers.
- * Checks x-vercel-forwarded-for (first IP), then x-forwarded-for, then x-real-ip, else "unknown".
- */
 export function getClientIp(request: NextRequest): string {
-  // Vercel often provides this header
-  const vercelFwd = request.headers.get("x-vercel-forwarded-for");
-  if (vercelFwd) {
-    const firstIp = vercelFwd.split(",")[0]?.trim();
-    if (firstIp) return firstIp;
-  }
-
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    // x-forwarded-for can contain multiple IPs, take the first one
-    const firstIp = forwarded.split(",")[0]?.trim();
-    if (firstIp) return firstIp;
-  }
-
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) return realIp;
-
-  return "unknown";
+  // Vercel sets x-forwarded-for. Take the first IP in the list.
+  const xff = request.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0].trim();
+  return request.ip ?? "0.0.0.0";
 }
 
 /**
@@ -51,34 +33,44 @@ export function getClientId(request: NextRequest): string {
   return `${ip}:${hashString(ua)}`;
 }
 
-let redisInstance: Redis | null = null;
+let _redis: Redis | null = null;
 
-/**
- * Get Redis client, with defensive handling for missing env vars.
- * In production, throws if env vars are missing (fail closed).
- * In dev, returns null to allow fail-open behavior.
- */
-function getRedis(): Redis | null {
-  if (redisInstance) return redisInstance;
+function getRedis(): Redis {
+  if (_redis) return _redis;
 
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  /**
+   * Upstash env var names vary depending on how you provisioned it:
+   * - Direct Upstash docs / manual: UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
+   * - Vercel Upstash integration: UPSTASH_REDIS_KV_REST_API_URL / UPSTASH_REDIS_KV_REST_API_TOKEN
+   *   (and sometimes a read-only token too)
+   */
+  const restUrl =
+    process.env.UPSTASH_REDIS_REST_URL?.trim() ||
+    process.env.UPSTASH_REDIS_KV_REST_API_URL?.trim() ||
+    "";
 
-  if (!url || !token) {
-    const isProd = process.env.NODE_ENV === "production";
-    if (isProd) {
-      // In production, fail closed
-      const msg = "Missing Upstash Redis env vars (UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN). Failing closed in production.";
-      console.error(`[rateLimit] ${msg}`);
-      throw new Error(msg);
-    }
-    // In dev, return null to allow fail-open behavior
-    console.warn("[rateLimit] Missing Upstash Redis env vars. Rate limiting disabled in dev.");
-    return null;
+  const restToken =
+    process.env.UPSTASH_REDIS_REST_TOKEN?.trim() ||
+    process.env.UPSTASH_REDIS_KV_REST_API_TOKEN?.trim() ||
+    // If only a read-only token exists, allow it to initialize (reads still help some uses),
+    // but note: rate limiting requires writes, so this should be last-resort.
+    process.env.UPSTASH_REDIS_KV_REST_API_READ_ONLY_TOKEN?.trim() ||
+    "";
+
+  if (!restUrl || !restToken) {
+    throw new Error([
+      "Missing Upstash REST env vars for rate limiting.",
+      "Set one of the following pairs:",
+      "- UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (manual Upstash)",
+      "- UPSTASH_REDIS_KV_REST_API_URL + UPSTASH_REDIS_KV_REST_API_TOKEN (Vercel integration)",
+    ].join(" "));
   }
 
-  redisInstance = new Redis({ url, token });
-  return redisInstance;
+  _redis = new Redis({
+    url: restUrl,
+    token: restToken,
+  });
+  return _redis;
 }
 
 // Rate limiter for authentication endpoints (5 requests per 60 seconds)
@@ -86,20 +78,21 @@ function getRedis(): Redis | null {
 let _ratelimitAuth: Ratelimit | null = null;
 function getRatelimitAuth(): Ratelimit {
   if (_ratelimitAuth) return _ratelimitAuth;
-  const redis = getRedis();
-  if (!redis) {
+  try {
+    const redis = getRedis();
+    _ratelimitAuth = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, "60 s"),
+      analytics: true,
+    });
+    return _ratelimitAuth;
+  } catch {
     // In dev with missing Redis, create a dummy that always allows (fail open)
     _ratelimitAuth = {
       limit: async () => ({ success: true, limit: 5, remaining: 4, reset: Date.now() + 60000 }),
     } as unknown as Ratelimit;
     return _ratelimitAuth;
   }
-  _ratelimitAuth = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(5, "60 s"),
-    analytics: true,
-  });
-  return _ratelimitAuth;
 }
 export const ratelimitAuth = new Proxy({} as Ratelimit, {
   get(_target, prop) {
@@ -107,65 +100,28 @@ export const ratelimitAuth = new Proxy({} as Ratelimit, {
   },
 });
 
-// Rate limiter for admin API endpoints (600 requests per 60 seconds)
-// Created lazily to handle missing Redis in dev
-let _ratelimitAdmin: Ratelimit | null = null;
-function getRatelimitAdmin(): Ratelimit {
-  if (_ratelimitAdmin) return _ratelimitAdmin;
-  const redis = getRedis();
-  if (!redis) {
-    // In dev with missing Redis, create a dummy that always allows (fail open)
-    _ratelimitAdmin = {
-      limit: async () => ({ success: true, limit: 600, remaining: 599, reset: Date.now() + 60000 }),
-    } as unknown as Ratelimit;
-    return _ratelimitAdmin;
-  }
-  _ratelimitAdmin = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(600, "60 s"),
-    analytics: true,
-  });
-  return _ratelimitAdmin;
-}
-export const ratelimitAdmin = new Proxy({} as Ratelimit, {
-  get(_target, prop) {
-    return getRatelimitAdmin()[prop as keyof Ratelimit];
-  },
+export const ratelimitAdmin = new Ratelimit({
+  redis: getRedis(),
+  limiter: Ratelimit.slidingWindow(60, "60 s"),
+  analytics: true,
+  prefix: "tbr:ratelimit:admin",
 });
 
-/**
- * Enforce rate limit and return result.
- * @param ratelimit - The Ratelimit instance to use
- * @param keyParts - Array of strings to join with ":" as the identifier
- * @returns { ok: boolean, retryAfter?: number } - ok is false if blocked, retryAfter in seconds if available
- */
 export async function enforceRateLimit(
-  ratelimit: Ratelimit,
-  keyParts: string[],
-): Promise<{ ok: boolean; retryAfter?: number }> {
-  try {
-    const identifier = keyParts.join(":");
-    const result = await ratelimit.limit(identifier);
+  limiter: Ratelimit,
+  keyParts: (string | number)[],
+) {
+  const key = keyParts.map(String).join(":");
+  const result = await limiter.limit(key);
 
-    if (!result.success) {
-      return {
-        ok: false,
-        retryAfter: result.reset ? Math.ceil((result.reset - Date.now()) / 1000) : undefined,
-      };
-    }
-
-    return { ok: true };
-  } catch (err) {
-    // If Redis fails, fail closed in production, open in dev
-    const isProd = process.env.NODE_ENV === "production";
-    console.error("[rateLimit] Redis error:", err);
-    if (isProd) {
-      // In production, fail closed (block request)
-      return { ok: false };
-    }
-    // In dev, fail open (allow request) but log error
-    return { ok: true };
-  }
+  return {
+    ok: result.success,
+    retryAfter: result.reset
+      ? Math.max(1, Math.ceil((result.reset - Date.now()) / 1000))
+      : 60,
+    remaining: result.remaining,
+    reset: result.reset,
+  };
 }
 
 /**
@@ -175,7 +131,6 @@ export async function enforceRateLimit(
 export async function checkAuthLockout(id: string): Promise<number | null> {
   try {
     const redis = getRedis();
-    if (!redis) return null; // Fail open in dev
     const lockKey = `admin_auth_lock:${id}`;
     const ttl = await redis.ttl(lockKey);
     if (ttl > 0) {
@@ -200,7 +155,6 @@ export async function checkAuthLockout(id: string): Promise<number | null> {
 export async function recordAuthFailure(id: string): Promise<boolean> {
   try {
     const redis = getRedis();
-    if (!redis) return false; // Fail open in dev
     const failKey = `admin_auth_fail:${id}`;
     const lockKey = `admin_auth_lock:${id}`;
 
@@ -228,7 +182,6 @@ export async function recordAuthFailure(id: string): Promise<boolean> {
 export async function clearAuthFailures(id: string): Promise<void> {
   try {
     const redis = getRedis();
-    if (!redis) return; // No-op in dev if Redis missing
     await redis.del(`admin_auth_fail:${id}`);
     await redis.del(`admin_auth_lock:${id}`);
   } catch (err) {
