@@ -7,7 +7,7 @@ import {
   type BenderOverlayInput,
 } from "../../../../../lib/benderOverlayRepo";
 import {
-  getClientId,
+  getClientIp,
   ratelimitAdmin,
   enforceRateLimit,
 } from "../../../../../lib/rateLimit";
@@ -26,6 +26,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  // Auth first: never rate-limit unauthenticated requests as "authorized".
   if (!isAuthorized(request)) {
     return badRequest("Not authorized");
   }
@@ -34,35 +35,6 @@ export async function GET(
 
   if (!productId) {
     return badRequest("Missing product id");
-  }
-
-  // Next.js App Router can prefetch RSC payloads and call this endpoint multiple times.
-  // Bypass rate limiting for prefetch/RSC GETs to avoid self-throttling the admin editor.
-  const isPrefetch =
-  request.headers.has("next-router-prefetch") ||
-  request.headers.has("rsc");
-
-
-  const clientId = getClientId(request);
-  if (!isPrefetch) {
-    // Apply rate limiting (authorized, non-prefetch requests only)
-    const rateLimitResult = await enforceRateLimit(ratelimitAdmin, [
-      "admin_api",
-      clientId,
-      request.nextUrl.pathname,
-      request.method,
-    ]);
-    if (!rateLimitResult.ok) {
-      return Response.json(
-        { error: "Too many requests" },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(rateLimitResult.retryAfter ?? 60),
-          },
-        },
-      );
-    }
   }
 
   try {
@@ -78,23 +50,17 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  // Auth first
   if (!isAuthorized(request)) {
     return badRequest("Not authorized");
   }
 
-  const productId = params?.id;
+  const ip = getClientIp(request);
 
-  if (!productId) {
-    return badRequest("Missing product id");
-  }
-
-  const clientId = getClientId(request);
-  // Apply rate limiting (authorized requests only)
+  // Apply rate limiting
   const rateLimitResult = await enforceRateLimit(ratelimitAdmin, [
     "admin_api",
-    clientId,
-    request.nextUrl.pathname,
-    request.method,
+    ip,
   ]);
   if (!rateLimitResult.ok) {
     return Response.json(
@@ -106,6 +72,12 @@ export async function POST(
         },
       },
     );
+  }
+
+  const productId = params?.id;
+
+  if (!productId) {
+    return badRequest("Missing product id");
   }
 
   let body: Partial<BenderOverlayInput>;
