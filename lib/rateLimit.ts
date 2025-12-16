@@ -33,44 +33,51 @@ export function getClientId(request: NextRequest): string {
   return `${ip}:${hashString(ua)}`;
 }
 
-let _redis: Redis | null = null;
+let redisInstance: Redis | null = null;
 
-function getRedis(): Redis {
-  if (_redis) return _redis;
+/**
+ * Upstash env var compatibility:
+ * - Some integrations create UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
+ * - Others create UPSTASH_REDIS_KV_REST_API_URL / UPSTASH_REDIS_KV_REST_API_TOKEN
+ *
+ * We accept either so production doesn't "mysteriously" fail closed.
+ */
+function readUpstashRestConfig(): { url?: string; token?: string } {
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL ??
+    process.env.UPSTASH_REDIS_KV_REST_API_URL;
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN ??
+    process.env.UPSTASH_REDIS_KV_REST_API_TOKEN;
+  return { url, token };
+}
 
-  /**
-   * Upstash env var names vary depending on how you provisioned it:
-   * - Direct Upstash docs / manual: UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
-   * - Vercel Upstash integration: UPSTASH_REDIS_KV_REST_API_URL / UPSTASH_REDIS_KV_REST_API_TOKEN
-   *   (and sometimes a read-only token too)
-   */
-  const restUrl =
-    process.env.UPSTASH_REDIS_REST_URL?.trim() ||
-    process.env.UPSTASH_REDIS_KV_REST_API_URL?.trim() ||
-    "";
+/**
+ * Get Redis client, with defensive handling for missing env vars.
+ * In production, throws if env vars are missing (fail closed).
+ * In dev, returns null to allow fail-open behavior.
+ */
+function getRedis(): Redis | null {
+  if (redisInstance) return redisInstance;
 
-  const restToken =
-    process.env.UPSTASH_REDIS_REST_TOKEN?.trim() ||
-    process.env.UPSTASH_REDIS_KV_REST_API_TOKEN?.trim() ||
-    // If only a read-only token exists, allow it to initialize (reads still help some uses),
-    // but note: rate limiting requires writes, so this should be last-resort.
-    process.env.UPSTASH_REDIS_KV_REST_API_READ_ONLY_TOKEN?.trim() ||
-    "";
+  const { url, token } = readUpstashRestConfig();
 
-  if (!restUrl || !restToken) {
-    throw new Error([
-      "Missing Upstash REST env vars for rate limiting.",
-      "Set one of the following pairs:",
-      "- UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (manual Upstash)",
-      "- UPSTASH_REDIS_KV_REST_API_URL + UPSTASH_REDIS_KV_REST_API_TOKEN (Vercel integration)",
-    ].join(" "));
+  if (!url || !token) {
+    const isProd = process.env.NODE_ENV === "production";
+    if (isProd) {
+      // In production, fail closed
+      const msg =
+        "Missing Upstash Redis env vars. Expected either (UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN) or (UPSTASH_REDIS_KV_REST_API_URL, UPSTASH_REDIS_KV_REST_API_TOKEN). Failing closed in production.";
+      console.error(`[rateLimit] ${msg}`);
+      throw new Error(msg);
+    }
+    // In dev, return null to allow fail-open behavior
+    console.warn("[rateLimit] Missing Upstash Redis env vars. Rate limiting disabled in dev.");
+    return null;
   }
 
-  _redis = new Redis({
-    url: restUrl,
-    token: restToken,
-  });
-  return _redis;
+  redisInstance = new Redis({ url, token });
+  return redisInstance;
 }
 
 // Rate limiter for authentication endpoints (5 requests per 60 seconds)
@@ -100,11 +107,63 @@ export const ratelimitAuth = new Proxy({} as Ratelimit, {
   },
 });
 
-export const ratelimitAdmin = new Ratelimit({
-  redis: getRedis(),
-  limiter: Ratelimit.slidingWindow(60, "60 s"),
-  analytics: true,
-  prefix: "tbr:ratelimit:admin",
+// Admin READ rate limiter (GETs). Keep this generous; protects Neon + prevents accidental loops.
+let _ratelimitAdminRead: Ratelimit | null = null;
+function getRatelimitAdminRead(): Ratelimit {
+  if (_ratelimitAdminRead) return _ratelimitAdminRead;
+  const redis = getRedis();
+  if (!redis) {
+    // In dev with missing Redis, create a dummy that always allows (fail open)
+    _ratelimitAdminRead = {
+      limit: async () => ({
+        success: true,
+        limit: 300,
+        remaining: 299,
+        reset: Date.now() + 60000,
+      }),
+    } as unknown as Ratelimit;
+    return _ratelimitAdminRead;
+  }
+  _ratelimitAdminRead = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(300, "60 s"),
+    analytics: true,
+  });
+  return _ratelimitAdminRead;
+}
+export const ratelimitAdminRead = new Proxy({} as Ratelimit, {
+  get(_target, prop) {
+    return getRatelimitAdminRead()[prop as keyof Ratelimit];
+  },
+});
+
+// Admin WRITE rate limiter (PATCH/POST). Tight enough to stop storms, loose enough for normal editing.
+let _ratelimitAdminWrite: Ratelimit | null = null;
+function getRatelimitAdminWrite(): Ratelimit {
+  if (_ratelimitAdminWrite) return _ratelimitAdminWrite;
+  const redis = getRedis();
+  if (!redis) {
+    _ratelimitAdminWrite = {
+      limit: async () => ({
+        success: true,
+        limit: 120,
+        remaining: 119,
+        reset: Date.now() + 60000,
+      }),
+    } as unknown as Ratelimit;
+    return _ratelimitAdminWrite;
+  }
+  _ratelimitAdminWrite = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(120, "60 s"),
+    analytics: true,
+  });
+  return _ratelimitAdminWrite;
+}
+export const ratelimitAdminWrite = new Proxy({} as Ratelimit, {
+  get(_target, prop) {
+    return getRatelimitAdminWrite()[prop as keyof Ratelimit];
+  },
 });
 
 export async function enforceRateLimit(

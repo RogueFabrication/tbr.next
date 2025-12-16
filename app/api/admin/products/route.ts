@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { listProductIds } from "../../../../lib/data";
 import { mergeWithOverlay, info } from "../../../../lib/adminStore";
-import { cookies } from "next/headers";
+import { badRequest } from "../../../../lib/http";
+import { getClientId, ratelimitAdminRead, enforceRateLimit } from "../../../../lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ADMIN_COOKIE_NAME = "admin_token";
 
-function isAuthorized(): boolean {
+function isAuthorized(request: NextRequest): boolean {
   const envToken = process.env.ADMIN_TOKEN?.trim();
   if (!envToken) return false;
-
-  const cookieToken = cookies().get(ADMIN_COOKIE_NAME)?.value;
+  const cookieToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
   return cookieToken === envToken;
 }
 
@@ -20,12 +21,25 @@ function isAuthorized(): boolean {
  * GET /api/admin/products
  * Returns an array of products. Shape is { ok: true, data: [...] } to match admin client.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    if (!isAuthorized()) {
+    if (!isAuthorized(request)) {
+      return badRequest("Not authorized");
+    }
+
+    const clientId = getClientId(request);
+    const rateLimitResult = await enforceRateLimit(ratelimitAdminRead, [
+      "admin_api_read",
+      clientId,
+      "products_list",
+    ]);
+    if (!rateLimitResult.ok) {
       return NextResponse.json(
-        { ok: false, error: "Not authorized", data: [] },
-        { status: 401 },
+        { error: "Too many requests" },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rateLimitResult.retryAfter ?? 60) },
+        },
       );
     }
 

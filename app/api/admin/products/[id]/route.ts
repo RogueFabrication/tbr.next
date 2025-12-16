@@ -7,8 +7,9 @@ import {
   type BenderOverlayInput,
 } from "../../../../../lib/benderOverlayRepo";
 import {
-  getClientIp,
-  ratelimitAdmin,
+  getClientId,
+  ratelimitAdminRead,
+  ratelimitAdminWrite,
   enforceRateLimit,
 } from "../../../../../lib/rateLimit";
 
@@ -37,6 +38,23 @@ export async function GET(
     return badRequest("Missing product id");
   }
 
+  const clientId = getClientId(request);
+  const rateLimitResult = await enforceRateLimit(ratelimitAdminRead, [
+    "admin_api_read",
+    clientId,
+    "product",
+    productId,
+  ]);
+  if (!rateLimitResult.ok) {
+    return Response.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimitResult.retryAfter ?? 60) },
+      },
+    );
+  }
+
   try {
     const overlay = await getBenderOverlay(productId);
     return ok({ overlay });
@@ -55,12 +73,12 @@ export async function POST(
     return badRequest("Not authorized");
   }
 
-  const ip = getClientIp(request);
+  const clientId = getClientId(request);
 
   // Apply rate limiting
-  const rateLimitResult = await enforceRateLimit(ratelimitAdmin, [
-    "admin_api",
-    ip,
+  const rateLimitResult = await enforceRateLimit(ratelimitAdminWrite, [
+    "admin_api_write",
+    clientId,
   ]);
   if (!rateLimitResult.ok) {
     return Response.json(
