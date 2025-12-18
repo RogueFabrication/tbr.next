@@ -36,23 +36,6 @@ export function getClientId(request: NextRequest): string {
 let redisInstance: Redis | null = null;
 
 /**
- * Upstash env var compatibility:
- * - Some integrations create UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
- * - Others create UPSTASH_REDIS_KV_REST_API_URL / UPSTASH_REDIS_KV_REST_API_TOKEN
- *
- * We accept either so production doesn't "mysteriously" fail closed.
- */
-function readUpstashRestConfig(): { url?: string; token?: string } {
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ??
-    process.env.UPSTASH_REDIS_KV_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ??
-    process.env.UPSTASH_REDIS_KV_REST_API_TOKEN;
-  return { url, token };
-}
-
-/**
  * Get Redis client, with defensive handling for missing env vars.
  * In production, throws if env vars are missing (fail closed).
  * In dev, returns null to allow fail-open behavior.
@@ -60,14 +43,11 @@ function readUpstashRestConfig(): { url?: string; token?: string } {
 function getRedis(): Redis | null {
   if (redisInstance) return redisInstance;
 
-  // Support both:
-  // - legacy Upstash env vars: UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
-  // - Vercel integration env vars you currently have: UPSTASH_REDIS_KV_REST_API_URL / UPSTASH_REDIS_KV_REST_API_TOKEN
+  // Support both "standard" Upstash env names and Vercel Marketplace integration names.
   const url =
     process.env.UPSTASH_REDIS_REST_URL ??
     process.env.UPSTASH_REDIS_KV_REST_API_URL ??
     null;
-
   const token =
     process.env.UPSTASH_REDIS_REST_TOKEN ??
     process.env.UPSTASH_REDIS_KV_REST_API_TOKEN ??
@@ -99,21 +79,22 @@ function getRedis(): Redis | null {
 let _ratelimitAuth: Ratelimit | null = null;
 function getRatelimitAuth(): Ratelimit {
   if (_ratelimitAuth) return _ratelimitAuth;
-  try {
-    const redis = getRedis();
-    _ratelimitAuth = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(5, "60 s"),
-      analytics: true,
-    });
-    return _ratelimitAuth;
-  } catch {
+  const redis = getRedis();
+  if (!redis) {
     // In dev with missing Redis, create a dummy that always allows (fail open)
     _ratelimitAuth = {
       limit: async () => ({ success: true, limit: 5, remaining: 4, reset: Date.now() + 60000 }),
     } as unknown as Ratelimit;
     return _ratelimitAuth;
   }
+  // TS sometimes fails to narrow here depending on upstream types; force it.
+  const redisClient = redis as Redis;
+  _ratelimitAuth = new Ratelimit({
+    redis: redisClient,
+    limiter: Ratelimit.slidingWindow(5, "60 s"),
+    analytics: true,
+  });
+  return _ratelimitAuth;
 }
 export const ratelimitAuth = new Proxy({} as Ratelimit, {
   get(_target, prop) {
@@ -134,8 +115,10 @@ function getRatelimitAdminRead(): Ratelimit {
     } as unknown as Ratelimit;
     return _ratelimitAdminRead;
   }
+  // TS sometimes fails to narrow here depending on upstream types; force it.
+  const redisClient = redis as Redis;
   _ratelimitAdminRead = new Ratelimit({
-    redis,
+    redis: redisClient,
     limiter: Ratelimit.slidingWindow(60, "60 s"),
     analytics: true,
   });
@@ -160,8 +143,10 @@ function getRatelimitAdmin(): Ratelimit {
     } as unknown as Ratelimit;
     return _ratelimitAdmin;
   }
+  // TS sometimes fails to narrow here depending on upstream types; force it.
+  const redisClient = redis as Redis;
   _ratelimitAdmin = new Ratelimit({
-    redis,
+    redis: redisClient,
     limiter: Ratelimit.slidingWindow(600, "60 s"),
     analytics: true,
   });
