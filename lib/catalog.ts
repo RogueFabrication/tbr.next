@@ -1,3 +1,27 @@
+export type ProductCitationSourceType =
+  | "web-page"
+  | "pdf"
+  | "manual"
+  | "email"
+  | "other";
+
+export type ProductCitation = {
+  id: string;
+  /** Scoring category key (e.g. "valueForMoney") */
+  category: string;
+  /** Optional: specific field within the category */
+  field: string | null;
+  sourceType: ProductCitationSourceType;
+  /** URL or internal doc reference */
+  urlOrRef: string;
+  /** Short label for humans */
+  title: string | null;
+  /** YYYY-MM-DD preferred */
+  accessed: string | null;
+  /** Page/section/notes */
+  note: string | null;
+};
+
 /**
  * Canonical, minimal catalog for TubeBenderReviews.
  * This file is the single source of truth used by pages and the public API.
