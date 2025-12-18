@@ -56,6 +56,10 @@ export type Product = {
   consSources?: string | null;
   keyFeatures?: string | null;
   materials?: string | null;
+
+  // Citations (admin overlay / scoring audit)
+  citationsRaw?: string | null;
+  citations?: ProductCitation[] | null;
 };
 
 /**
