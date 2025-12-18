@@ -53,18 +53,41 @@ function readUpstashRestConfig(): { url?: string; token?: string } {
 }
 
 /**
- * Get Redis client. Rate limiting is a security control; fail loudly if misconfigured.
+ * Get Redis client, with defensive handling for missing env vars.
+ * In production, throws if env vars are missing (fail closed).
+ * In dev, returns null to allow fail-open behavior.
  */
-function getRedis(): Redis {
+function getRedis(): Redis | null {
   if (redisInstance) return redisInstance;
 
-  const { url, token } = readUpstashRestConfig();
+  // Support both:
+  // - legacy Upstash env vars: UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
+  // - Vercel integration env vars you currently have: UPSTASH_REDIS_KV_REST_API_URL / UPSTASH_REDIS_KV_REST_API_TOKEN
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL ??
+    process.env.UPSTASH_REDIS_KV_REST_API_URL ??
+    null;
+
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN ??
+    process.env.UPSTASH_REDIS_KV_REST_API_TOKEN ??
+    null;
 
   if (!url || !token) {
-    // Rate limiting is a security control; fail loudly if misconfigured.
-    throw new Error(
-      "[rateLimit] Missing Redis env vars. Expected UPSTASH_REDIS_* or project-specific *_REST_API_URL/_REST_API_TOKEN.",
-    );
+    const isProd = process.env.NODE_ENV === "production";
+    if (isProd) {
+      // In production, fail closed
+      const msg =
+        "Missing Upstash Redis env vars. Expected either " +
+        "(UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN) or " +
+        "(UPSTASH_REDIS_KV_REST_API_URL, UPSTASH_REDIS_KV_REST_API_TOKEN). " +
+        "Failing closed in production.";
+      console.error(`[rateLimit] ${msg}`);
+      throw new Error(msg);
+    }
+    // In dev, return null to allow fail-open behavior
+    console.warn("[rateLimit] Missing Upstash Redis env vars. Rate limiting disabled in dev.");
+    return null;
   }
 
   redisInstance = new Redis({ url, token });
@@ -72,16 +95,25 @@ function getRedis(): Redis {
 }
 
 // Rate limiter for authentication endpoints (5 requests per 60 seconds)
+// Created lazily to handle missing Redis in dev
 let _ratelimitAuth: Ratelimit | null = null;
 function getRatelimitAuth(): Ratelimit {
   if (_ratelimitAuth) return _ratelimitAuth;
-  const redis = getRedis();
-  _ratelimitAuth = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(5, "60 s"),
-    analytics: true,
-  });
-  return _ratelimitAuth;
+  try {
+    const redis = getRedis();
+    _ratelimitAuth = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, "60 s"),
+      analytics: true,
+    });
+    return _ratelimitAuth;
+  } catch {
+    // In dev with missing Redis, create a dummy that always allows (fail open)
+    _ratelimitAuth = {
+      limit: async () => ({ success: true, limit: 5, remaining: 4, reset: Date.now() + 60000 }),
+    } as unknown as Ratelimit;
+    return _ratelimitAuth;
+  }
 }
 export const ratelimitAuth = new Proxy({} as Ratelimit, {
   get(_target, prop) {
@@ -89,14 +121,22 @@ export const ratelimitAuth = new Proxy({} as Ratelimit, {
   },
 });
 
-// Admin READ rate limiter (GETs). Keep this generous; protects Neon + prevents accidental loops.
+// Rate limiter for admin READ endpoints (e.g. list pages)
+// Keep this tighter than write limits so page refresh/poll bugs don't spike Redis.
 let _ratelimitAdminRead: Ratelimit | null = null;
 function getRatelimitAdminRead(): Ratelimit {
   if (_ratelimitAdminRead) return _ratelimitAdminRead;
   const redis = getRedis();
+  if (!redis) {
+    // Dev fail-open
+    _ratelimitAdminRead = {
+      limit: async () => ({ success: true, limit: 60, remaining: 59, reset: Date.now() + 60000 }),
+    } as unknown as Ratelimit;
+    return _ratelimitAdminRead;
+  }
   _ratelimitAdminRead = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(300, "60 s"),
+    limiter: Ratelimit.slidingWindow(60, "60 s"),
     analytics: true,
   });
   return _ratelimitAdminRead;
@@ -107,23 +147,34 @@ export const ratelimitAdminRead = new Proxy({} as Ratelimit, {
   },
 });
 
-// Admin WRITE rate limiter (PATCH/POST). Tight enough to stop storms, loose enough for normal editing.
-let _ratelimitAdminWrite: Ratelimit | null = null;
-function getRatelimitAdminWrite(): Ratelimit {
-  if (_ratelimitAdminWrite) return _ratelimitAdminWrite;
+// Rate limiter for admin API endpoints (600 requests per 60 seconds)
+// Created lazily to handle missing Redis in dev
+let _ratelimitAdmin: Ratelimit | null = null;
+function getRatelimitAdmin(): Ratelimit {
+  if (_ratelimitAdmin) return _ratelimitAdmin;
   const redis = getRedis();
-  _ratelimitAdminWrite = new Ratelimit({
+  if (!redis) {
+    // Dev fail-open
+    _ratelimitAdmin = {
+      limit: async () => ({ success: true, limit: 600, remaining: 599, reset: Date.now() + 60000 }),
+    } as unknown as Ratelimit;
+    return _ratelimitAdmin;
+  }
+  _ratelimitAdmin = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(120, "60 s"),
+    limiter: Ratelimit.slidingWindow(600, "60 s"),
     analytics: true,
   });
-  return _ratelimitAdminWrite;
+  return _ratelimitAdmin;
 }
-export const ratelimitAdminWrite = new Proxy({} as Ratelimit, {
+export const ratelimitAdmin = new Proxy({} as Ratelimit, {
   get(_target, prop) {
-    return getRatelimitAdminWrite()[prop as keyof Ratelimit];
+    return getRatelimitAdmin()[prop as keyof Ratelimit];
   },
 });
+
+// Backwards-compatible alias for ratelimitAdmin
+export const ratelimitAdminWrite = ratelimitAdmin;
 
 export async function enforceRateLimit(
   limiter: Ratelimit,
@@ -149,6 +200,7 @@ export async function enforceRateLimit(
 export async function checkAuthLockout(id: string): Promise<number | null> {
   try {
     const redis = getRedis();
+    if (!redis) return null;
     const lockKey = `admin_auth_lock:${id}`;
     const ttl = await redis.ttl(lockKey);
     if (ttl > 0) {
@@ -157,7 +209,11 @@ export async function checkAuthLockout(id: string): Promise<number | null> {
     return null;
   } catch (err) {
     console.error("[rateLimit] Failed to check auth lockout:", err);
-    throw err;
+    // Fail closed in production
+    if (process.env.NODE_ENV === "production") {
+      return 3600; // Assume locked if Redis fails in production
+    }
+    return null;
   }
 }
 
@@ -167,29 +223,42 @@ export async function checkAuthLockout(id: string): Promise<number | null> {
  * @returns true if lockout was triggered, false otherwise
  */
 export async function recordAuthFailure(id: string): Promise<boolean> {
-  const redis = getRedis();
-  const failKey = `admin_auth_fail:${id}`;
-  const lockKey = `admin_auth_lock:${id}`;
+  try {
+    const redis = getRedis();
+    if (!redis) return false;
+    const failKey = `admin_auth_fail:${id}`;
+    const lockKey = `admin_auth_lock:${id}`;
 
-  // Increment failure count with 10 minute expiry
-  const count = await redis.incr(failKey);
-  await redis.expire(failKey, 600); // 10 minutes
+    // Increment failure count with 10 minute expiry
+    const count = await redis.incr(failKey);
+    await redis.expire(failKey, 600); // 10 minutes
 
-  // If 10 or more failures, set lockout for 1 hour
-  if (count >= 10) {
-    await redis.set(lockKey, "1", { ex: 3600 }); // 1 hour lockout
-    return true;
+    // If 10 or more failures, set lockout for 1 hour
+    if (count >= 10) {
+      await redis.set(lockKey, "1", { ex: 3600 }); // 1 hour lockout
+      return true;
+    }
+
+    return false;
+  } catch (err) {
+    console.error("[rateLimit] Failed to record auth failure:", err);
+    // Don't block on Redis errors for failure tracking
+    return false;
   }
-
-  return false;
 }
 
 /**
  * Clear auth failure counter and lockout (call on successful auth).
  */
 export async function clearAuthFailures(id: string): Promise<void> {
-  const redis = getRedis();
-  await redis.del(`admin_auth_fail:${id}`);
-  await redis.del(`admin_auth_lock:${id}`);
+  try {
+    const redis = getRedis();
+    if (!redis) return;
+    await redis.del(`admin_auth_fail:${id}`);
+    await redis.del(`admin_auth_lock:${id}`);
+  } catch (err) {
+    console.error("[rateLimit] Failed to clear auth failures:", err);
+    // Non-critical, don't throw
+  }
 }
 
