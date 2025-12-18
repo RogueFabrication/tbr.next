@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { ProductScore } from "../lib/scoring";
-import ScoreBreakdown from "./ScoreBreakdown";
+import { ScoreBreakdown } from "./reviews/ScoreBreakdown";
 
 type ScoreBreakdownToggleProps = {
   score: ProductScore | null | undefined;
@@ -44,7 +44,7 @@ export default function ScoreBreakdownToggle({
 
       {open && (
         <div className="pt-2">
-          <ScoreBreakdown score={score} />
+          <ScoreBreakdown scores={score} />
         </div>
       )}
     </div>

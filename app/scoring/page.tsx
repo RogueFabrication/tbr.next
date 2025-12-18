@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { SCORING_CATEGORIES, TOTAL_POINTS } from "../../lib/scoring";
--import React from "react";
--import Link from "next/link";
-+import React from "react";
-+import Link from "next/link";
-+import ReviewAuditPanel from "../../../components/ReviewAuditPanel";
+import React from "react";
+import Link from "next/link";
+import ReviewAuditPanel from "../../../components/ReviewAuditPanel";
 
 
 export const metadata: Metadata = {
