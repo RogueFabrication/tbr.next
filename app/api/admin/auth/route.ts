@@ -42,7 +42,9 @@ export async function POST(request: NextRequest) {
         // Admin UI is same-site; Strict is a cheap hardening win.
         // If you ever embed admin in another site/context, switch back to 'lax'.
         sameSite: 'strict',
-        path: '/admin',
+        // Must be visible to BOTH /admin pages and /api/admin/* routes.
+        // Using '/' keeps auth consistent across the admin surface.
+        path: '/',
         maxAge: 60 * 60 * 24 * 7 // 7 days
       });
       return response;
