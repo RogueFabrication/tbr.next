@@ -1,3 +1,4 @@
+// app/api/admin/auth/route.ts
 import { NextRequest } from 'next/server';
 import { ok, badRequest } from '../../../../lib/http';
 
@@ -38,8 +39,10 @@ export async function POST(request: NextRequest) {
       response.cookies.set('admin_token', adminToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
+        // Admin UI is same-site; Strict is a cheap hardening win.
+        // If you ever embed admin in another site/context, switch back to 'lax'.
+        sameSite: 'strict',
+        path: '/admin',
         maxAge: 60 * 60 * 24 * 7 // 7 days
       });
       return response;

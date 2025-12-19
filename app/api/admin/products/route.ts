@@ -3,7 +3,6 @@ import type { NextRequest } from "next/server";
 import { listProductIds } from "../../../../lib/data";
 import { mergeWithOverlay, info } from "../../../../lib/adminStore";
 import { badRequest } from "../../../../lib/http";
-import { getClientId, ratelimitAdminRead, enforceRateLimit } from "../../../../lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,27 +19,14 @@ function isAuthorized(request: NextRequest): boolean {
 /**
  * GET /api/admin/products
  * Returns an array of products. Shape is { ok: true, data: [...] } to match admin client.
+ *
+ * NOTE: This endpoint is auth-gated but intentionally NOT rate-limited.
+ * The write-heavy endpoint is /api/admin/products/[id] which is rate-limited.
  */
 export async function GET(request: NextRequest) {
   try {
     if (!isAuthorized(request)) {
       return badRequest("Not authorized");
-    }
-
-    const clientId = getClientId(request);
-    const rateLimitResult = await enforceRateLimit(ratelimitAdminRead, [
-      "admin_api_read",
-      clientId,
-      "products_list",
-    ]);
-    if (!rateLimitResult.ok) {
-      return NextResponse.json(
-        { error: "Too many requests" },
-        {
-          status: 429,
-          headers: { "Retry-After": String(rateLimitResult.retryAfter ?? 60) },
-        },
-      );
     }
 
     const base = await listProductIds(); // [{id}]
