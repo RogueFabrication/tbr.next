@@ -255,10 +255,22 @@ export function getProductScore(
     if (!Number.isFinite(scored.totalScore)) {
       return { total: null, source: "none" };
     }
+
+    // Normalize whitespace in reasoning to avoid newlines leaking into UI/export
+    const normalizedBreakdown = Array.isArray(scored.scoreBreakdown)
+      ? scored.scoreBreakdown.map((b) => ({
+          ...b,
+          reasoning:
+            typeof b.reasoning === "string"
+              ? b.reasoning.replace(/\s+/g, " ").trim()
+              : b.reasoning,
+        }))
+      : [];
+
     return {
       total: scored.totalScore,
       source: "computed",
-      breakdown: Array.isArray(scored.scoreBreakdown) ? scored.scoreBreakdown : [],
+      breakdown: normalizedBreakdown,
     };
   } catch (err) {
     console.warn("[scoring] failed to compute score:", err);
