@@ -6,6 +6,9 @@ import {
   upsertBenderOverlay,
   type BenderOverlayInput,
 } from "../../../../../lib/benderOverlayRepo";
+import { saveDraftBodySchema } from "../../../../../lib/adminDraftSchema";
+import { saveProductDraft } from "../../../../../lib/productVersionsRepo";
+import { getProductScore } from "../../../../../lib/scoring";
 import {
   getClientId,
   ratelimitAdminRead,
@@ -61,6 +64,97 @@ export async function GET(
   } catch (err) {
     console.error("[bender_overlays] Failed to load overlay:", err);
     return badRequest("Failed to load overlay from Neon");
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  // Auth first
+  if (!isAuthorized(request)) {
+    return badRequest("Not authorized");
+  }
+
+  const productId = params?.id;
+  if (!productId) {
+    return badRequest("Missing product id");
+  }
+
+  const clientId = getClientId(request);
+  const rateLimitResult = await enforceRateLimit(ratelimitAdminWrite, [
+    "admin_api_write",
+    clientId,
+    "product",
+    productId,
+  ]);
+  if (!rateLimitResult.ok) {
+    return Response.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rateLimitResult.retryAfter ?? 60),
+        },
+      },
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = (await request.json()) ?? {};
+  } catch {
+    return badRequest("Invalid JSON body");
+  }
+
+  const parsed = saveDraftBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return badRequest("Invalid draft payload");
+  }
+
+  const actor = `admin:${clientId}`;
+
+  const scoreJson = getProductScore({
+    id: productId,
+    ...(parsed.data.fields ?? {}),
+  });
+
+  const evidence = parsed.data.evidence.map((e) => {
+    const verifiedBy = (e.verifiedBy?.trim() || actor).slice(0, 200);
+    const verifiedAt = e.verifiedAt ? new Date(e.verifiedAt) : new Date();
+    if (Number.isNaN(verifiedAt.getTime())) {
+      throw new Error("Invalid verifiedAt");
+    }
+
+    return {
+      fieldKey: e.fieldKey,
+      sourceType: e.sourceType,
+      url: e.url,
+      quotedText: e.quotedText,
+      howGathered: e.howGathered,
+      notes: e.notes,
+      verifiedBy,
+      verifiedAt,
+    };
+  });
+
+  try {
+    const { draftVersionId } = await saveProductDraft({
+      productId,
+      fieldsJson: parsed.data.fields,
+      scoreJson,
+      actor,
+      evidence,
+    });
+    return ok({
+      draftVersionId,
+      productId,
+      savedAt: new Date().toISOString(),
+      actor,
+    });
+  } catch (err) {
+    console.error("[product_versions] Failed to save draft:", err);
+    return badRequest("Failed to save draft to Neon");
   }
 }
 

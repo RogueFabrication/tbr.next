@@ -11,7 +11,7 @@ import {
 export type ScoringMethod = "tier" | "scaled" | "binary" | "brand";
 
 export type ScoringCategory = {
-  /** 1–11 ordering as presented on the scoring page. */
+  /** 1–15 ordering as presented on the scoring page. */
   index: number;
   /** Stable key for future use in scoring/overlays. */
   key: string;
@@ -28,95 +28,133 @@ export type ScoringCategory = {
 /** Total possible score across all categories. */
 export const TOTAL_POINTS = 100;
 
-/** 11-category, 100-point scoring framework. */
+/** 15-category, 100-point scoring framework. */
 export const SCORING_CATEGORIES: ScoringCategory[] = [
   {
     index: 1,
     key: "valueForMoney",
     name: "Value for Money",
     maxPoints: 20,
-    method: "tier",
-    tagline: "Tier-based scoring by complete setup price range.",
+    method: "scaled",
+    tagline:
+      "How much real capability and completeness you get per dollar for a typical starter system (frame + dies + power + stand).",
   },
   {
     index: 2,
     key: "easeOfUseSetup",
     name: "Ease of Use & Setup",
-    maxPoints: 12,
-    method: "brand",
-    tagline: "Feature-based scoring on documented setup and usability.",
+    maxPoints: 11,
+    method: "tier",
+    tagline:
+      "Portability/base configuration plus basic ergonomics and operational refinement that affect day-to-day use.",
   },
   {
     index: 3,
     key: "maxDiameterRadius",
-    name: "Max Diameter & Radius Capacity",
-    maxPoints: 12,
+    name: "Max Diameter & CLR Capability",
+    maxPoints: 10,
     method: "scaled",
-    tagline: "Scaled scoring based on maximum tube diameter and CLR range.",
+    tagline:
+      "Realistic maximum round tube size you can run on this frame with catalog tooling today. CLR ranges will be added to the math once every machine has documented CLR data.",
   },
   {
     index: 4,
-    key: "usaManufacturing",
-    name: "USA Manufacturing",
-    maxPoints: 10,
-    method: "binary",
-    tagline: "Binary scoring based on country of origin.",
+    key: "bendAngleCapability",
+    name: "Bend Angle Capability",
+    maxPoints: 9,
+    method: "scaled",
+    tagline:
+      "Maximum single-pass bend angle the machine + tooling can actually achieve for typical sizes, based on documented specs.",
   },
   {
     index: 5,
-    key: "bendAngleCapability",
-    name: "Bend Angle Capability",
-    maxPoints: 10,
-    method: "scaled",
-    tagline: "Scaled scoring based on documented maximum bend angle.",
-  },
-  {
-    index: 6,
     key: "wallThicknessCapability",
     name: "Wall Thickness Capability",
     maxPoints: 9,
     method: "scaled",
-    tagline: "Scaled scoring based on thickest published 1.75\" OD wall capacity.",
+    tagline:
+      "How thick of a 1.75\" DOM wall the manufacturer is willing to put in writing for this frame, using their own published specs.",
   },
   {
-    index: 7,
+    index: 6,
     key: "dieSelectionShapes",
     name: "Die Selection & Shapes",
     maxPoints: 8,
-    method: "brand",
-    tagline: "Brand-based scoring for die variety, shapes, and availability.",
+    method: "tier",
+    tagline:
+      "Breadth of the die family: round tube, pipe, square, EMT, metric, plastic/urethane, and clearly documented \"other\" shapes.",
+  },
+  {
+    index: 7,
+    key: "yearsInBusiness",
+    name: "Track Record (Years in Business)",
+    maxPoints: 3,
+    method: "tier",
+    tagline:
+      "Documented operating history of the brand. This matters, but far less than performance and features, so we keep the weight modest.",
   },
   {
     index: 8,
-    key: "yearsInBusiness",
-    name: "Years in Business",
-    maxPoints: 7,
+    key: "upgradePathModularity",
+    name: "Upgrade Path & Modularity",
+    maxPoints: 8,
     method: "tier",
-    tagline: "Tier-based scoring on company longevity and market track record.",
+    tagline:
+      "Factory-supported power upgrades, length/rotation indexing, angle measurement, auto-stop, thick/thin-wall upgrades, and wiper-die support – one point for each documented upgrade.",
   },
   {
     index: 9,
-    key: "upgradePathModularity",
-    name: "Upgrade Path & Modularity",
-    maxPoints: 5,
-    method: "brand",
-    tagline: "Brand-based scoring on upgrades, modularity, and growth path.",
-  },
-  {
-    index: 10,
     key: "mandrelCompatibility",
     name: "Mandrel Compatibility",
     maxPoints: 4,
     method: "tier",
-    tagline: "Tier-based scoring on supported mandrel options and upgrades.",
+    tagline:
+      "Documented support for mandrel bending on this frame (or a direct factory kit). No guesses; only what's clearly supported by the manufacturer.",
+  },
+  {
+    index: 10,
+    key: "sBendCapability",
+    name: "True S-Bend Capability",
+    maxPoints: 3,
+    method: "binary",
+    tagline:
+      "Ability to make a true S-bend with ≤0.125\" straight between opposing bends, proven by documentation or repeatable test pieces. Marketing photos with several inches of straight do not count.",
   },
   {
     index: 11,
-    key: "sBendCapability",
-    name: "S-Bend Capability",
-    maxPoints: 3,
+    key: "usaManufacturingDisclosure",
+    name: "USA Manufacturing (Disclosure-Based)",
+    maxPoints: 5,
+    method: "tier",
+    tagline:
+      "Points based strictly on what the manufacturer publicly claims about where frames, dies, and hydraulics are made or assembled. We do not independently verify or guess where parts are actually made.",
+  },
+  {
+    index: 12,
+    key: "originTransparency",
+    name: "Origin Transparency",
+    maxPoints: 5,
+    method: "tier",
+    tagline:
+      "How clearly the manufacturer explains where major components come from. This scores the quality of disclosure, not the origin itself.",
+  },
+  {
+    index: 13,
+    key: "singleSourceSystem",
+    name: "Single-Source System",
+    maxPoints: 2,
     method: "binary",
-    tagline: "Binary scoring based on documented S-bend capability.",
+    tagline:
+      "Binary: can a normal buyer obtain a complete, fully functional bending system (frame + dies + hydraulics/lever) from one primary manufacturer/storefront, or not?",
+  },
+  {
+    index: 14,
+    key: "warrantySupport",
+    name: "Warranty (Published Terms Only)",
+    maxPoints: 3,
+    method: "tier",
+    tagline:
+      "Warranty strength based strictly on the published terms (coverage and duration). We do not score how well the warranty is honored in practice.",
   },
 ];
 
@@ -154,52 +192,62 @@ export function getProductScore(
 
   const p: any = product;
 
-  // Parse bend angle from either number or string.
-  let bendAngle: number | undefined;
-  if (typeof p.bendAngle === "number") {
-    bendAngle = p.bendAngle;
-  } else if (typeof p.bendAngle === "string") {
-    const parsed = parseFloat(p.bendAngle.replace(/[^0-9.+-]/g, ""));
-    if (Number.isFinite(parsed)) {
-      bendAngle = parsed;
-    }
+  // Derive a system "entry price" from component-level min/max pricing where available.
+  const parsePrice = (v: unknown): number =>
+    typeof v === "number"
+      ? v
+      : parseFloat(String(v ?? "").replace(/[^0-9.+-]/g, "")) || 0;
+
+  const minTotal =
+    parsePrice(p.framePriceMin) +
+    parsePrice(p.diePriceMin) +
+    parsePrice(p.hydraulicPriceMin) +
+    parsePrice(p.standPriceMin);
+
+  const maxTotal =
+    parsePrice(p.framePriceMax) +
+    parsePrice(p.diePriceMax) +
+    parsePrice(p.hydraulicPriceMax) +
+    parsePrice(p.standPriceMax);
+
+  // Entry-level system price used for Value for Money.
+  // Prefer the conservative minimum system total; if that is missing, fall back
+  // to the max system total, then any existing catalog price/priceRange.
+  let entryPrice: number | undefined;
+  if (minTotal > 0) {
+    entryPrice = minTotal;
+  } else if (maxTotal > 0) {
+    entryPrice = maxTotal;
+  } else if (parsePrice(p.price) > 0) {
+    entryPrice = parsePrice(p.price);
   }
 
-  // Normalize s-bend capability from boolean or string admin input.
-  let sBendCapability: boolean | undefined;
-  if (typeof p.sBendCapability === "boolean") {
-    sBendCapability = p.sBendCapability;
-  } else if (typeof p.sBendCapability === "string") {
-    const v = p.sBendCapability.trim().toLowerCase();
-    if (v === "yes" || v === "true") sBendCapability = true;
-    if (v === "no" || v === "false") sBendCapability = false;
-  }
-
-  // Build a best-effort scoring input from whatever fields we have.
+  // --- Adapter into the legacy engine ---
   const scoringInput: ScoringInput = {
-    id: p.id,
-    brand: p.brand,
-    model: p.model,
-    // Prefer an explicit priceRange; otherwise fall back to a stringified price
-    // so the legacy price-bucket logic has something to classify.
-    priceRange:
-      p.priceRange ??
-      (p.price ? String(p.price) : undefined),
-    powerType: p.powerType,
-    // Capacity: prefer a dedicated maxCapacity field, then capacity.
-    maxCapacity: p.maxCapacity ?? p.capacity,
-    // Country of origin often appears as country/countryOfOrigin/madeIn.
-    countryOfOrigin: p.countryOfOrigin ?? p.country ?? p.madeIn,
-    bendAngle,
-    // Wall thickness capability: prefer a dedicated field, then maxWall as a
-    // best-effort proxy when that is how the catalog stores it.
-    wallThicknessCapacity: p.wallThicknessCapacity ?? p.maxWall,
-    features: Array.isArray(p.features) ? p.features : [],
-    materials: Array.isArray(p.materials) ? p.materials : [],
-    // Mandrel availability in the new admin grid is stored as "mandrel" with
-    // values like "Available" / "Standard" / "No".
-    mandrelBender: p.mandrelBender ?? p.mandrel,
-    sBendCapability,
+    entryPrice,
+    maxTubeOD: parseFloat(String(p.maxTubeOD ?? "")) || undefined,
+    maxBendAngle: parseFloat(String(p.maxBendAngle ?? "")) || undefined,
+    maxWallAt175: parseFloat(String(p.maxWallAt175 ?? "")) || undefined,
+    dieShapes: Array.isArray(p.dieShapes) ? p.dieShapes : [],
+    yearsInBusiness: parseFloat(String(p.yearsInBusiness ?? "")) || undefined,
+    usaManufacturingTier: p.usaManufacturingTier ?? p.usaManufacturingDisclosure ?? 0,
+    originTransparencyTier: p.originTransparencyTier ?? 0,
+    singleSourceSystemTier: p.singleSourceSystemTier ?? 0,
+    warrantyTier: p.warrantyTier ?? 0,
+    portability: p.portability ?? undefined,
+    wallThicknessCapacity: p.wallThicknessCapacity ?? undefined,
+    materials: p.materials ?? undefined,
+    dieShapesTier: p.dieShapesTier ?? undefined,
+    mandrel: p.mandrel ?? undefined,
+    hasPowerUpgradePath: !!p.hasPowerUpgradePath,
+    lengthStop: !!p.lengthStop,
+    rotationIndexing: !!p.rotationIndexing,
+    angleMeasurement: !!p.angleMeasurement,
+    autoStop: !!p.autoStop,
+    thickWallUpgrade: !!p.thickWallUpgrade,
+    thinWallUpgrade: !!p.thinWallUpgrade,
+    wiperDieSupport: !!p.wiperDieSupport,
+    sBendCapability: !!p.sBendCapability,
   };
 
   try {
@@ -207,19 +255,13 @@ export function getProductScore(
     if (!Number.isFinite(scored.totalScore)) {
       return { total: null, source: "none" };
     }
-
-    const clamp = (value: number): number =>
-      Math.max(0, Math.min(TOTAL_POINTS, Math.round(value)));
-
     return {
-      total: clamp(scored.totalScore),
+      total: scored.totalScore,
       source: "computed",
-      breakdown: scored.scoreBreakdown,
+      breakdown: Array.isArray(scored.scoreBreakdown) ? scored.scoreBreakdown : [],
     };
-  } catch {
-    // If anything goes sideways in the scoring engine, fail closed and treat
-    // the product as unscored rather than throwing from UI.
+  } catch (err) {
+    console.warn("[scoring] failed to compute score:", err);
     return { total: null, source: "none" };
   }
 }
-
