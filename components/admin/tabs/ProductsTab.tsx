@@ -94,9 +94,20 @@ export default function ProductsTab() {
   const [draftMeta, setDraftMeta] = useState<{
     id: string;
     status: string;
+    version: number;
     updatedAt: string;
-    score: any;
   } | null>(null);
+
+  const [publishedMeta, setPublishedMeta] = useState<{
+    id: string;
+    status: string;
+    version: number;
+    updatedAt: string;
+  } | null>(null);
+  const [publishedLoadError, setPublishedLoadError] = useState<string | null>(
+    null,
+  );
+
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -105,6 +116,38 @@ export default function ProductsTab() {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  const loadPublishedForProduct = async (productId: string) => {
+    setPublishedLoadError(null);
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/publish`, {
+        method: "GET",
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        console.error("Load published failed:", res.status, txt);
+        setPublishedMeta(null);
+        setPublishedLoadError(`Failed to load published (${res.status})`);
+        return;
+      }
+      const json = (await res.json()) as any;
+      const p = json?.published ?? null;
+      if (!p) {
+        setPublishedMeta(null);
+        return;
+      }
+      setPublishedMeta({
+        id: String(p.id),
+        status: String(p.status),
+        version: Number(p.version ?? 0),
+        updatedAt: String(p.updatedAt ?? p.updated_at ?? ""),
+      });
+    } catch (err) {
+      console.error("Load published error:", err);
+      setPublishedMeta(null);
+      setPublishedLoadError("Failed to load published");
+    }
+  };
 
   const loadDraftForProduct = async (id: string) => {
     setDraftLoadError(null);
@@ -131,8 +174,8 @@ export default function ProductsTab() {
         setDraftMeta({
           id: draft.id,
           status: draft.status,
+          version: Number(draft.version ?? 0),
           updatedAt: String(draft.updatedAt ?? ""),
-          score,
         });
       } else {
         setDraftMeta(null);
@@ -206,6 +249,7 @@ export default function ProductsTab() {
     if (!selectedId) return;
     if (!products.find((p) => p.id === selectedId)) return;
     void loadDraftForProduct(selectedId);
+    void loadPublishedForProduct(selectedId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, products.length]);
 
@@ -263,8 +307,13 @@ export default function ProductsTab() {
         return;
       }
 
-      // Reload draft to pull back server-authoritative computed score
+      setIsDirty(false);
+
+      // Reload draft so UI reflects canonical saved state (timestamps/version/evidence)
       await loadDraftForProduct(selectedProduct.id);
+      // Published doesn't change on save, but loading keeps UI consistent if server
+      // normalizes anything you might later mirror on the read side.
+      await loadPublishedForProduct(selectedProduct.id);
     } finally {
       setSaving(false);
     }
@@ -283,8 +332,9 @@ export default function ProductsTab() {
         alert(`Publish failed (${res.status}). Check console.`);
         return;
       }
-      // After publish, reload the draft view (status/version may change)
+      // After publish, reload both draft and published views (status/version will change)
       await loadDraftForProduct(selectedProduct.id);
+      await loadPublishedForProduct(selectedProduct.id);
     } finally {
       setPublishing(false);
     }
@@ -727,44 +777,54 @@ export default function ProductsTab() {
 
           {/* Explicit Save/Publish controls (no autosave) */}
           <div className="mt-2 flex w-full max-w-xs items-center justify-between gap-2">
-            <div className="text-[0.7rem] text-gray-500">
-              {draftLoadError ? (
-                <span className="text-red-600">{draftLoadError}</span>
-              ) : draftMeta ? (
-                <span>
-                  Draft: <span className="font-mono">{draftMeta.id.slice(0, 8)}</span>{" "}
-                  {draftMeta.status ? `(${draftMeta.status})` : ""}
-                </span>
-              ) : (
-                <span>No draft yet</span>
-              )}
-              {isDirty ? (
-                <span className="ml-2 rounded bg-amber-50 px-1.5 py-0.5 text-amber-800">
-                  Unsaved
-                </span>
-              ) : (
-                <span className="ml-2 rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-800">
-                  Saved
-                </span>
-              )}
+            <div className="text-[0.7rem] text-gray-500 leading-tight">
+              <div>
+                {draftMeta ? (
+                  <span>
+                    Draft v{draftMeta.version} • {draftMeta.status} •{" "}
+                    {draftMeta.updatedAt
+                      ? new Date(draftMeta.updatedAt).toLocaleString()
+                      : "—"}
+                  </span>
+                ) : (
+                  <span>No draft loaded</span>
+                )}
+                {draftLoadError ? (
+                  <span className="ml-2 text-red-600">{draftLoadError}</span>
+                ) : null}
+              </div>
+              <div>
+                {publishedMeta ? (
+                  <span>
+                    Published v{publishedMeta.version} •{" "}
+                    {publishedMeta.updatedAt
+                      ? new Date(publishedMeta.updatedAt).toLocaleString()
+                      : "—"}
+                  </span>
+                ) : (
+                  <span>Not published yet</span>
+                )}
+                {publishedLoadError ? (
+                  <span className="ml-2 text-red-600">{publishedLoadError}</span>
+                ) : null}
+              </div>
             </div>
           </div>
 
           <div className="flex w-full max-w-xs gap-2">
             <button
-              type="button"
               onClick={saveDraft}
               disabled={saving || !isDirty}
               className={`flex-1 rounded border px-3 py-1 text-sm ${
                 saving || !isDirty
                   ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400"
-                  : "border-gray-400 bg-white text-gray-900 hover:bg-gray-50"
+                  : "border-gray-900 bg-white text-gray-900 hover:bg-gray-50"
               }`}
+              title={!isDirty ? "No changes to save" : "Save current draft"}
             >
               {saving ? "Saving..." : "Save draft"}
             </button>
             <button
-              type="button"
               onClick={publishDraft}
               disabled={publishing || isDirty}
               className={`flex-1 rounded border px-3 py-1 text-sm ${
