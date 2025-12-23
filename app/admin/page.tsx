@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function AdminLoginPage() {
   const [token, setToken] = useState("");
@@ -9,6 +10,7 @@ export default function AdminLoginPage() {
     "idle",
   );
   const [message, setMessage] = useState<string | null>(null);
+  const router = useRouter();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -31,7 +33,9 @@ export default function AdminLoginPage() {
       }
 
       setStatus("ok");
-      setMessage("Logged in. You can now open /admin/products/[id].");
+      setMessage("Logged in. Redirecting to the admin app…");
+      // Route into the new AdminClient UI (Save Draft / Publish).
+      router.push("/admin/app");
     } catch (err) {
       setStatus("error");
       setMessage(
@@ -85,11 +89,11 @@ export default function AdminLoginPage() {
         <ol className="mt-1 list-decimal space-y-1 pl-4">
           <li>Log in with the token.</li>
           <li>
-            In the address bar, go to{" "}
+            After login you'll be sent to{" "}
             <code className="rounded bg-gray-100 px-1">
-              /admin/products/roguefab-m601
+              /admin/app
             </code>{" "}
-            (or any other product id).
+            (new Save Draft / Publish workflow).
           </li>
         </ol>
       </div>
@@ -107,16 +111,16 @@ export default function AdminLoginPage() {
       {status === "ok" && (
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
-            href="/admin/products"
+            href="/admin/app"
             className="rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700"
           >
-            Open product list
+            Open admin app
           </Link>
           <Link
-            href="/admin/products/roguefab-m601"
+            href="/admin/products"
             className="rounded-md border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-900 shadow-sm hover:bg-gray-50"
           >
-            Open example (roguefab-m601)
+            Open legacy overlay editor
           </Link>
         </div>
       )}

@@ -166,6 +166,27 @@ export async function getEvidenceForVersion(productVersionId: string): Promise<E
   return rows ?? [];
 }
 
+/**
+ * Load the latest published version for a product (or null if none).
+ * This is the read-side companion to POST publish.
+ */
+export async function getLatestPublishedVersion(productId: string) {
+  // IMPORTANT:
+  // Avoid selecting speculative columns (e.g. published_at) that may not exist
+  // across environments. POST publish already works; GET should be resilient.
+  const rows = await sql/* sql */`
+    SELECT *
+    FROM product_versions
+    WHERE product_id = ${productId}
+      AND status = 'published'
+    ORDER BY version DESC
+    LIMIT 1
+  `;
+
+  if (!rows || rows.length === 0) return null;
+  return rows[0];
+}
+
 export async function publishCurrentDraft(args: {
   productId: string;
   actor: string;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 // Admin grid reads from /api/admin/products; writes hit /api/admin/products/[id]
 
 type Product = {
@@ -82,11 +82,6 @@ type RowCitationClipboard = {
   userCode: string;
 };
 
-type PendingWrite = {
-  updates: Record<string, any>;
-  timer: ReturnType<typeof setTimeout> | null;
-};
-
 export default function ProductsTab() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,112 +90,61 @@ export default function ProductsTab() {
   const [citationClipboard, setCitationClipboard] =
     useState<RowCitationClipboard | null>(null);
 
-  // Coalesce rapid edits into a single PATCH per product per short interval.
-  // This prevents 429s caused by bursts of per-field saves.
-  const pendingWritesRef = useRef<Map<string, PendingWrite>>(new Map());
+  // Draft/publish workflow state (explicit Save/Publish only)
+  const [draftMeta, setDraftMeta] = useState<{
+    id: string;
+    status: string;
+    updatedAt: string;
+    score: any;
+  } | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [draftLoadError, setDraftLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  // Send a PATCH with one or more field updates.
-  // IMPORTANT: Do not refetch the whole product list after each write.
-  // The UI already does optimistic updates; full refetches create a GET storm.
-  const patchProduct = async (
-    id: string,
-    updates: Record<string, any>,
-  ): Promise<boolean> => {
+  const loadDraftForProduct = async (id: string) => {
+    setDraftLoadError(null);
     try {
-      const response = await fetch(`/api/admin/products/${id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updates),
+      const res = await fetch(`/api/admin/products/${id}/draft`, {
+        cache: "no-store",
       });
+      if (!res.ok) {
+        setDraftLoadError(`Failed to load draft (${res.status})`);
+        setDraftMeta(null);
+        return;
+      }
+      const json: any = await res.json();
+      const draft = json?.draft ?? null;
+      const fields = draft?.fields ?? {};
+      const score = draft?.score ?? {};
 
-      if (!response.ok) {
-        // Respect rate limiting if present.
-        if (response.status === 429) {
-          const retryAfterHeader = response.headers.get("Retry-After");
-          const retryAfterSec = retryAfterHeader
-            ? Math.max(0, parseInt(retryAfterHeader, 10) || 0)
-            : 0;
-          console.warn(`Rate limited (429). Retry-After: ${retryAfterSec}s`);
-        } else {
-          console.error("Failed to update product");
-        }
-        return false;
+      // Merge draft fields into the local editable product row (no writes).
+      setProducts((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...(fields || {}) } : p)),
+      );
+
+      if (draft) {
+        setDraftMeta({
+          id: draft.id,
+          status: draft.status,
+          updatedAt: String(draft.updatedAt ?? ""),
+          score,
+        });
+      } else {
+        setDraftMeta(null);
       }
 
-      // Keep optimistic value; no full refetch here.
-      return true;
-    } catch (error) {
-      console.error("Error updating product:", error);
-      return false;
+      setIsDirty(false);
+    } catch (e) {
+      console.error("Failed to load draft:", e);
+      setDraftLoadError("Failed to load draft");
+      setDraftMeta(null);
     }
   };
-
-  const flushQueuedWrite = async (id: string): Promise<boolean> => {
-    const entry = pendingWritesRef.current.get(id);
-    if (!entry) return true;
-
-    // Clear timer before sending.
-    if (entry.timer) {
-      clearTimeout(entry.timer);
-      entry.timer = null;
-    }
-
-    const updates = entry.updates;
-    // Reset entry now so new edits can queue while this request is in-flight.
-    entry.updates = {};
-
-    // If nothing to send, treat as success.
-    if (!updates || Object.keys(updates).length === 0) return true;
-
-    return await patchProduct(id, updates);
-  };
-
-  const queueWrite = (id: string, updates: Record<string, any>) => {
-    const map = pendingWritesRef.current;
-    const existing = map.get(id);
-
-    if (!existing) {
-      map.set(id, { updates: { ...updates }, timer: null });
-    } else {
-      existing.updates = { ...existing.updates, ...updates };
-      if (existing.timer) {
-        clearTimeout(existing.timer);
-        existing.timer = null;
-      }
-    }
-
-    const entry = map.get(id)!;
-    // Debounce interval: tune if needed (500–800ms is typically right).
-    entry.timer = setTimeout(() => {
-      void flushQueuedWrite(id);
-    }, 650);
-  };
-
-  // Flush queued writes when navigating away/unmounting the tab.
-  useEffect(() => {
-    return () => {
-      const map = pendingWritesRef.current;
-      for (const [id, entry] of map.entries()) {
-        if (entry.timer) {
-          clearTimeout(entry.timer);
-          entry.timer = null;
-        }
-        // Fire-and-forget best effort. We intentionally do not block unmount.
-        const updates = entry.updates;
-        if (updates && Object.keys(updates).length > 0) {
-          void patchProduct(id, updates);
-        }
-      }
-      map.clear();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const fetchProducts = async () => {
     try {
@@ -233,16 +177,12 @@ export default function ProductsTab() {
   };
 
   // Update helper – keep type loose so we can use dynamic citation keys.
-  // Also perform an optimistic local update so fields (especially select/tier fields)
-  // keep their selected value visible immediately after blur.
+  // NOTE: Batch 4.1 removes autosave. All edits are local until Save Draft.
   const updateProduct = async (id: string, field: string, value: string) => {
-    // Optimistic local update
     setProducts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
     );
-
-    // Queue network write (debounced + coalesced per-product).
-    queueWrite(id, { [field]: value });
+    setIsDirty(true);
   };
 
   // Local-only update helper so we can keep inputs responsive while typing
@@ -251,6 +191,7 @@ export default function ProductsTab() {
     setProducts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
     );
+    setIsDirty(true);
   };
 
   // Default to first product once loaded
@@ -259,6 +200,14 @@ export default function ProductsTab() {
       setSelectedId(products[0].id);
     }
   }, [products, selectedId]);
+
+  // Load draft when selection changes (and after products first load).
+  useEffect(() => {
+    if (!selectedId) return;
+    if (!products.find((p) => p.id === selectedId)) return;
+    void loadDraftForProduct(selectedId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, products.length]);
 
   if (loading) {
     return <div className="py-8 text-center">Loading products...</div>;
@@ -274,6 +223,72 @@ export default function ProductsTab() {
 
   const selectedProduct =
     products.find((p) => p.id === selectedId) ?? products[0] ?? null;
+
+  const buildFieldsPayload = (p: Product) => {
+    // Do not persist identity/display-only keys.
+    // We intentionally keep this permissive: whatever the UI edits becomes draft fields.
+    const {
+      id,
+      brand,
+      model,
+      image,
+      ...rest
+    } = (p as any) || {};
+
+    // Remove undefined so Neon JSON stays clean.
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(rest)) {
+      if (typeof v !== "undefined") out[k] = v;
+    }
+    return out;
+  };
+
+  const saveDraft = async () => {
+    if (!selectedProduct) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/products/${selectedProduct.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fields: buildFieldsPayload(selectedProduct),
+          evidence: [],
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        console.error("Save draft failed:", res.status, txt);
+        alert(`Save failed (${res.status}). Check console.`);
+        return;
+      }
+
+      // Reload draft to pull back server-authoritative computed score
+      await loadDraftForProduct(selectedProduct.id);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const publishDraft = async () => {
+    if (!selectedProduct) return;
+    setPublishing(true);
+    try {
+      const res = await fetch(`/api/admin/products/${selectedProduct.id}/publish`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        console.error("Publish failed:", res.status, txt);
+        alert(`Publish failed (${res.status}). Check console.`);
+        return;
+      }
+      // After publish, reload the draft view (status/version may change)
+      await loadDraftForProduct(selectedProduct.id);
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   if (!selectedProduct) {
   return (
@@ -673,7 +688,7 @@ export default function ProductsTab() {
             letters, numbers, and dashes.
           </p>
         </div>
-        <div className="flex flex-col gap-1 text-sm md:items-end">
+        <div className="flex flex-col gap-2 text-sm md:items-end">
           <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
             Select model
           </label>
@@ -709,6 +724,59 @@ export default function ProductsTab() {
               );
             })}
           </select>
+
+          {/* Explicit Save/Publish controls (no autosave) */}
+          <div className="mt-2 flex w-full max-w-xs items-center justify-between gap-2">
+            <div className="text-[0.7rem] text-gray-500">
+              {draftLoadError ? (
+                <span className="text-red-600">{draftLoadError}</span>
+              ) : draftMeta ? (
+                <span>
+                  Draft: <span className="font-mono">{draftMeta.id.slice(0, 8)}</span>{" "}
+                  {draftMeta.status ? `(${draftMeta.status})` : ""}
+                </span>
+              ) : (
+                <span>No draft yet</span>
+              )}
+              {isDirty ? (
+                <span className="ml-2 rounded bg-amber-50 px-1.5 py-0.5 text-amber-800">
+                  Unsaved
+                </span>
+              ) : (
+                <span className="ml-2 rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-800">
+                  Saved
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex w-full max-w-xs gap-2">
+            <button
+              type="button"
+              onClick={saveDraft}
+              disabled={saving || !isDirty}
+              className={`flex-1 rounded border px-3 py-1 text-sm ${
+                saving || !isDirty
+                  ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400"
+                  : "border-gray-400 bg-white text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              {saving ? "Saving..." : "Save draft"}
+            </button>
+            <button
+              type="button"
+              onClick={publishDraft}
+              disabled={publishing || isDirty}
+              className={`flex-1 rounded border px-3 py-1 text-sm ${
+                publishing || isDirty
+                  ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400"
+                  : "border-gray-900 bg-gray-900 text-white hover:bg-black"
+              }`}
+              title={isDirty ? "Save draft before publishing" : "Publish current draft"}
+            >
+              {publishing ? "Publishing..." : "Publish"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -830,13 +898,6 @@ export default function ProductsTab() {
                               e.target.value,
                             );
                           }}
-                          onBlur={(e) =>
-                            updateProduct(
-                              selectedProduct.id,
-                              source1Key,
-                              e.target.value,
-                            )
-                          }
                           placeholder="Spec page, PDF, catalog ref, etc."
                         />
                       </div>
@@ -852,13 +913,6 @@ export default function ProductsTab() {
                               e.target.value,
                             );
                           }}
-                          onBlur={(e) =>
-                            updateProduct(
-                              selectedProduct.id,
-                              source2Key,
-                              e.target.value,
-                            )
-                          }
                           placeholder="YYYY-MM-DD"
                         />
                   </div>
@@ -874,13 +928,6 @@ export default function ProductsTab() {
                               e.target.value,
                             );
                           }}
-                          onBlur={(e) =>
-                            updateProduct(
-                              selectedProduct.id,
-                              notesKey,
-                              e.target.value,
-                            )
-                          }
                           placeholder="How we found it, or cross-references"
                         />
                       </div>
@@ -901,7 +948,7 @@ export default function ProductsTab() {
     // Only normalize to uppercase once editing is finished.
     const upper = e.target.value.toUpperCase();
     updateProductLocalField(selectedProduct.id, userKey, upper);
-    updateProduct(selectedProduct.id, userKey, upper);
+    // No autosave: Save Draft button commits changes.
   }}
   placeholder="XXXNNNN"
 />
@@ -954,14 +1001,6 @@ export default function ProductsTab() {
                               userKey,
                               citationClipboard.userCode,
                             );
-
-                            // Queue as a single coalesced write (no immediate spam)
-                            queueWrite(selectedProduct.id, {
-                              [source1Key]: citationClipboard.source1,
-                              [source2Key]: citationClipboard.source2,
-                              [notesKey]: citationClipboard.notes,
-                              [userKey]: citationClipboard.userCode,
-                            });
                           }}
                         >
                           Paste

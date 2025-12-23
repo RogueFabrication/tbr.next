@@ -3,10 +3,15 @@ import { NextRequest } from "next/server";
 import { ok, badRequest } from "../../../../../../lib/http";
 import {
   getClientId,
+  ratelimitAdminRead,
   ratelimitAdminWrite,
   enforceRateLimit,
 } from "../../../../../../lib/rateLimit";
-import { publishCurrentDraft } from "../../../../../../lib/productVersionsRepo";
+import {
+  publishCurrentDraft,
+  getLatestPublishedVersion,
+  getEvidenceForVersion,
+} from "../../../../../../lib/productVersionsRepo";
 
 const ADMIN_COOKIE_NAME = "admin_token";
 
@@ -15,6 +20,72 @@ function isAuthorized(request: NextRequest): boolean {
   if (!envToken) return false;
   const cookieToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
   return cookieToken === envToken;
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  if (!isAuthorized(request)) {
+    return badRequest("Not authorized");
+  }
+
+  const productId = params?.id;
+  if (!productId) {
+    return badRequest("Missing product id");
+  }
+
+  const clientId = getClientId(request);
+  const rateLimitResult = await enforceRateLimit(ratelimitAdminRead, [
+    "admin_api_read",
+    clientId,
+    "product_published",
+    productId,
+  ]);
+  if (!rateLimitResult.ok) {
+    return Response.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimitResult.retryAfter ?? 60) },
+      },
+    );
+  }
+
+  try {
+    const published = await getLatestPublishedVersion(productId);
+    if (!published) {
+      return ok({ published: null, evidence: [] });
+    }
+    const evidence = await getEvidenceForVersion(published.id);
+    return ok({
+      published: {
+        id: published.id,
+        productId: published.product_id,
+        status: published.status,
+        version: published.version,
+        fields: published.fields_json ?? {},
+        score: published.score_json ?? {},
+        createdBy: published.created_by,
+        createdAt: published.created_at,
+        updatedAt: published.updated_at,
+      },
+      evidence: evidence.map((e: any) => ({
+        id: e.id,
+        fieldKey: e.field_key,
+        sourceType: e.source_type,
+        url: e.url,
+        quotedText: e.quoted_text,
+        howGathered: e.how_gathered,
+        notes: e.notes,
+        verifiedBy: e.verified_by,
+        verifiedAt: e.verified_at,
+      })),
+    });
+  } catch (err) {
+    console.error("[product_versions] Failed to load published:", err);
+    return badRequest("Failed to load published from Neon");
+  }
 }
 
 export async function POST(
