@@ -1,6 +1,15 @@
 // lib/productVersionsRepo.ts
 import { sql } from "./db";
 
+// JSONValue type for Drizzle/postgres JSON column typing
+type JSONValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JSONValue }
+  | JSONValue[];
+
 export type EvidenceInsert = {
   id?: string;
   fieldKey: string;
@@ -70,8 +79,10 @@ export async function saveProductDraft(args: {
       await tx`
         update product_versions
         set
-          fields_json = ${tx.json(fieldsJson)},
-          score_json  = ${tx.json(scoreJson)},
+          -- fields_json / score_json are validated upstream and intentionally
+          -- stored as raw JSON snapshots; assert here to satisfy Drizzle typing.
+          fields_json = ${tx.json(fieldsJson as JSONValue)},
+          score_json  = ${tx.json(scoreJson as JSONValue)},
           created_by  = ${actor},
           updated_at  = now()
         where id = ${draftVersionId}
@@ -82,7 +93,7 @@ export async function saveProductDraft(args: {
           insert into product_versions
             (product_id, status, version, fields_json, score_json, created_by)
           values
-            (${productId}, 'draft', 0, ${tx.json(fieldsJson)}, ${tx.json(scoreJson)}, ${actor})
+            (${productId}, 'draft', 0, ${tx.json(fieldsJson as JSONValue)}, ${tx.json(scoreJson as JSONValue)}, ${actor})
           returning id
         `;
       draftVersionId = inserted[0]!.id;
@@ -171,21 +182,58 @@ export async function getEvidenceForVersion(productVersionId: string): Promise<E
  * This is the read-side companion to POST publish.
  */
 export async function getLatestPublishedVersion(productId: string) {
-  // IMPORTANT:
-  // Avoid selecting speculative columns (e.g. published_at) that may not exist
-  // across environments. POST publish already works; GET should be resilient.
   const rows = await sql/* sql */`
-    SELECT *
+    SELECT
+      id,
+      product_id,
+      status,
+      version,
+      fields_json,
+      score_json,
+      created_by,
+      created_at,
+      updated_at
     FROM product_versions
     WHERE product_id = ${productId}
       AND status = 'published'
-    ORDER BY version DESC
+    ORDER BY version DESC, updated_at DESC
     LIMIT 1
   `;
 
   if (!rows || rows.length === 0) return null;
   return rows[0];
 }
+
+/**
+ * Bulk-load latest published versions for many products.
+ * Used by public catalog overlay merge to avoid N+1 queries.
+ */
+export async function getLatestPublishedVersionsForProducts(productIds: string[]) {
+  const ids = (productIds ?? []).filter(Boolean);
+  if (ids.length === 0) return [];
+
+  // DISTINCT ON picks the highest-version published row per product_id.
+  // If version ties ever occur, we prefer latest updated_at.
+  const rows = await sql/* sql */`
+    select distinct on (product_id)
+      id,
+      product_id,
+      status,
+      version,
+      fields_json,
+      score_json,
+      created_by,
+      created_at,
+      updated_at
+    from product_versions
+    where status = 'published'
+      and product_id = any(${sql.array(ids)})
+    order by product_id, version desc, updated_at desc
+  `;
+
+  return rows as any[];
+}
+
 
 export async function publishCurrentDraft(args: {
   productId: string;
@@ -231,7 +279,7 @@ export async function publishCurrentDraft(args: {
       insert into product_versions
         (product_id, status, version, fields_json, score_json, created_by)
       values
-        (${productId}, 'published', ${nextVersion}, ${tx.json(draft.fields_json)}, ${tx.json(draft.score_json)}, ${actor})
+        (${productId}, 'published', ${nextVersion}, ${tx.json(draft.fields_json as JSONValue)}, ${tx.json(draft.score_json as JSONValue)}, ${actor})
       returning id
     `;
     const publishedVersionId = inserted[0]!.id;
